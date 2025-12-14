@@ -1,0 +1,1009 @@
+# -*- coding: utf-8 -*-
+# proveedores/serializers.py - EXTENSIÓN PARA EDICIÓN
+"""
+Nuevos Serializers para edición de Proveedores y Repartidores
+
+ Validadores robustos y reutilizables
+ Serializers de edición completos
+ Validaciones a nivel campo y objeto
+ Documentación detallada
+ Optimizado para rendimiento
+ Manejo de errores específicos
+"""
+
+from rest_framework import serializers
+from authentication.models import User
+from proveedores.models import Proveedor
+from repartidores.models import Repartidor
+from productos.models import Producto, Categoria
+from productos.models import Promocion 
+
+# ============================================
+# BLOQUE 0: SERIALIZERS BASICOS PROVEEDOR
+# ============================================
+
+class ProveedorListSerializer(serializers.ModelSerializer):
+    """
+    Serializer para listar proveedores (datos resumidos)
+    """
+    tipo_proveedor_display = serializers.CharField(
+        source='get_tipo_proveedor_display',
+        read_only=True
+    )
+    email_usuario = serializers.SerializerMethodField()
+    celular_usuario = serializers.SerializerMethodField()
+    nombre_completo = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Proveedor
+        fields = [
+            'id',
+            'nombre',
+            'ruc',
+            'tipo_proveedor',
+            'tipo_proveedor_display',
+            'ciudad',
+            'activo',
+            'verificado',
+            'email_usuario',
+            'celular_usuario',
+            'nombre_completo',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+        # === CORRECCIÓN DE SWAGGER ===
+        ref_name = 'PublicProveedorList' 
+        # =============================
+    
+    def get_email_usuario(self, obj):
+        return obj.email_actual
+    
+    def get_celular_usuario(self, obj, **kwargs):
+        # Asumo que obj.celular_actual accede al user.celular
+        return obj.celular_actual 
+    
+    def get_nombre_completo(self, obj):
+        return obj.nombre_completo_usuario
+
+
+class ProveedorDetalleSerializer(serializers.ModelSerializer):
+    """
+    Serializer para obtener detalle completo de un proveedor
+    """
+    tipo_proveedor_display = serializers.CharField(
+        source='get_tipo_proveedor_display',
+        read_only=True
+    )
+    email_usuario = serializers.SerializerMethodField()
+    celular_usuario = serializers.SerializerMethodField()
+    nombre_completo = serializers.SerializerMethodField()
+    usuario_id = serializers.IntegerField(source='user_id', read_only=True)
+    
+    class Meta:
+        model = Proveedor
+        fields = [
+            'id',
+            'usuario_id',
+            'nombre',
+            'ruc',
+            'tipo_proveedor',
+            'tipo_proveedor_display',
+            'descripcion',
+            'direccion',
+            'ciudad',
+            'latitud',
+            'longitud',
+            'activo',
+            'verificado',
+            'horario_apertura',
+            'horario_cierre',
+            'logo',
+            'email_usuario',
+            'celular_usuario',
+            'nombre_completo',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+        # === CORRECCIÓN DE SWAGGER ===
+        ref_name = 'PublicProveedorDetalle' 
+        # =============================
+    
+    def get_email_usuario(self, obj):
+        return obj.email_actual
+    
+    def get_celular_usuario(self, obj):
+        return obj.celular_actual
+    
+    def get_nombre_completo(self, obj):
+        return obj.nombre_completo_usuario
+
+
+class VerificarProveedorSerializer(serializers.Serializer):
+    """
+    Serializer para verificar/rechazar un proveedor
+    """
+    verificado = serializers.BooleanField(
+        help_text='True para verificar, False para rechazar'
+    )
+    motivo = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text='Motivo de la decisión'
+    )
+
+
+# ============================================
+# BLOQUE 0: SERIALIZERS BASICOS REPARTIDOR
+# ============================================
+
+class RepartidorListSerializer(serializers.ModelSerializer):
+    """
+    Serializer para listar repartidores (datos resumidos)
+    """
+    usuario_nombre = serializers.SerializerMethodField()
+    usuario_email = serializers.SerializerMethodField()
+    usuario_id = serializers.IntegerField(source='user_id', read_only=True)
+    
+    class Meta:
+        model = Repartidor
+        fields = [
+            'id',
+            'usuario_id',
+            'usuario_nombre',
+            'usuario_email',
+            'cedula',
+            'telefono',
+            'estado',
+            'activo',
+            'verificado',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+        # === CORRECCIÓN DE SWAGGER ===
+        ref_name = 'PublicRepartidorList' 
+        # =============================
+    
+    def get_usuario_nombre(self, obj):
+        if obj.user:
+            return obj.user.get_full_name()
+        return None
+    
+    def get_usuario_email(self, obj):
+        if obj.user:
+            return obj.user.email
+        return None
+
+
+class RepartidorDetalleSerializer(serializers.ModelSerializer):
+    """
+    Serializer para obtener detalle completo de un repartidor
+    """
+    usuario_nombre = serializers.SerializerMethodField()
+    usuario_email = serializers.SerializerMethodField()
+    usuario_id = serializers.IntegerField(source='user_id', read_only=True)
+    
+    class Meta:
+        model = Repartidor
+        fields = [
+            'id',
+            'usuario_id',
+            'usuario_nombre',
+            'usuario_email',
+            'cedula',
+            'telefono',
+            'latitud',
+            'longitud',
+            'estado',
+            'activo',
+            'verificado',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+        # === CORRECCIÓN DE SWAGGER ===
+        ref_name = 'PublicRepartidorDetalle' 
+        # =============================
+    
+    def get_usuario_nombre(self, obj):
+        if obj.user:
+            return obj.user.get_full_name()
+        return None
+    
+    def get_usuario_email(self, obj):
+        if obj.user:
+            return obj.user.email
+        return None
+
+
+class VerificarRepartidorSerializer(serializers.Serializer):
+    """
+    Serializer para verificar/rechazar un repartidor
+    """
+    verificado = serializers.BooleanField(
+        help_text='True para verificar, False para rechazar'
+    )
+    motivo = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text='Motivo de la decisión'
+    )
+
+# ============================================
+# BLOQUE 1: VALIDADORES COMPARTIDOS
+# ============================================
+
+class ValidadorRUC:
+    """
+    Validador para RUC ecuatoriano
+    - Valida formato (10 o 13 dígitos)
+    - Valida que no esté duplicado
+    """
+    
+    @staticmethod
+    def validar_formato(ruc):
+        """
+        Valida formato básico del RUC
+        
+        Args:
+            ruc (str): RUC a validar
+            
+        Raises:
+            ValidationError: Si el formato es inválido
+        """
+        if not ruc:
+            return True
+        
+        if not isinstance(ruc, str):
+            raise serializers.ValidationError('RUC debe ser texto')
+        
+        # RUC: 10 dígitos (persona) o 13 dígitos (empresa)
+        if len(ruc) != 13 and len(ruc) != 10:
+            raise serializers.ValidationError(
+                'RUC debe tener 10 (persona) o 13 (empresa) dígitos'
+            )
+        
+        if not ruc.isdigit():
+            raise serializers.ValidationError(
+                'RUC solo debe contener números'
+            )
+        
+        return True
+    
+    @staticmethod
+    def validar_duplicado(ruc, proveedor_id=None):
+        """
+        Valida que el RUC no esté duplicado en el sistema
+        
+        Args:
+            ruc (str): RUC a validar
+            proveedor_id (int): ID del proveedor actual (para exclusión)
+            
+        Raises:
+            ValidationError: Si el RUC ya existe
+        """
+        if not ruc:
+            return True
+        
+        query = Proveedor.objects.filter(ruc=ruc)
+        
+        # Excluir el proveedor actual si se está editando
+        if proveedor_id:
+            query = query.exclude(id=proveedor_id)
+        
+        if query.exists():
+            raise serializers.ValidationError(
+                'Este RUC ya está registrado en el sistema'
+            )
+        
+        return True
+
+
+class ValidadorCedula:
+    """
+    Validador para cédula ecuatoriana
+    - Valida formato (10 dígitos)
+    - Valida que no esté duplicada
+    """
+    
+    @staticmethod
+    def validar_formato(cedula):
+        """
+        Valida formato básico de cédula
+        
+        Args:
+            cedula (str): Cédula a validar
+            
+        Raises:
+            ValidationError: Si el formato es inválido
+        """
+        if not cedula:
+            return True
+        
+        if not isinstance(cedula, str):
+            raise serializers.ValidationError('Cédula debe ser texto')
+        
+        if len(cedula) != 10:
+            raise serializers.ValidationError(
+                'Cédula debe tener exactamente 10 dígitos'
+            )
+        
+        if not cedula.isdigit():
+            raise serializers.ValidationError(
+                'Cédula solo debe contener números'
+            )
+        
+        return True
+    
+    @staticmethod
+    def validar_duplicado(cedula, repartidor_id=None):
+        """
+        Valida que la cédula no esté duplicada en el sistema
+        
+        Args:
+            cedula (str): Cédula a validar
+            repartidor_id (int): ID del repartidor actual (para exclusión)
+            
+        Raises:
+            ValidationError: Si la cédula ya existe
+        """
+        if not cedula:
+            return True
+        
+        query = Repartidor.objects.filter(cedula=cedula)
+        
+        # Excluir el repartidor actual si se está editando
+        if repartidor_id:
+            query = query.exclude(id=repartidor_id)
+        
+        if query.exists():
+            raise serializers.ValidationError(
+                'Esta cédula ya está registrada en el sistema'
+            )
+        
+        return True
+
+
+class ValidadorContacto:
+    """
+    Validador para datos de contacto
+    - Email: validación de unicidad
+    - Teléfono: formato ecuatoriano (09XXXXXXXXX)
+    """
+    
+    @staticmethod
+    def validar_email_duplicado(email, usuario_id=None):
+        """
+        Valida que el email no esté duplicado en el sistema
+        
+        Args:
+            email (str): Email a validar
+            usuario_id (int): ID del usuario actual (para exclusión)
+            
+        Raises:
+            ValidationError: Si el email ya existe
+        """
+        if not email:
+            return True
+        
+        query = User.objects.filter(email=email)
+        
+        # Excluir el usuario actual si se está editando
+        if usuario_id:
+            query = query.exclude(id=usuario_id)
+        
+        if query.exists():
+            raise serializers.ValidationError(
+                'Este email ya está registrado en el sistema'
+            )
+        
+        return True
+    
+    @staticmethod
+    def validar_telefono(telefono):
+        """
+        Valida formato de teléfono ecuatoriano
+        Formato: 09XXXXXXXXX (10 dígitos comenzando con 09)
+        
+        Args:
+            telefono (str): Teléfono a validar
+            
+        Raises:
+            ValidationError: Si el formato es inválido
+        """
+        if not telefono:
+            return True
+        
+        # Convertir a string y remover espacios
+        telefono = str(telefono).strip()
+        
+        if not telefono.startswith('09'):
+            raise serializers.ValidationError(
+                'El teléfono debe comenzar con 09'
+            )
+        
+        if len(telefono) != 10:
+            raise serializers.ValidationError(
+                'El teléfono debe tener exactamente 10 dígitos'
+            )
+        
+        if not telefono.isdigit():
+            raise serializers.ValidationError(
+                'El teléfono solo debe contener números'
+            )
+        
+        return True
+
+
+class ValidadorUbicacion:
+    """
+    Validador para coordenadas geográficas
+    - Latitud: -90 a 90
+    - Longitud: -180 a 180
+    """
+    
+    @staticmethod
+    def validar_latitud(latitud):
+        """
+        Valida rango de latitud
+        
+        Args:
+            latitud (float): Latitud a validar
+            
+        Raises:
+            ValidationError: Si está fuera del rango
+        """
+        if latitud is None:
+            return True
+        
+        try:
+            lat = float(latitud)
+        except (ValueError, TypeError):
+            raise serializers.ValidationError('Latitud debe ser un número')
+        
+        if not (-90 <= lat <= 90):
+            raise serializers.ValidationError(
+                'Latitud debe estar entre -90 y 90 grados'
+            )
+        
+        return True
+    
+    @staticmethod
+    def validar_longitud(longitud):
+        """
+        Valida rango de longitud
+        
+        Args:
+            longitud (float): Longitud a validar
+            
+        Raises:
+            ValidationError: Si está fuera del rango
+        """
+        if longitud is None:
+            return True
+        
+        try:
+            lon = float(longitud)
+        except (ValueError, TypeError):
+            raise serializers.ValidationError('Longitud debe ser un número')
+        
+        if not (-180 <= lon <= 180):
+            raise serializers.ValidationError(
+                'Longitud debe estar entre -180 y 180 grados'
+            )
+        
+        return True
+
+
+# ============================================
+# BLOQUE 2: SERIALIZER EDITAR PROVEEDOR
+# ============================================
+
+class ProveedorEditarSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Proveedor
+        fields = [
+            'nombre',
+            'descripcion',
+            'ruc',
+            'telefono',
+            'direccion',
+            'ciudad',
+            'horario_apertura', 
+            'horario_cierre',
+            'activo',
+            'logo',
+        ]
+        read_only_fields = ['id', 'user', 'verificado', 'created_at']
+    
+    # -------- VALIDADORES DE CAMPOS INDIVIDUALES --------
+    
+    def validate_nombre(self, value):
+        """Valida nombre del proveedor"""
+        if value:
+            value = value.strip()
+            
+            if len(value) < 3:
+                raise serializers.ValidationError(
+                    'El nombre debe tener al menos 3 caracteres'
+                )
+            
+            if len(value) > 150:
+                raise serializers.ValidationError(
+                    'El nombre no puede exceder 150 caracteres'
+                )
+        
+        return value
+    
+    def validate_tipo_proveedor(self, value):
+        """Valida que el tipo de proveedor sea válido"""
+        if value:
+            # Obtener tipos válidos del modelo
+            tipos_validos = [
+                choice[0] for choice in 
+                Proveedor._meta.get_field('tipo_proveedor').choices
+            ]
+            
+            if value not in tipos_validos:
+                tipos_str = ', '.join(tipos_validos)
+                raise serializers.ValidationError(
+                    f'Tipo de proveedor no válido. Opciones: {tipos_str}'
+                )
+        
+        return value
+    
+    def validate_ruc(self, value):
+        """Valida formato y unicidad del RUC"""
+        if value:
+            ValidadorRUC.validar_formato(value)
+            
+            # Obtener ID del proveedor actual para excluirlo
+            proveedor_id = self.instance.id if self.instance else None
+            ValidadorRUC.validar_duplicado(value, proveedor_id)
+        
+        return value
+    
+    def validate_telefono(self, value):
+        """Valida formato del teléfono"""
+        if value:
+            ValidadorContacto.validar_telefono(value)
+        
+        return value
+    
+    def validate_direccion(self, value):
+        """Valida dirección del proveedor"""
+        if value:
+            value = value.strip()
+            
+            if len(value) < 5:
+                raise serializers.ValidationError(
+                    'La dirección debe tener al menos 5 caracteres'
+                )
+            
+            if len(value) > 255:
+                raise serializers.ValidationError(
+                    'La dirección no puede exceder 255 caracteres'
+                )
+        
+        return value
+    
+    def validate_latitud(self, value):
+        """Valida rango de latitud"""
+        if value is not None:
+            ValidadorUbicacion.validar_latitud(value)
+        
+        return value
+    
+    def validate_longitud(self, value):
+        """Valida rango de longitud"""
+        if value is not None:
+            ValidadorUbicacion.validar_longitud(value)
+        
+        return value
+    
+    def validate_descripcion(self, value):
+        """Valida descripción del proveedor"""
+        if value:
+            value = value.strip()
+            
+            if len(value) > 1000:
+                raise serializers.ValidationError(
+                    'La descripción no puede exceder 1000 caracteres'
+                )
+        
+        return value
+    
+    def validate_horario_atencion(self, value):
+        """Valida formato de horario"""
+        if value:
+            value = value.strip()
+            
+            # Formato esperado: "HH:MM-HH:MM" ej: "08:00-20:00"
+            if '-' not in value:
+                raise serializers.ValidationError(
+                    'Formato de horario inválido. Use: HH:MM-HH:MM (ej: 08:00-20:00)'
+                )
+            
+            try:
+                partes = value.split('-')
+                if len(partes) != 2:
+                    raise ValueError()
+                
+                # Validar formato HH:MM
+                for parte in partes:
+                    if ':' not in parte:
+                        raise ValueError()
+                    h, m = parte.split(':')
+                    h, m = int(h), int(m)
+                    if not (0 <= h <= 23) or not (0 <= m <= 59):
+                        raise ValueError()
+            
+            except (ValueError, IndexError):
+                raise serializers.ValidationError(
+                    'Formato de horario inválido. Use: HH:MM-HH:MM'
+                )
+        
+        return value
+    
+    def validate_tiempo_preparacion_promedio(self, value):
+        """Valida tiempo de preparación"""
+        if value is not None:
+            try:
+                value = int(value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(
+                    'El tiempo de preparación debe ser un número'
+                )
+            
+            if value < 0:
+                raise serializers.ValidationError(
+                    'El tiempo de preparación no puede ser negativo'
+                )
+            
+            if value > 180:  # 3 horas máximo
+                raise serializers.ValidationError(
+                    'El tiempo de preparación no puede exceder 180 minutos (3 horas)'
+                )
+        
+        return value
+    
+    # -------- VALIDADOR A NIVEL DE OBJETO --------
+    
+    def validate(self, data):
+        """
+        Validaciones a nivel de objeto completo
+        - Si se envían coordenadas, ambas deben estar presentes
+        """
+        # Verificar coherencia de coordenadas
+        latitud = data.get('latitud')
+        longitud = data.get('longitud')
+        
+        # Si se envía uno, debe enviarse el otro
+        if (latitud is None) != (longitud is None):
+            raise serializers.ValidationError({
+                'ubicacion': 'Latitud y longitud deben enviarse juntas'
+            })
+        
+        return data
+
+
+# ============================================
+# BLOQUE 3: SERIALIZER EDITAR CONTACTO PROVEEDOR
+# ============================================
+
+class ProveedorEditarContactoSerializer(serializers.Serializer):
+    """
+    Serializer para EDITAR datos de CONTACTO del Proveedor
+    """
+    
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=False,
+        help_text='Email del contacto del proveedor'
+    )
+    
+    first_name = serializers.CharField(
+        required=False,
+        max_length=100,
+        allow_blank=False,
+        help_text='Nombre del contacto'
+    )
+    
+    last_name = serializers.CharField(
+        required=False,
+        max_length=100,
+        allow_blank=False,
+        help_text='Apellido del contacto'
+    )
+    
+    # -------- VALIDADORES DE CAMPOS INDIVIDUALES --------
+    
+    def validate_email(self, value):
+        """Valida que el email sea único en el sistema"""
+        if value:
+            usuario = self.context.get('usuario')
+            usuario_id = usuario.id if usuario else None
+            ValidadorContacto.validar_email_duplicado(value, usuario_id)
+        
+        return value
+    
+    def validate_first_name(self, value):
+        """Valida nombre del contacto"""
+        if value:
+            value = value.strip()
+            
+            if len(value) < 2:
+                raise serializers.ValidationError(
+                    'El nombre debe tener al menos 2 caracteres'
+                )
+        
+        return value
+    
+    def validate_last_name(self, value):
+        """Valida apellido del contacto"""
+        if value:
+            value = value.strip()
+            
+            if len(value) < 2:
+                raise serializers.ValidationError(
+                    'El apellido debe tener al menos 2 caracteres'
+                )
+        
+        return value
+    
+    # -------- VALIDADOR A NIVEL DE OBJETO --------
+    
+    def validate(self, data):
+        """
+        Validaciones a nivel de objeto completo
+        - Al menos un campo debe ser proporcionado
+        """
+        if not data:
+            raise serializers.ValidationError(
+                'Debe proporcionar al menos un campo para actualizar (email, first_name o last_name)'
+            )
+        
+        return data
+
+
+# ============================================
+# BLOQUE 4: SERIALIZER EDITAR REPARTIDOR
+# ============================================
+
+class RepartidorEditarSerializer(serializers.ModelSerializer):
+    """
+    Serializer para EDITAR información del Repartidor
+    """
+    
+    class Meta:
+        model = Repartidor
+        fields = [
+            'cedula',
+            'telefono',
+            'latitud',
+            'longitud',
+        ]
+    
+    # -------- VALIDADORES DE CAMPOS INDIVIDUALES --------
+    
+    def validate_cedula(self, value):
+        """Valida formato y unicidad de cédula"""
+        if value:
+            ValidadorCedula.validar_formato(value)
+            
+            # Obtener ID del repartidor actual para excluirlo
+            repartidor_id = self.instance.id if self.instance else None
+            ValidadorCedula.validar_duplicado(value, repartidor_id)
+        
+        return value
+    
+    def validate_telefono(self, value):
+        """Valida formato del teléfono"""
+        if value:
+            ValidadorContacto.validar_telefono(value)
+        
+        return value
+    
+    def validate_latitud(self, value):
+        """Valida rango de latitud"""
+        if value is not None:
+            ValidadorUbicacion.validar_latitud(value)
+        
+        return value
+    
+    def validate_longitud(self, value):
+        """Valida rango de longitud"""
+        if value is not None:
+            ValidadorUbicacion.validar_longitud(value)
+        
+        return value
+    
+    # -------- VALIDADOR A NIVEL DE OBJETO --------
+    
+    def validate(self, data):
+        """
+        Validaciones a nivel de objeto completo
+        - Si se envían coordenadas, ambas deben estar presentes
+        """
+        # Verificar coherencia de coordenadas
+        latitud = data.get('latitud')
+        longitud = data.get('longitud')
+        
+        # Si se envía uno, debe enviarse el otro
+        if (latitud is None) != (longitud is None):
+            raise serializers.ValidationError({
+                'ubicacion': 'Latitud y longitud deben enviarse juntas'
+            })
+        
+        return data
+
+
+# ============================================
+# BLOQUE 5: SERIALIZER EDITAR CONTACTO REPARTIDOR
+# ============================================
+
+class RepartidorEditarContactoSerializer(serializers.Serializer):
+    """
+    Serializer para EDITAR datos de CONTACTO del Repartidor
+    """
+    
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=False,
+        help_text='Email del repartidor'
+    )
+    
+    first_name = serializers.CharField(
+        required=False,
+        max_length=100,
+        allow_blank=False,
+        help_text='Nombre del repartidor'
+    )
+    
+    last_name = serializers.CharField(
+        required=False,
+        max_length=100,
+        allow_blank=False,
+        help_text='Apellido del repartidor'
+    )
+    
+    # -------- VALIDADORES DE CAMPOS INDIVIDUALES --------
+    
+    def validate_email(self, value):
+        """Valida que el email sea único en el sistema"""
+        if value:
+            usuario = self.context.get('usuario')
+            usuario_id = usuario.id if usuario else None
+            ValidadorContacto.validar_email_duplicado(value, usuario_id)
+        
+        return value
+    
+    def validate_first_name(self, value):
+        """Valida nombre del repartidor"""
+        if value:
+            value = value.strip()
+            
+            if len(value) < 2:
+                raise serializers.ValidationError(
+                    'El nombre debe tener al menos 2 caracteres'
+                )
+        
+        return value
+    
+    def validate_last_name(self, value):
+        """Valida apellido del repartidor"""
+        if value:
+            value = value.strip()
+            
+            if len(value) < 2:
+                raise serializers.ValidationError(
+                    'El apellido debe tener al menos 2 caracteres'
+                )
+        
+        return value
+    
+    # -------- VALIDADOR A NIVEL DE OBJETO --------
+    
+    def validate(self, data):
+        """
+        Validaciones a nivel de objeto completo
+        - Al menos un campo debe ser proporcionado
+        """
+        if not data:
+            raise serializers.ValidationError(
+                'Debe proporcionar al menos un campo para actualizar (email, first_name o last_name)'
+            )
+        
+        return data
+# ============================================
+# BLOQUE 6: GESTIÓN DE PRODUCTOS (PANEL PROVEEDOR)
+# ============================================
+class ProductoProveedorSerializer(serializers.ModelSerializer):
+    """
+    Serializer para que el PROVEEDOR gestione SU inventario.
+    - El proveedor NO envía el ID de proveedor (se asigna automático).
+    - Puede subir imagen.
+    - Puede cambiar stock y precio.
+    """
+    categoria_nombre = serializers.ReadOnlyField(source='categoria.nombre')
+    
+    # Campo para mostrar la imagen actual
+    imagen_url = serializers.ReadOnlyField(source='imagen_final')
+    
+    class Meta:
+        model = Producto
+        fields = [
+            'id',
+            'categoria',       # ID de la categoría para asignar
+            'categoria_nombre', # Nombre para mostrar en la UI
+            'nombre',
+            'descripcion',
+            'precio',
+            'imagen',          # Campo para subir el archivo (Multipart)
+            'imagen_url',      # Campo para leer la URL
+            'disponible',
+            'tiene_stock',
+            'stock',
+            'veces_vendido',   # Solo lectura
+            'rating_promedio'  # Solo lectura
+        ]
+        read_only_fields = [
+            'id', 
+            'veces_vendido', 
+            'rating_promedio', 
+            'imagen_url', 
+            'categoria_nombre'
+        ]
+
+    def validate_precio(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("El precio debe ser mayor a 0.")
+        return value
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El stock no puede ser negativo.")
+        return value
+    
+# ============================================
+# BLOQUE 7: GESTIÓN DE PROMOCIONES (PANEL PROVEEDOR)
+# ============================================
+
+class PromocionProveedorSerializer(serializers.ModelSerializer):
+    """
+    Serializer para que el proveedor cree sus banners tipo 'PedidosYa'.
+    """
+    imagen_url = serializers.ReadOnlyField(source='imagen_url') 
+    
+    class Meta:
+        model = Promocion
+        fields = [
+            'id',
+            'titulo',           # Ej: "Combos $4.99"
+            'descripcion',      # Ej: "Los mejores combos..."
+            'descuento',        # Ej: "20% OFF"
+            'color',            # Ej: "#E91E63"
+            'imagen',           # La foto PNG transparente
+            'imagen_url',       # Para mostrarla
+            'producto_asociado',# ID del producto al que lleva el banner
+            'activa',
+            'fecha_inicio',
+            'fecha_fin'
+        ]
+        read_only_fields = ['id', 'imagen_url', 'proveedor']
+
+    def validate_color(self, value):
+        """Valida que sea un código Hexadecimal"""
+        if not value.startswith('#') or len(value) not in [4, 7]:
+            raise serializers.ValidationError("El color debe ser hexadecimal (Ej: #E91E63)")
+        return value
+
+    def validate_producto_asociado(self, value):
+        """Valida que el producto pertenezca al mismo proveedor"""
+        user = self.context['request'].user
+        # Accedemos al proveedor a través del usuario
+        if value and value.proveedor.user != user:
+            raise serializers.ValidationError("Solo puedes promocionar tus propios productos.")
+        return value

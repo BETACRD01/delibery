@@ -1,0 +1,669 @@
+// lib/screens/user/perfil/editar/pantalla_agregar_direccion.dart
+
+import 'package:flutter/material.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
+import 'package:geocoding/geocoding.dart';
+import '../../../../../theme/jp_theme.dart';
+import '../../../../../services/usuarios_service.dart';
+import '../../../../../apis/helpers/api_exception.dart';
+import '../../../../../models/usuario.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+
+/// 📍 Pantalla para gestionar dirección de entrega
+/// ✅ No envía etiqueta: el backend la genera automáticamente
+class PantallaAgregarDireccion extends StatefulWidget {
+  final DireccionModel? direccion;
+
+  const PantallaAgregarDireccion({super.key, this.direccion});
+
+
+
+
+
+
+
+
+  @override
+  State<PantallaAgregarDireccion> createState() =>
+      _PantallaAgregarDireccionState();
+}
+
+class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
+  final _formKey = GlobalKey<FormState>();
+  final _usuarioService = UsuarioService();
+
+  late final TextEditingController _direccionController;
+  late final TextEditingController _pisoController;
+  late final TextEditingController _calleSecundariaController;
+  late final TextEditingController _ciudadController;
+  late final TextEditingController _telefonoController;
+  late final TextEditingController _indicacionesController;
+  String _telefonoCompleto = '';
+  static const String _codigoPaisDefault = '593';
+
+  double? _latitud;
+  double? _longitud;
+  bool _guardando = false;
+  bool _cargandoInicial = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final dir = widget.direccion;
+    _direccionController = TextEditingController(text: dir?.direccion);
+    _pisoController = TextEditingController(text: dir?.pisoApartamento ?? '');
+    _calleSecundariaController =
+        TextEditingController(text: dir?.calleSecundaria ?? '');
+    _ciudadController = TextEditingController(text: dir?.ciudad ?? '');
+    _telefonoController = TextEditingController();
+    _indicacionesController = TextEditingController(text: dir?.indicaciones ?? '');
+    _setTelefonoInicial(dir?.telefonoContacto);
+    _latitud = dir?.latitud;
+    _longitud = dir?.longitud;
+    _cargarDireccionInicial();
+  }
+
+  @override
+  void dispose() {
+    _direccionController.dispose();
+    _pisoController.dispose();
+    _calleSecundariaController.dispose();
+    _ciudadController.dispose();
+    _telefonoController.dispose();
+    _indicacionesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarDireccionInicial() async {
+    // Si viene una dirección preinyectada, no cargar del backend
+    if (widget.direccion != null) {
+      setState(() => _cargandoInicial = false);
+      return;
+    }
+
+    try {
+      final direcciones = await _usuarioService.listarDirecciones();
+      if (direcciones.isEmpty) {
+        setState(() => _cargandoInicial = false);
+        return;
+      }
+
+      DireccionModel seleccionada;
+      try {
+        seleccionada =
+            direcciones.firstWhere((d) => d.esPredeterminada, orElse: () => direcciones.first);
+      } catch (_) {
+        seleccionada = direcciones.first;
+      }
+
+      setState(() {
+        _direccionController.text = seleccionada.direccion;
+        _pisoController.text = seleccionada.pisoApartamento ?? '';
+        _calleSecundariaController.text = seleccionada.calleSecundaria ?? '';
+        _ciudadController.text = seleccionada.ciudad ?? '';
+        _setTelefonoInicial(seleccionada.telefonoContacto);
+        _indicacionesController.text = seleccionada.indicaciones ?? '';
+        _latitud = seleccionada.latitud;
+        _longitud = seleccionada.longitud;
+      });
+    } catch (e) {
+      if (mounted) {
+        JPSnackbar.error(context, 'No se pudo cargar tu dirección guardada');
+      }
+    } finally {
+      if (mounted) setState(() => _cargandoInicial = false);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 📍 OBTENER UBICACIÓN + AUTOCOMPLETAR DIRECCIÓN
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 💾 GUARDAR DIRECCIÓN - ✅ COMPLETAMENTE CORREGIDO
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Future<void> _guardarDireccion() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _guardando = true);
+
+    try {
+      final direccionTexto = _direccionController.text.trim();
+      final pisoDepto = _pisoController.text.trim();
+      final calleSecundaria = _calleSecundariaController.text.trim();
+      final ciudad = _ciudadController.text.trim();
+      final telefono = (_telefonoCompleto.isNotEmpty
+              ? _telefonoCompleto
+              : _telefonoController.text)
+          .trim();
+      final indicaciones = _indicacionesController.text.trim();
+      final lat = _latitud ?? 0.0;
+      final lon = _longitud ?? 0.0;
+      final partesDireccion = <String>[
+        direccionTexto,
+        if (calleSecundaria.isNotEmpty) calleSecundaria,
+        if (pisoDepto.isNotEmpty) pisoDepto,
+      ];
+
+      // ✅ CAMBIO CRÍTICO: etiqueta vacía (el backend la genera)
+      final nuevaDireccion = DireccionModel(
+        id: widget.direccion?.id ?? '',
+        tipo: 'casa',
+        tipoDisplay: 'Casa',
+        etiqueta: '', // ✅ VACÍO - el backend generará automáticamente
+        direccion: direccionTexto,
+        referencia: null,
+        pisoApartamento: pisoDepto.isEmpty ? null : pisoDepto,
+        calleSecundaria: calleSecundaria.isEmpty ? null : calleSecundaria,
+        latitud: lat,
+        longitud: lon,
+        ciudad: ciudad.isEmpty ? null : ciudad,
+        telefonoContacto: telefono,
+        indicaciones: indicaciones.isEmpty ? null : indicaciones,
+        esPredeterminada: true,
+        activa: true,
+        vecesUsada: widget.direccion?.vecesUsada ?? 0,
+        ultimoUso: widget.direccion?.ultimoUso,
+        direccionCompleta: partesDireccion.join(' - '),
+        createdAt: widget.direccion?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+
+      try {
+        // ✅ INTENTO 1: Crear dirección nueva
+        await _usuarioService.crearDireccion(nuevaDireccion);
+
+        // ✅ CRÍTICO: Limpiar caché ANTES de cerrar
+        _usuarioService.limpiarCacheDirecciones();
+
+        if (!mounted) return;
+
+        JPSnackbar.success(context, '✓ Dirección guardada correctamente');
+
+        // ✅ Retornar true para indicar éxito
+        Navigator.pop(context, true);
+        return;
+      } on ApiException catch (e) {
+
+        // ✅ DETECTAR ERRORES DE DUPLICADO
+        final errorEtiqueta = e.errors['etiqueta']?.toString() ?? '';
+        final errorLatitud = e.errors['latitud']?.toString() ?? '';
+        final errorGeneral = e.errors['error']?.toString() ?? '';
+        final errorDetalles = e.errors['detalles']?.toString() ?? '';
+
+        final esDuplicadoEtiqueta =
+            errorEtiqueta.contains('Ya tienes una dirección') ||
+            errorGeneral.contains('Ya tienes una dirección') ||
+            (errorDetalles.contains('etiqueta') &&
+                errorDetalles.contains('Ya tienes'));
+
+        final esDuplicadoUbicacion =
+            errorLatitud.contains('muy cercana') ||
+            errorGeneral.contains('muy cercana');
+
+        // ══════════════════════════════════════════════════════════════════════
+        // 🔄 CASO: DIRECCIÓN DUPLICADA → ACTUALIZAR EN LUGAR DE CREAR
+        // ══════════════════════════════════════════════════════════════════════
+
+        if (esDuplicadoEtiqueta || esDuplicadoUbicacion) {
+          try {
+            // ✅ PASO 1: Obtener todas las direcciones del usuario
+            final direcciones = await _usuarioService.listarDirecciones(
+              forzarRecarga: true,
+            );
+
+            if (direcciones.isEmpty) {
+              throw Exception('No se encontraron direcciones para actualizar');
+            }
+
+            // ✅ PASO 2: Buscar la dirección duplicada
+            DireccionModel direccionExistente;
+
+            if (esDuplicadoUbicacion) {
+              direccionExistente = direcciones.firstWhere(
+                (d) {
+                  final deltaLat = (d.latitud - nuevaDireccion.latitud).abs();
+                  final deltaLon = (d.longitud - nuevaDireccion.longitud).abs();
+                  return deltaLat < 0.0005 && deltaLon < 0.0005;
+                },
+                orElse: () => direcciones.first, // Fallback: primera dirección
+              );
+            } else {
+              // Fallback: usar la primera dirección
+              direccionExistente = direcciones.first;
+            }
+
+            // ✅ PASO 3: Actualizar la dirección existente
+            final dataActualizacion = nuevaDireccion.toCreateJson();
+
+            await _usuarioService.actualizarDireccion(
+              direccionExistente.id,
+              dataActualizacion,
+            );
+
+            // ✅ CRÍTICO: Limpiar caché después de actualizar
+            _usuarioService.limpiarCacheDirecciones();
+
+            if (!mounted) return;
+
+            JPSnackbar.success(
+              context,
+              '✓ Tu dirección fue actualizada correctamente',
+            );
+
+            // ✅ Retornar true para indicar éxito
+            Navigator.pop(context, true);
+            return;
+          } catch (updateError) {
+
+            if (!mounted) return;
+
+            JPSnackbar.error(
+              context,
+              'Error al actualizar: ${updateError.toString()}',
+            );
+          }
+        } else {
+          // ══════════════════════════════════════════════════════════════════════
+          // ❌ OTRO TIPO DE ERROR (NO ES DUPLICADO)
+          // ══════════════════════════════════════════════════════════════════════
+
+          if (!mounted) return;
+
+          // ✅ Mostrar mensaje específico del backend
+          if (e.errors.containsKey('etiqueta')) {
+            JPSnackbar.error(context, e.errors['etiqueta'].toString());
+          } else if (e.errors.containsKey('latitud')) {
+            JPSnackbar.error(context, e.errors['latitud'].toString());
+          } else if (e.errors.containsKey('detalles')) {
+            final detalles = e.errors['detalles'];
+            if (detalles is Map && detalles.containsKey('etiqueta')) {
+              final mensajesList = detalles['etiqueta'];
+              if (mensajesList is List && mensajesList.isNotEmpty) {
+                JPSnackbar.error(context, mensajesList[0].toString());
+              } else {
+                JPSnackbar.error(context, e.getUserFriendlyMessage());
+              }
+            } else {
+              JPSnackbar.error(context, e.getUserFriendlyMessage());
+            }
+          } else {
+            JPSnackbar.error(context, e.getUserFriendlyMessage());
+          }
+        }
+      }
+    } catch (e) {
+
+      if (!mounted) return;
+      JPSnackbar.error(context, 'Error al guardar dirección');
+    } finally {
+      if (mounted) {
+        setState(() => _guardando = false);
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🎨 UI
+  // ══════════════════════════════════════════════════════════════════════════
+
+  void _setTelefonoInicial(String? telefonoBackend) {
+    if (telefonoBackend == null || telefonoBackend.isEmpty) {
+      _telefonoController.text = '';
+      _telefonoCompleto = '';
+      return;
+    }
+    String limpio = telefonoBackend.trim();
+    if (limpio.startsWith('+')) {
+      limpio = limpio.substring(1);
+    }
+    if (limpio.startsWith(_codigoPaisDefault)) {
+      limpio = limpio.substring(_codigoPaisDefault.length);
+    }
+    // Dejamos que el usuario vea el número local tal cual (sin añadir ceros)
+    _telefonoController.text = limpio;
+    _telefonoCompleto = telefonoBackend.startsWith('+')
+        ? telefonoBackend
+        : '+$_codigoPaisDefault$limpio';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: JPColors.background,
+      appBar: AppBar(
+        title: const Text('Mi Dirección'),
+        backgroundColor: JPColors.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: _cargandoInicial
+          ? const Center(child: CircularProgressIndicator(color: JPColors.primary))
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  _buildResumenUbicacion(),
+                  const SizedBox(height: 24),
+                  _buildCampoDireccionConAutocompletado(),
+                  const SizedBox(height: 16),
+                  _buildCampoTexto(
+                    controller: _pisoController,
+                    label: 'Piso / Departamento (opcional)',
+                    icon: Icons.apartment_rounded,
+                    hint: 'Ej: Torre B, depto 302',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCampoTexto(
+                    controller: _calleSecundariaController,
+                    label: 'Calle secundaria (opcional)',
+                    icon: Icons.alt_route_rounded,
+                    hint: 'Ej: Esq. con Calle 10',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCampoTexto(
+                    controller: _indicacionesController,
+                    label: 'Indicaciones de entrega (opcional)',
+                    icon: Icons.notes_rounded,
+                    hint: 'Ej: Llamar al llegar, timbre dañado',
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCampoTexto(
+                    controller: _ciudadController,
+                    label: 'Ciudad',
+                    icon: Icons.location_city,
+                    hint: 'Ciudad / Provincia',
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Campo obligatorio';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children:[
+                          Icon(Icons.phone_iphone_rounded,
+                              color: JPColors.primary, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Teléfono de contacto',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      IntlPhoneField(
+                        controller: _telefonoController,
+                        initialCountryCode: 'EC',
+                        disableLengthCheck: false,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        decoration: InputDecoration(
+                          hintText: 'Número de teléfono',
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderSide: BorderSide(color: JPColors.primary, width: 2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.all(12),
+                        ),
+                        onChanged: (phone) {
+                          final dial = phone.countryCode; // incluye "+"
+                          String local = phone.number.replaceAll(RegExp(r'\s'), '');
+                          // Quitar solo un 0 inicial si existe
+                          if (local.startsWith('0') && local.length > 1) {
+                            local = local.substring(1);
+                          }
+                          final normalized = local.isNotEmpty ? '$dial$local' : phone.completeNumber;
+                          setState(() => _telefonoCompleto = normalized);
+                        },
+                        validator: (phone) {
+                          String local = phone?.number.replaceAll(RegExp(r'\s'), '') ?? '';
+                          if (local.isEmpty) {
+                            return 'Ingresa un número de contacto';
+                          }
+                          if (local.startsWith('0') && local.length > 1) {
+                            local = local.substring(1);
+                          }
+                          if (local.length < 6) return 'Número demasiado corto';
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _guardando ? null : _guardarDireccion,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: JPColors.primary,
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _guardando
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Guardar',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🧩 COMPONENTES VISUALES
+  // ══════════════════════════════════════════════════════════════════════════
+
+  
+
+  Widget _buildResumenUbicacion() => const SizedBox.shrink();
+
+  /// Maneja la selección de una dirección del autocompletado
+  Future<void> _onPlaceSelected(Prediction prediction) async {
+    try {
+      // Establecer el texto de la dirección
+      setState(() {
+        _direccionController.text = prediction.description ?? '';
+      });
+
+      // Obtener coordenadas usando geocoding
+      if (prediction.description != null && prediction.description!.isNotEmpty) {
+        try {
+          final locations = await locationFromAddress(prediction.description!);
+          if (locations.isNotEmpty) {
+            setState(() {
+              _latitud = locations.first.latitude;
+              _longitud = locations.first.longitude;
+            });
+            debugPrint('Coordenadas obtenidas: $_latitud, $_longitud');
+          }
+        } catch (e) {
+          debugPrint('Error obteniendo coordenadas: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error al seleccionar lugar: $e');
+    }
+  }
+
+  /// Campo de dirección con autocompletado de Google Places
+  Widget _buildCampoDireccionConAutocompletado() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.home, color: JPColors.primary, size: 20),
+            SizedBox(width: 8),
+            Text(
+              'Dirección',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        GooglePlaceAutoCompleteTextField(
+          textEditingController: _direccionController,
+          googleAPIKey: "AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA", // Misma key configurada en Android/iOS/Web
+          inputDecoration: InputDecoration(
+            hintText: 'Escribe tu dirección...',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(color: JPColors.primary, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.all(16),
+            suffixIcon: _direccionController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    onPressed: () {
+                      setState(() {
+                        _direccionController.clear();
+                        _latitud = null;
+                        _longitud = null;
+                      });
+                    },
+                  )
+                : const Icon(Icons.search, color: Colors.grey),
+          ),
+          debounceTime: 600,
+          countries: const ["ec"], // Solo Ecuador
+          isLatLngRequired: true,
+          getPlaceDetailWithLatLng: (Prediction prediction) {
+            _onPlaceSelected(prediction);
+          },
+          itemClick: (Prediction prediction) {
+            _direccionController.text = prediction.description ?? '';
+            _direccionController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _direccionController.text.length),
+            );
+          },
+          itemBuilder: (context, index, Prediction prediction) {
+            return Container(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on, color: JPColors.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      prediction.description ?? "",
+                      style: const TextStyle(fontSize: 14),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+          seperatedBuilder: const Divider(height: 1),
+          isCrossBtnShown: true,
+          containerHorizontalPadding: 12,
+        ),
+        if (_latitud != null && _longitud != null)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: JPColors.success, size: 16),
+                SizedBox(width: 6),
+                Text(
+                  'Ubicación confirmada',
+                  style: TextStyle(
+                    color: JPColors.success,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCampoTexto({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required String hint,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: JPColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(color: JPColors.primary, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.all(16),
+          ),
+          maxLines: maxLines,
+          validator: validator,
+        ),
+      ],
+    );
+  }
+}
