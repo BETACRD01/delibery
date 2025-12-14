@@ -182,26 +182,37 @@ DATABASES = {
     }
 }
 
-# Redis
+# Redis / Cache distribuida
+USE_REDIS_CACHE = get_env_bool("USE_REDIS_CACHE", not DEBUG)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PASSWORD": REDIS_PASSWORD,
-            "SOCKET_CONNECT_TIMEOUT": 5,
-            "SOCKET_TIMEOUT": 5,
-            "RETRY_ON_TIMEOUT": True,
-            "CONNECTION_POOL_KWARGS": {"max_connections": 50},
-        },
-        "KEY_PREFIX": "deliber",
-        "TIMEOUT": 300,
+if USE_REDIS_CACHE:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "PASSWORD": REDIS_PASSWORD,
+                "SOCKET_CONNECT_TIMEOUT": 5,
+                "SOCKET_TIMEOUT": 5,
+                "RETRY_ON_TIMEOUT": True,
+                "CONNECTION_POOL_KWARGS": {"max_connections": 50},
+            },
+            "KEY_PREFIX": "deliber",
+            "TIMEOUT": 300,
+        }
     }
-}
+else:
+    logger.warning("Redis deshabilitado. Usando cache en memoria local para desarrollo.")
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "deliber-localcache",
+            "TIMEOUT": 300,
+        }
+    }
 
 # Simplificar configuración en modo pruebas
 if TESTING:
@@ -217,15 +228,20 @@ if TESTING:
         }
     }
 
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-SESSION_CACHE_ALIAS = "default"
+if USE_REDIS_CACHE:
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
+else:
+    SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
 # ==========================================
 # 6. CELERY (TAREAS ASÍNCRONAS)
 # ==========================================
 
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
+default_broker = REDIS_URL if USE_REDIS_CACHE else "memory://"
+default_result_backend = REDIS_URL if USE_REDIS_CACHE else "cache+memory://"
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", default_broker)
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", default_result_backend)
 CELERY_TIMEZONE = "America/Guayaquil"
 CELERY_ENABLE_UTC = True
 CELERY_ACCEPT_CONTENT = ["json"]

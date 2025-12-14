@@ -12,7 +12,7 @@ class ApiConfig {
 
   static const String _redCasaPrefix = '192.168.1';
   // IP fija del backend en la red local (interfaz wlo1)
-  static const String _ipBackendLocal = '192.168.1.11';
+  static const String _ipBackendLocal = '192.168.1.5';
   static const String _redInstitucionalPrefix = '172.16';
   static const String _ipInstitucional = '172.16.60.5';
   static const String _redHotspotPrefix = '192.168.137';

@@ -721,7 +721,7 @@ class _PantallaEditarPerfilRepartidorState
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _vehiculoSeleccionado,
+                  initialValue: _vehiculoSeleccionado,
                   decoration: InputDecoration(
                     labelText: 'Vehículo',
                     prefixIcon: const Icon(Icons.directions_bike, color: _naranja),
