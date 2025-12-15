@@ -18,6 +18,7 @@ import './providers/proveedor_roles.dart';
 import './providers/proveedor_carrito.dart';
 import './providers/proveedor_pedido.dart';
 import './providers/locale_provider.dart';
+import './providers/notificaciones_provider.dart';
 import './l10n/app_localizations.dart';
 // Controllers Proveedor
 import '../controllers/user/perfil_controller.dart';
@@ -141,6 +142,7 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => ProveedorRoles()..inicializar()),
         ChangeNotifierProvider(create: (_) => ProveedorCarrito()),
         ChangeNotifierProvider(create: (_) => PerfilController()),
+        ChangeNotifierProvider(create: (_) => NotificacionesProvider()),
         
         ChangeNotifierProvider(
         create: (_) => PedidoProvider(

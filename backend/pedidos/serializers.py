@@ -394,6 +394,10 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
     
     # 🟢 Logística Detallada
     datos_envio = serializers.SerializerMethodField()
+    puede_calificar_repartidor = serializers.SerializerMethodField()
+    calificacion_repartidor = serializers.SerializerMethodField()
+    puede_calificar_proveedor = serializers.SerializerMethodField()
+    calificacion_proveedor = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
@@ -475,6 +479,105 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
             return "En espera de repartidor"
         return obj.get_estado_display()
 
+    def get_puede_calificar_repartidor(self, obj):
+        """
+        Habilita la calificación del repartidor cuando el pedido está ENTREGADO
+        y el cliente aún no lo ha calificado.
+        """
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+
+        if not user or not user.is_authenticated:
+            return False
+        if obj.estado != EstadoPedido.ENTREGADO:
+            return False
+        if not obj.repartidor:
+            return False
+
+        try:
+          from calificaciones.models import Calificacion, TipoCalificacion
+          ya_califico = Calificacion.objects.filter(
+              pedido=obj,
+              calificador=user,
+              tipo=TipoCalificacion.CLIENTE_A_REPARTIDOR
+          ).exists()
+          return not ya_califico
+        except Exception:
+          return False
+
+    def get_calificacion_repartidor(self, obj):
+        """
+        Devuelve la calificación que el cliente ya dio al repartidor (si existe).
+        """
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return None
+        try:
+            from calificaciones.models import Calificacion, TipoCalificacion
+            cal = Calificacion.objects.filter(
+                pedido=obj,
+                calificador=user,
+                tipo=TipoCalificacion.CLIENTE_A_REPARTIDOR
+            ).first()
+            if cal:
+                return {
+                    'estrellas': cal.estrellas,
+                    'comentario': cal.comentario,
+                    'fecha': cal.created_at if hasattr(cal, 'created_at') else None,
+                }
+        except Exception:
+            return None
+        return None
+
+    def get_puede_calificar_proveedor(self, obj):
+        """
+        Habilita la calificación del proveedor cuando el pedido está ENTREGADO
+        y el cliente aún no lo ha calificado.
+        """
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+
+        if not user or not user.is_authenticated:
+            return False
+        if obj.estado != EstadoPedido.ENTREGADO:
+            return False
+        if not obj.proveedor:
+            return False
+
+        try:
+          from calificaciones.models import Calificacion, TipoCalificacion
+          ya_califico = Calificacion.objects.filter(
+              pedido=obj,
+              calificador=user,
+              tipo=TipoCalificacion.CLIENTE_A_PROVEEDOR
+          ).exists()
+          return not ya_califico
+        except Exception:
+          return False
+
+    def get_calificacion_proveedor(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return None
+        try:
+            from calificaciones.models import Calificacion, TipoCalificacion
+            cal = Calificacion.objects.filter(
+                pedido=obj,
+                calificador=user,
+                tipo=TipoCalificacion.CLIENTE_A_PROVEEDOR
+            ).first()
+            if cal:
+                return {
+                    'estrellas': cal.estrellas,
+                    'comentario': cal.comentario,
+                    'fecha': cal.created_at if hasattr(cal, 'created_at') else None,
+                }
+        except Exception:
+            return None
+        return None
+
     def get_pago_id(self, obj):
         try:
             return obj.pago.id
@@ -530,6 +633,7 @@ class PedidoRepartidorResumidoSerializer(serializers.ModelSerializer):
             'metodo_pago',
             'metodo_pago_display',
             'comision_repartidor',
+            'tarifa_servicio',
             'descripcion',  # Descripción general del pedido (no sensible)
             'zona_entrega',  # Solo zona general, NO dirección exacta
             'latitud_destino',  # Coordenadas para mostrar en mapa
@@ -594,6 +698,7 @@ class PedidoRepartidorDetalladoSerializer(serializers.ModelSerializer):
             'descripcion',
             'total',
             'comision_repartidor',
+            'tarifa_servicio',
             'direccion_origen',  # Dirección de recogida (proveedor)
             'latitud_origen',
             'longitud_origen',

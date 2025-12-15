@@ -1,10 +1,12 @@
-// lib/screens/user/notificaciones/pantalla_notificaciones.dart
+// lib/screens/user/catalogo/pantalla_notificaciones.dart
 
 import 'package:flutter/material.dart';
-import '../../../../../theme/jp_theme.dart';
+import 'package:provider/provider.dart';
+import '../../../theme/jp_theme.dart';
 import '../../../models/notificacion_model.dart';
+import '../../../providers/notificaciones_provider.dart';
 
-/// Pantalla de notificaciones del usuario
+/// Inbox unificado (push + internas) accesible desde la campana
 class PantallaNotificaciones extends StatefulWidget {
   const PantallaNotificaciones({super.key});
 
@@ -15,16 +17,14 @@ class PantallaNotificaciones extends StatefulWidget {
 class _PantallaNotificacionesState extends State<PantallaNotificaciones>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
-  List<NotificacionModel> _notificaciones = [];
-  bool _loading = true;
-  String _error = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _cargarNotificaciones();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<NotificacionesProvider>().recargar();
+    });
   }
 
   @override
@@ -33,143 +33,72 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
     super.dispose();
   }
 
-  Future<void> _cargarNotificaciones() async {
-    setState(() {
-      _loading = true;
-      _error = '';
-    });
-
-    try {
-      // TODO: Llamar al servicio real
-      // _notificaciones = await _notificacionesService.obtenerNotificaciones();
-      
-      // MOCK - Datos de prueba
-      await Future.delayed(const Duration(milliseconds: 800));
-      _notificaciones = _generarNotificacionesMock();
-      
-      setState(() {
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = 'Error al cargar notificaciones: $e';
-        _loading = false;
-      });
-    }
-  }
-
-  List<NotificacionModel> _generarNotificacionesMock() {
-    return [
-      NotificacionModel(
-        id: '1',
-        titulo: '¡Pedido en camino! 🚚',
-        mensaje: 'Tu pedido #1234 está siendo entregado. Llegará en 15 minutos.',
-        tipo: 'pedido',
-        fecha: DateTime.now().subtract(const Duration(minutes: 5)),
-        leida: false,
-        metadata: {'pedido_id': '1234'},
-      ),
-      NotificacionModel(
-        id: '2',
-        titulo: '🎉 Nueva promoción: 40% OFF',
-        mensaje: 'Happy Hour en bebidas. Aprovecha ahora.',
-        tipo: 'promocion',
-        fecha: DateTime.now().subtract(const Duration(hours: 2)),
-        leida: false,
-      ),
-      NotificacionModel(
-        id: '3',
-        titulo: 'Pago confirmado ✅',
-        mensaje: 'Tu pago de \$18.99 fue procesado exitosamente.',
-        tipo: 'pago',
-        fecha: DateTime.now().subtract(const Duration(hours: 5)),
-        leida: true,
-        metadata: {'monto': 18.99},
-      ),
-      NotificacionModel(
-        id: '4',
-        titulo: 'Pedido entregado',
-        mensaje: 'Tu pedido #1230 fue entregado. ¡Buen provecho!',
-        tipo: 'pedido',
-        fecha: DateTime.now().subtract(const Duration(days: 1)),
-        leida: true,
-      ),
-      NotificacionModel(
-        id: '5',
-        titulo: 'Sistema actualizado',
-        mensaje: 'Nueva versión disponible con mejoras de rendimiento.',
-        tipo: 'sistema',
-        fecha: DateTime.now().subtract(const Duration(days: 2)),
-        leida: true,
-      ),
-    ];
-  }
-
-  List<NotificacionModel> get _noLeidas {
-    return _notificaciones.where((n) => !n.leida).toList();
-  }
-
-  List<NotificacionModel> get _todas {
-    return _notificaciones;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: JPColors.background,
-      appBar: AppBar(
-        backgroundColor: JPColors.primary,
-        foregroundColor: Colors.white,
-        title: const Text('Notificaciones'),
-        elevation: 0,
-        actions: [
-          if (_noLeidas.isNotEmpty)
-            TextButton(
-              onPressed: _marcarTodasComoLeidas,
-              child: const Text(
-                'Marcar todas',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+    return Consumer<NotificacionesProvider>(
+      builder: (context, inbox, _) {
+        final noLeidasCount = inbox.noLeidas.length;
+        final totalCount = inbox.todas.length;
+
+        return Scaffold(
+          backgroundColor: JPColors.background,
+          appBar: AppBar(
+            backgroundColor: JPColors.primary,
+            foregroundColor: Colors.white,
+            title: const Text('Notificaciones'),
+            elevation: 0,
+            actions: [
+              if (noLeidasCount > 0)
+                TextButton(
+                  onPressed: inbox.marcarTodasComoLeidas,
+                  child: const Text(
+                    'Marcar todas',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
+            ],
+            bottom: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.white,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              tabs: [
+                Tab(text: 'No leídas ($noLeidasCount)'),
+                Tab(text: 'Todas ($totalCount)'),
+              ],
             ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: [
-            Tab(
-              text: 'No leídas (${_noLeidas.length})',
-            ),
-            const Tab(
-              text: 'Todas',
-            ),
-          ],
-        ),
-      ),
-      body: _buildBody(),
+          ),
+          body: _buildBody(inbox),
+        );
+      },
     );
   }
 
-  Widget _buildBody() {
-    if (_loading) {
+  Widget _buildBody(NotificacionesProvider inbox) {
+    if (inbox.cargando) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_error.isNotEmpty) {
+    if (inbox.error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(_error, style: const TextStyle(color: JPColors.textSecondary)),
-            const SizedBox(height: 16),
+            const Icon(Icons.error_outline, size: 64, color: JPColors.textHint),
+            const SizedBox(height: 12),
+            Text(
+              inbox.error!,
+              style: const TextStyle(color: JPColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: _cargarNotificaciones,
+              onPressed: () {
+                inbox.recargar();
+              },
               child: const Text('Reintentar'),
             ),
           ],
@@ -180,14 +109,15 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
     return TabBarView(
       controller: _tabController,
       children: [
-        _buildListaNotificaciones(_noLeidas, esNoLeidas: true),
-        _buildListaNotificaciones(_todas, esNoLeidas: false),
+        _buildListaNotificaciones(inbox.noLeidas, inbox, esNoLeidas: true),
+        _buildListaNotificaciones(inbox.todas, inbox, esNoLeidas: false),
       ],
     );
   }
 
   Widget _buildListaNotificaciones(
-    List<NotificacionModel> notificaciones, {
+    List<NotificacionModel> notificaciones,
+    NotificacionesProvider inbox, {
     required bool esNoLeidas,
   }) {
     if (notificaciones.isEmpty) {
@@ -200,7 +130,7 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
               size: 80,
               color: Colors.grey[300],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               esNoLeidas
                   ? 'No tienes notificaciones nuevas'
@@ -216,44 +146,39 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
     }
 
     return RefreshIndicator(
-      onRefresh: _cargarNotificaciones,
+      onRefresh: inbox.recargar,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: notificaciones.length,
         itemBuilder: (context, index) {
+          final notificacion = notificaciones[index];
           return _NotificacionCard(
-            notificacion: notificaciones[index],
-            onTap: () => _abrirNotificacion(notificaciones[index]),
-            onMarcarLeida: () => _marcarComoLeida(notificaciones[index]),
-            onEliminar: () => _eliminarNotificacion(notificaciones[index]),
+            notificacion: notificacion,
+            onTap: () => _abrirNotificacion(notificacion, inbox),
+            onMarcarLeida: () => _marcarComoLeida(notificacion, inbox),
+            onEliminar: () => inbox.eliminar(notificacion.id),
           );
         },
       ),
     );
   }
 
-  void _abrirNotificacion(NotificacionModel notificacion) {
-    // Marcar como leída
+  void _abrirNotificacion(
+    NotificacionModel notificacion,
+    NotificacionesProvider inbox,
+  ) {
     if (!notificacion.leida) {
-      _marcarComoLeida(notificacion);
+      _marcarComoLeida(notificacion, inbox);
     }
 
-    // Navegar según el tipo
     switch (notificacion.tipo) {
       case 'pedido':
-        // TODO: Navegar a detalle de pedido
-        debugPrint('Abrir pedido: ${notificacion.metadata?['pedido_id']}');
-        break;
       case 'promocion':
-        // TODO: Navegar a promociones
-        debugPrint('Abrir promociones');
-        break;
       case 'pago':
-        // TODO: Navegar a historial de pagos
-        debugPrint('Abrir historial de pagos');
+        // En este paso solo marcamos como leída; la navegación específica se puede
+        // agregar usando metadata cuando esté listo.
         break;
       default:
-        // Mostrar detalle de la notificación
         _mostrarDetalleNotificacion(notificacion);
     }
   }
@@ -261,105 +186,55 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
   void _mostrarDetalleNotificacion(NotificacionModel notificacion) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(notificacion.icono, color: notificacion.color),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  notificacion.titulo,
-                  style: const TextStyle(fontSize: 18),
-                ),
+      builder: (_) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(notificacion.icono, color: notificacion.color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                notificacion.titulo,
+                style: const TextStyle(fontSize: 18),
               ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(notificacion.mensaje),
-              const SizedBox(height: 12),
-              Text(
-                notificacion.tiempoTranscurrido,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  void _marcarComoLeida(NotificacionModel notificacion) {
-    setState(() {
-      final index = _notificaciones.indexWhere((n) => n.id == notificacion.id);
-      if (index != -1) {
-        _notificaciones[index] = notificacion.copyWith(leida: true);
-      }
-    });
-
-    // TODO: Actualizar en el backend
-    // await _notificacionesService.marcarComoLeida(notificacion.id);
-  }
-
-  void _marcarTodasComoLeidas() {
-    setState(() {
-      _notificaciones = _notificaciones.map((n) {
-        return n.copyWith(leida: true);
-      }).toList();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Todas las notificaciones marcadas como leídas'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    // TODO: Actualizar en el backend
-    // await _notificacionesService.marcarTodasComoLeidas();
-  }
-
-  void _eliminarNotificacion(NotificacionModel notificacion) {
-    setState(() {
-      _notificaciones.removeWhere((n) => n.id == notificacion.id);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Notificación eliminada'),
-        duration: const Duration(seconds: 2),
-        action: SnackBarAction(
-          label: 'Deshacer',
-          onPressed: () {
-            setState(() {
-              _notificaciones.add(notificacion);
-              _notificaciones.sort((a, b) => b.fecha.compareTo(a.fecha));
-            });
-          },
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notificacion.mensaje),
+            const SizedBox(height: 12),
+            Text(
+              notificacion.tiempoTranscurrido,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
+  }
 
-    // TODO: Eliminar en el backend
-    // await _notificacionesService.eliminarNotificacion(notificacion.id);
+  void _marcarComoLeida(
+    NotificacionModel notificacion,
+    NotificacionesProvider inbox,
+  ) {
+    inbox.marcarComoLeida(notificacion.id);
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════
 // WIDGETS AUXILIARES
-// ══════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════
 
 class _NotificacionCard extends StatelessWidget {
   final NotificacionModel notificacion;
@@ -387,11 +262,7 @@ class _NotificacionCard extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(
-          Icons.delete,
-          color: Colors.white,
-          size: 28,
-        ),
+        child: const Icon(Icons.delete, color: Colors.white, size: 28),
       ),
       onDismissed: (_) => onEliminar(),
       child: GestureDetector(
@@ -399,25 +270,24 @@ class _NotificacionCard extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: notificacion.leida
-                ? Colors.white
-                : notificacion.color.withValues(alpha: 0.05),
+            decoration: BoxDecoration(
+              color: notificacion.leida
+                  ? Colors.white
+                  : notificacion.color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: notificacion.leida
                   ? Colors.grey[200]!
-                  : notificacion.color.withValues(alpha: 0.2),
+                  : notificacion.color.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icono
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: notificacion.color.withValues(alpha: 0.1),
+                  color: notificacion.color.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -427,8 +297,6 @@ class _NotificacionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Contenido
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,12 +337,26 @@ class _NotificacionCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      notificacion.tiempoTranscurrido,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          notificacion.tiempoTranscurrido,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        if (!notificacion.leida) ...[
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: onMarcarLeida,
+                            child: const Text(
+                              'Marcar leída',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),

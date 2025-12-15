@@ -36,6 +36,7 @@ class Pedido {
   final double comisionRepartidor;
   final double comisionProveedor;
   final double gananciaApp;
+  final double tarifaServicio;
   
   final bool aceptadoPorRepartidor;
   final bool confirmadoPorProveedor;
@@ -46,6 +47,10 @@ class Pedido {
   final bool esPedidoActivo;
   final bool puedeSerCancelado;
   final DatosEnvio? datosEnvio;
+  final bool puedeCalificarRepartidor;
+  final double? calificacionRepartidor;
+  final bool puedeCalificarProveedor;
+  final double? calificacionProveedor;
 
   final DateTime creadoEn;
   final DateTime actualizadoEn;
@@ -87,6 +92,7 @@ class Pedido {
     required this.comisionRepartidor,
     required this.comisionProveedor,
     required this.gananciaApp,
+    required this.tarifaServicio,
     required this.aceptadoPorRepartidor,
     required this.confirmadoPorProveedor,
     this.canceladoPor,
@@ -95,6 +101,10 @@ class Pedido {
     required this.esPedidoActivo,
     required this.puedeSerCancelado,
     this.datosEnvio,
+    this.puedeCalificarRepartidor = false,
+    this.calificacionRepartidor,
+    this.puedeCalificarProveedor = false,
+    this.calificacionProveedor,
     required this.creadoEn,
     required this.actualizadoEn,
     this.fechaConfirmado,
@@ -174,6 +184,7 @@ class Pedido {
       comisionRepartidor: asDouble(json['comision_repartidor']),
       comisionProveedor: asDouble(json['comision_proveedor']),
       gananciaApp: asDouble(json['ganancia_app']),
+      tarifaServicio: asDouble(json['tarifa_servicio']),
       aceptadoPorRepartidor: json['aceptado_por_repartidor'] ?? false,
       confirmadoPorProveedor: json['confirmado_por_proveedor'] ?? false,
       canceladoPor: json['cancelado_por'],
@@ -184,6 +195,16 @@ class Pedido {
       datosEnvio: json['datos_envio'] != null
           ? DatosEnvio.fromJson(json['datos_envio'] as Map<String, dynamic>)
           : null,
+      puedeCalificarRepartidor: json['puede_calificar_repartidor'] ?? false,
+      calificacionRepartidor: json['calificacion_repartidor'] is Map
+          ? double.tryParse(
+                  (json['calificacion_repartidor']['estrellas'] ?? '').toString())
+          : double.tryParse((json['calificacion_repartidor'] ?? '').toString()),
+      puedeCalificarProveedor: json['puede_calificar_proveedor'] ?? false,
+      calificacionProveedor: json['calificacion_proveedor'] is Map
+          ? double.tryParse(
+                  (json['calificacion_proveedor']['estrellas'] ?? '').toString())
+          : double.tryParse((json['calificacion_proveedor'] ?? '').toString()),
       creadoEn: asDate(json['creado_en']),
       actualizadoEn: asDate(json['actualizado_en']),
       fechaConfirmado: json['fecha_confirmado'] != null 
@@ -214,6 +235,7 @@ class Pedido {
       'descripcion': descripcion,
       'total': total,
       'metodo_pago': metodoPago,
+      'tarifa_servicio': tarifaServicio,
       'direccion_origen': direccionOrigen,
       'latitud_origen': latitudOrigen,
       'longitud_origen': longitudOrigen,

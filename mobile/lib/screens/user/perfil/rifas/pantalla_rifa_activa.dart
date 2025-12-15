@@ -95,102 +95,174 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva> {
     final elegible = elegibilidad?['elegible'] == true;
     final pedidosCompletados = elegibilidad?['pedidos_completados'] ?? 0;
     final pedidosMinimos = _rifa!['pedidos_minimos'] ?? elegibilidad?['pedidos_minimos'] ?? 3;
+    final progreso = (pedidosMinimos > 0)
+        ? (pedidosCompletados / pedidosMinimos).clamp(0.0, 1.0)
+        : 0.0;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return Container(
+      color: const Color(0xFFF5F7FB),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
               ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  titulo,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  premio,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _buildChip(Icons.card_giftcard, 'Premio: $valor'),
-                    _buildChip(Icons.calendar_today, 'Sorteo: $fechaSorteo'),
-                    _buildChip(Icons.timelapse, 'Días: $diasRestantes'),
-                    _buildChip(Icons.people, 'Participantes: $totalParticipantes'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Tu elegibilidad',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(
-                        elegible ? Icons.check_circle : Icons.info_outline,
-                        color: elegible ? JPColors.success : JPColors.warning,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          elegible
-                              ? '¡Ya estás participando!'
-                              : 'Te faltan pedidos para participar.',
-                          style: TextStyle(
-                            color: elegible ? JPColors.success : JPColors.warning,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Rifa del mes',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                         ),
                       ),
+                      const Spacer(),
+                      if (diasRestantes.isNotEmpty)
+                        _buildChip(Icons.timelapse, '$diasRestantes días', small: true),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text('Pedidos completados: $pedidosCompletados'),
-                  Text('Pedidos mínimos requeridos: $pedidosMinimos'),
+                  const SizedBox(height: 12),
+                  Text(
+                    titulo,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (premio.isNotEmpty)
+                    Text(
+                      premio,
+                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (valor.isNotEmpty) _buildChip(Icons.card_giftcard, 'Premio: $valor'),
+                      if (fechaSorteo.isNotEmpty) _buildChip(Icons.event, 'Sorteo: $fechaSorteo'),
+                      _buildChip(Icons.people, 'Participantes: $totalParticipantes'),
+                    ],
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tu elegibilidad',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          elegible ? Icons.verified_rounded : Icons.info_outline,
+                          color: elegible ? JPColors.success : JPColors.warning,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            elegible
+                                ? '¡Ya estás dentro!'
+                                : 'Completa los pedidos para participar.',
+                            style: TextStyle(
+                              color: elegible ? JPColors.success : JPColors.warning,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          '$pedidosCompletados / $pedidosMinimos pedidos',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${(progreso * 100).round()}%',
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progreso,
+                        minHeight: 8,
+                        backgroundColor: const Color(0xFFE8EEF5),
+                        valueColor: const AlwaysStoppedAnimation<Color>(JPColors.primary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child:const  Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cómo participar',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                    ),
+                    SizedBox(height: 10),
+                    _Paso(texto: 'Realiza tus pedidos habituales hasta cumplir el mínimo.'),
+                    SizedBox(height: 6),
+                    _Paso(texto: 'Una vez cumplido, quedas inscrito automáticamente.'),
+                    SizedBox(height: 6),
+                    _Paso(texto: 'Revisa esta sección para ver fecha de sorteo y participantes.'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildChip(IconData icon, String label) {
+  Widget _buildChip(IconData icon, String label, {bool small = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: small ? 8 : 10, vertical: small ? 4 : 6),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
@@ -198,11 +270,40 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 16),
+          Icon(icon, color: Colors.white, size: small ? 14 : 16),
           const SizedBox(width: 6),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+          Text(label, style: TextStyle(color: Colors.white, fontSize: small ? 11 : 12)),
         ],
       ),
+    );
+  }
+}
+
+class _Paso extends StatelessWidget {
+  final String texto;
+  const _Paso({required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 2),
+          child: Icon(Icons.check_circle, size: 16, color: JPColors.primary),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            texto,
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: JPColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -10,6 +10,7 @@ import '../../../../../services/productos_service.dart';
 import '../../../models/promocion_model.dart';
 import '../../../models/producto_model.dart';
 import 'dart:async';
+import 'dart:math';
 
 /// Pantalla de detalle de una promoción
 class PantallaPromocionDetalle extends StatefulWidget {
@@ -79,14 +80,47 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
         throw Exception("No se recibieron datos de la promoción");
       }
 
-      // Cargar productos en oferta del backend
       final productosService = ProductosService();
-      final productosReales = await productosService.obtenerProductosEnOferta();
+
+      List<ProductoModel> productosReales = [];
+
+      // 1) Producto asociado
+      if ((promocion.productoAsociadoId ?? '').isNotEmpty) {
+        try {
+          final prod = await productosService.obtenerProducto(promocion.productoAsociadoId!);
+          productosReales.add(prod);
+        } catch (_) {
+          // continúa con otros métodos
+        }
+      }
+
+      // 2) Categoría asociada
+      if (productosReales.isEmpty && (promocion.categoriaAsociadaId ?? '').isNotEmpty) {
+        productosReales = await productosService.obtenerProductos(
+          categoriaId: promocion.categoriaAsociadaId,
+        );
+      }
+
+      // 3) Fallback: ofertas/random para que siempre haya sugerencias reales
+      if (productosReales.isEmpty) {
+        productosReales = await productosService.obtenerProductosEnOferta(random: true);
+        if (productosReales.isEmpty) {
+          productosReales = await productosService.obtenerProductosMasPopulares(random: true);
+        }
+      }
 
       if (mounted) {
         setState(() {
-          // Limitamos a los primeros 6 productos para no saturar la pantalla
-          _productosIncluidos = productosReales.take(6).toList();
+          // Filtramos duplicados por id y tomamos 8 como máximo
+          final vistos = <String>{};
+          final depurados = <ProductoModel>[];
+          for (final p in productosReales) {
+            if (p.id.isEmpty || vistos.contains(p.id)) continue;
+            vistos.add(p.id);
+            depurados.add(p);
+          }
+          depurados.shuffle(Random());
+          _productosIncluidos = depurados.take(8).toList();
           _loading = false;
         });
       }
@@ -125,8 +159,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(promocion),
-                if (promocion.fechaFin != null && _tiempoRestante > Duration.zero)
-                  _buildContador(),
+                if (promocion.fechaFin != null) _buildContador(),
                 const SizedBox(height: 24),
                 _buildDescripcion(promocion),
                 const SizedBox(height: 24),
@@ -294,7 +327,37 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
   }
 
   Widget _buildContador() {
-    return const SizedBox.shrink();
+    final dias = _tiempoRestante.inDays;
+    final horas = _tiempoRestante.inHours.remainder(24);
+    final minutos = _tiempoRestante.inMinutes.remainder(60);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: JPColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.timer_outlined, color: JPColors.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _tiempoRestante == Duration.zero
+                    ? 'La promoción ha expirado'
+                    : 'Termina en $dias d $horas h $minutos m',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: JPColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildDescripcion(PromocionModel promocion) {
@@ -421,6 +484,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
             itemBuilder: (context, index) {
               return _ProductoPromoCard(
                 producto: _productosIncluidos[index],
+                onTap: () => Rutas.irAProductoDetalle(context, _productosIncluidos[index]),
               );
             },
           ),
@@ -475,15 +539,12 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
   Widget _buildBottomBar(PromocionModel promocion) {
     // Calculamos totales solo si hay productos específicos
-    final precioTotal = _productosIncluidos.fold<double>(
+    final precioTotal = _productosIncluidos.fold<double>(0, (sum, p) => sum + p.precio);
+    final precioAnterior = _productosIncluidos.fold<double>(
       0,
-      (sum, p) => sum + p.precio,
+      (sum, p) => sum + (p.precioAnterior ?? p.precio),
     );
-    final precioOriginal = _productosIncluidos.fold<double>(
-      0,
-      (sum, p) => sum + p.precio,
-    );
-    final ahorro = precioOriginal - precioTotal;
+    final ahorro = (precioAnterior - precioTotal).clamp(0, double.infinity);
     
     // Si no hay productos específicos, mostramos botón simple
     final mostrarTotales = _productosIncluidos.isNotEmpty;
@@ -567,7 +628,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                       ),
                     ),
                     child: Text(
-                      mostrarTotales ? 'Agregar Combo' : 'Ver Catálogo',
+                      mostrarTotales ? 'Agregar combo' : 'Explorar productos',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -608,15 +669,8 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
         });
       }
     } else {
-      // Si es una promo general, llevamos al catálogo
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Explora el catálogo para aplicar esta promoción'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      // Promo general: ir al home/catalogo
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -681,8 +735,9 @@ class _InfoRow extends StatelessWidget {
 
 class _ProductoPromoCard extends StatelessWidget {
   final ProductoModel producto;
+  final VoidCallback? onTap;
 
-  const _ProductoPromoCard({required this.producto});
+  const _ProductoPromoCard({required this.producto, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -703,7 +758,10 @@ class _ProductoPromoCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Row(
         children: [
           // Imagen del producto
           ClipRRect(
@@ -791,6 +849,7 @@ class _ProductoPromoCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

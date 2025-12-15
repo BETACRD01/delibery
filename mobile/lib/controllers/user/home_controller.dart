@@ -10,6 +10,15 @@ import '../../services/usuarios_service.dart';
 /// Controller para la pantalla Home
 /// Maneja el estado y la lógica de negocio
 class HomeController extends ChangeNotifier {
+  // Cache en memoria para primera pintura sin red
+  static List<CategoriaModel>? _cacheCategorias;
+  static List<PromocionModel>? _cachePromos;
+  static List<ProductoModel>? _cacheDestacados;
+  static List<ProductoModel>? _cacheOfertas;
+  static List<ProductoModel>? _cacheNovedades;
+  static List<ProductoModel>? _cachePopulares;
+  static DateTime? _cacheTimestamp;
+
   // ════════════════════════════════════════════════════════════════
   // SERVICIOS
   // ════════════════════════════════════════════════════════════════
@@ -57,6 +66,11 @@ class HomeController extends ChangeNotifier {
   int get rifasParticipadas => _rifasParticipadas;
   int get rifasGanadas => _rifasGanadas;
 
+  // Constructor: intenta hidratar con cache en memoria
+  HomeController() {
+    _hidratarDesdeCache();
+  }
+
   // ════════════════════════════════════════════════════════════════
   // MÉTODOS PÚBLICOS - CARGA DE DATOS
   // ════════════════════════════════════════════════════════════════
@@ -80,6 +94,7 @@ class HomeController extends ChangeNotifier {
 
       _loading = false;
       _error = null;
+      _guardarCache();
       notifyListeners();
     } catch (e) {
       _loading = false;
@@ -107,6 +122,7 @@ class HomeController extends ChangeNotifier {
 
       _loading = false;
       _error = null;
+      _guardarCache();
       notifyListeners();
     } catch (e) {
       _loading = false;
@@ -244,6 +260,27 @@ class HomeController extends ChangeNotifier {
   void limpiarError() {
     _error = null;
     notifyListeners();
+  }
+
+  void _hidratarDesdeCache() {
+    if (_cacheTimestamp == null) return;
+    _categorias = _cacheCategorias ?? [];
+    _promociones = _cachePromos ?? [];
+    _productosDestacados = _cacheDestacados ?? [];
+    _productosEnOferta = _cacheOfertas ?? [];
+    _productosNovedades = _cacheNovedades ?? [];
+    _productosMasPopulares = _cachePopulares ?? [];
+    notifyListeners();
+  }
+
+  void _guardarCache() {
+    _cacheCategorias = List<CategoriaModel>.from(_categorias);
+    _cachePromos = List<PromocionModel>.from(_promociones);
+    _cacheDestacados = List<ProductoModel>.from(_productosDestacados);
+    _cacheOfertas = List<ProductoModel>.from(_productosEnOferta);
+    _cacheNovedades = List<ProductoModel>.from(_productosNovedades);
+    _cachePopulares = List<ProductoModel>.from(_productosMasPopulares);
+    _cacheTimestamp = DateTime.now();
   }
 
   /// Formatea los puntos acumulados

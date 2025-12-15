@@ -1046,14 +1046,7 @@ PreferredSizeWidget _buildAppBar() {
                     tooltip: 'Llamar al cliente',
                   ),
                   IconButton(
-                    icon: Image.asset(
-                      'assets/images/whatsapp_icon.png',
-                      width: 24,
-                      height: 24,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.chat, color: Color(0xFF25D366));
-                      },
-                    ),
+                    icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
                     onPressed: () => _abrirWhatsAppCliente(pedido),
                     tooltip: 'Enviar mensaje por WhatsApp',
                   ),

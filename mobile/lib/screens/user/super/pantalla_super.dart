@@ -35,70 +35,57 @@ class _PantallaSuperState extends State<PantallaSuper> {
     return ChangeNotifierProvider.value(
       value: _controller,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'JP Super',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Consumer<SuperController>(
+            builder: (context, controller, _) {
+              if (controller.categorias.isEmpty && controller.loading) {
+                return const _SuperSkeleton();
+              }
+
+              if (controller.categorias.isEmpty) {
+                return _buildSinCategorias();
+              }
+
+              return RefreshIndicator(
+                onRefresh: controller.refrescar,
+                color: Colors.teal,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                        child: const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'JP Súper',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF15212B),
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'Farmacia, envíos y súper en un solo lugar',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF6B7A90),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    _buildGridCategorias(controller),
+                  ],
+                ),
+              );
+            },
           ),
-          elevation: 0,
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
         ),
-        body: Consumer<SuperController>(
-          builder: (context, controller, _) {
-            if (controller.error != null) {
-              return _buildError(controller.error!);
-            }
-
-            if (controller.categorias.isEmpty && controller.loading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (controller.categorias.isEmpty) {
-              return _buildSinCategorias();
-            }
-
-            return _buildListaCategorias(controller);
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildError(String error) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 100, color: Colors.red[300]),
-          const SizedBox(height: 24),
-          Text(
-            'Error al cargar',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              error,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _controller.refrescar(),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Reintentar'),
-          ),
-        ],
       ),
     );
   }
@@ -128,154 +115,38 @@ class _PantallaSuperState extends State<PantallaSuper> {
     );
   }
 
-  Widget _buildListaCategorias(SuperController controller) {
-    return RefreshIndicator(
-      onRefresh: controller.refrescar,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: controller.categorias.length,
-        itemBuilder: (context, index) {
-          final categoria = controller.categorias[index];
-          return _buildTarjetaCategoria(categoria);
-        },
-      ),
-    );
-  }
-
-  Widget _buildTarjetaCategoria(CategoriaSuperModel categoria) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _onCategoriaPressed(categoria),
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Imagen de la categoría
-            if (categoria.imagenUrl != null && categoria.imagenUrl!.isNotEmpty)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: Stack(
-                  children: [
-                    CachedNetworkImage(
-                      imageUrl: categoria.imagenUrl!,
-                      height: 180,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        height: 180,
-                        color: categoria.color.withValues(alpha: 0.1),
-                        child: Center(
-                          child: Icon(
-                            categoria.icono,
-                            size: 60,
-                            color: categoria.color.withValues(alpha: 0.3),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        height: 180,
-                        color: categoria.color.withValues(alpha: 0.1),
-                        child: Icon(
-                          categoria.icono,
-                          size: 60,
-                          color: categoria.color.withValues(alpha: 0.3),
-                        ),
-                      ),
-                    ),
-                    // Badge NUEVO
-                    if (categoria.destacado)
-                      Positioned(
-                        top: 12,
-                        right: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'NUEVO',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              )
-            else
-              // Fallback sin imagen
-              Container(
-                height: 180,
-                decoration: BoxDecoration(
-                  color: categoria.color.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                ),
-                child: Center(
-                  child: Icon(
-                    categoria.icono,
-                    size: 80,
-                    color: categoria.color.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-
-            // Contenido de la tarjeta
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: categoria.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      categoria.icono,
-                      color: categoria.color,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          categoria.nombre,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          categoria.descripcion,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey[400],
-                  ),
-                ],
-              ),
+  Widget _buildGridCategorias(SuperController controller) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+      sliver: SliverLayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.crossAxisExtent;
+          int crossAxisCount = 2;
+          if (width > 900) {
+            crossAxisCount = 4;
+          } else if (width > 640) {
+            crossAxisCount = 3;
+          }
+          const spacing = 12.0;
+          return SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
+              childAspectRatio: 0.82,
             ),
-          ],
-        ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final categoria = controller.categorias[index];
+                return _CategoriaCard(
+                  categoria: categoria,
+                  onTap: () => _onCategoriaPressed(categoria),
+                );
+              },
+              childCount: controller.categorias.length,
+            ),
+          );
+        },
       ),
     );
   }
@@ -288,6 +159,152 @@ class _PantallaSuperState extends State<PantallaSuper> {
       context,
       MaterialPageRoute(
         builder: (context) => PantallaCategoriaDetalle(categoria: categoria),
+      ),
+    );
+  }
+}
+
+class _CategoriaCard extends StatelessWidget {
+  final CategoriaSuperModel categoria;
+  final VoidCallback? onTap;
+
+  const _CategoriaCard({required this.categoria, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = categoria.color;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: Container(
+                height: 96,
+                width: double.infinity,
+                color: color.withValues(alpha: 0.08),
+                child: CachedNetworkImage(
+                  imageUrl: categoria.imagenUrl ?? '',
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Center(
+                    child: Icon(categoria.icono, color: color.withValues(alpha: 0.35), size: 42),
+                  ),
+                  errorWidget: (_, __, ___) => Center(
+                    child: Icon(categoria.icono, color: color.withValues(alpha: 0.35), size: 42),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(categoria.icono, color: color, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          categoria.nombre,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF15212B),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          categoria.descripcion,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7A90),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.store_mall_directory, size: 14, color: Color(0xFF45525F)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${categoria.totalProveedores ?? 0} prov.',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF45525F),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuperSkeleton extends StatelessWidget {
+  const _SuperSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: 6,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, __) => Container(
+        height: 180,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(14),
+        ),
       ),
     );
   }

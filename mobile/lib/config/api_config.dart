@@ -179,6 +179,7 @@ class ApiConfig {
   static String get _delivery => '$apiUrl/repartidores';
   static String get _admin => '$apiUrl/admin';
   static String get _payments => '$apiUrl/pagos';
+  static String get _ratings => '$apiUrl/calificaciones';
 
   // --- A. AUTENTICACION ---
   static String get registro => '$_auth/registro/';
@@ -297,6 +298,10 @@ class ApiConfig {
   static String get repartidorCalificaciones => '$_delivery/calificaciones/';
   static String repartidorCalificarCliente(int id) => '$_delivery/calificaciones/clientes/$id/';
 
+  // --- CALIFICACIONES GENERALES ---
+  static String get calificacionesRapida => '$_ratings/rapida/';
+  static String calificacionesPendientesPedido(int pedidoId) => '$_ratings/pendientes/$pedidoId/';
+
   // 🆕 Datos bancarios del repartidor
   static String get repartidorDatosBancarios => '$_delivery/datos-bancarios/';
 
@@ -406,9 +411,9 @@ class ApiConfig {
   static String get _super => '$apiUrl/super-categorias';
 
   // Categorías Super
-  static String get superCategorias => '$_super/';
-  static String superCategoriaDetalle(String id) => '$_super/$id/';
-  static String superCategoriaProductos(String id) => '$_super/$id/productos/';
+  static String get superCategorias => '$_super/categorias/';
+  static String superCategoriaDetalle(String id) => '$_super/categorias/$id/';
+  static String superCategoriaProductos(String id) => '$_super/categorias/$id/productos/';
 
   // Proveedores Super
   static String get superProveedores => '$_super/proveedores/';

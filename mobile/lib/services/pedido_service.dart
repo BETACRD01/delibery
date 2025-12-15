@@ -164,4 +164,48 @@ class PedidoService {
       throw Exception('Error al obtener ganancias: $e');
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Calificación rápida (cliente → repartidor)
+  // ---------------------------------------------------------------------------
+  Future<void> calificarRepartidor({
+    required int pedidoId,
+    required int estrellas,
+    String? comentario,
+  }) async {
+    try {
+      await _client.post(
+        ApiConfig.calificacionesRapida,
+        {
+          'pedido_id': pedidoId,
+          'tipo': 'cliente_a_repartidor',
+          'estrellas': estrellas,
+          if (comentario != null && comentario.isNotEmpty) 'comentario': comentario,
+        },
+      );
+    } catch (e) {
+      throw Exception('No se pudo enviar la calificación: $e');
+    }
+  }
+
+  // Calificación rápida (cliente → proveedor)
+  Future<void> calificarProveedor({
+    required int pedidoId,
+    required int estrellas,
+    String? comentario,
+  }) async {
+    try {
+      await _client.post(
+        ApiConfig.calificacionesRapida,
+        {
+          'pedido_id': pedidoId,
+          'tipo': 'cliente_a_proveedor',
+          'estrellas': estrellas,
+          if (comentario != null && comentario.isNotEmpty) 'comentario': comentario,
+        },
+      );
+    } catch (e) {
+      throw Exception('No se pudo enviar la calificación: $e');
+    }
+  }
 }

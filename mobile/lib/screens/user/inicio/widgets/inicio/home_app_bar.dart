@@ -1,251 +1,244 @@
 // lib/screens/user/inicio/widgets/inicio/home_app_bar.dart
 
 import 'package:flutter/material.dart';
-import '../../../../../theme/jp_theme.dart';
-import '../../../../../services/auth_service.dart';
-import '../../../../../config/rutas.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:badges/badges.dart' as badges;
+import '../../../../../theme/jp_theme.dart';
 
-/// AppBar personalizado para la pantalla Home
+/// AppBar premium y responsive para Home.
+/// Se controla desde PantallaHome pasando props (sin lógica interna extra).
 class HomeAppBar extends StatelessWidget {
   final VoidCallback? onNotificationTap;
   final VoidCallback? onSearchTap;
-  final int notificacionesCount;
-  final String nombreUsuario;
-  final String? fotoPerfilUrl;
+  final int unreadCount;
+  final String title;
+  final String subtitle;
   final String? logoAssetPath;
+  final String? logoNetworkUrl;
 
   const HomeAppBar({
     super.key,
     this.onNotificationTap,
     this.onSearchTap,
-    this.notificacionesCount = 0,
-    this.nombreUsuario = 'Usuario',
-    this.fotoPerfilUrl,
-    this.logoAssetPath,
+    this.unreadCount = 0,
+    this.title = 'JP Express',
+    this.subtitle = 'Entrega rápida y confiable',
+    this.logoAssetPath = 'assets/images/Beta.png',
+    this.logoNetworkUrl,
   });
-
-  // Tamaño deseado para el logo (compacto: 32.0)
-  static const double _logoSize = 48.0;
-  
-  // Ruta de logo predeterminada (desde el pubspec.yaml)
-  static const String _defaultLogoPath = 'assets/images/Beta.png'; 
 
   @override
   Widget build(BuildContext context) {
-    const double searchBarHeight = 46.0; 
-    
+    final width = MediaQuery.sizeOf(context).width;
+    final isCompact = width < 340;
+    final logoSize = isCompact ? 48.0 : 56.0;
+    final titleSize = isCompact ? 18.0 : 20.5;
+    final subtitleSize = isCompact ? 12.0 : 13.0;
+    final horizontalPad = isCompact ? 14.0 : 18.0;
+    final toolbarH = isCompact ? 64.0 : 70.0;
+    // Altura del buscador aún más compacta
+    final bottomH = isCompact ? 46.0 : 50.0;
+
     return SliverAppBar(
-      expandedHeight: 90,
-      toolbarHeight: 55,
-      floating: true,
       pinned: false,
-      snap: true,
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
+      floating: false,
+      snap: false,
       elevation: 0,
+      toolbarHeight: toolbarH,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      titleSpacing: horizontalPad,
       centerTitle: false,
-      // Espaciado estable; sin desplazamientos dinámicos
-      titleSpacing: 0,
-
-      // La Barra de búsqueda está en el 'bottom' para garantizar la separación.
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(searchBarHeight),
-        child: Column(
-          children: [
-            _buildSearchBar(context),
-            // Línea divisora
-            Container(color: Colors.grey[200], height: 0.5),
-          ],
-        ),
-      ),
-
-      // LOGO Y NOMBRE (Title)
-      title: Padding(
-        padding: const EdgeInsets.only(left: 16),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildLogoWidget(),
-            const SizedBox(width: 8),
-            const Text(
-              'JP Express',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
-                color: JPColors.textPrimary,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // ACCIONES A LA DERECHA
-      actions: [
-        _buildNotificationIcon(),
-        const SizedBox(width: 4),
-
-        IconButton(
-          icon: const Icon(
-            Icons.logout_rounded,
-            color: JPColors.error,
-            size: 26,
+      title: Row(
+        children: [
+          _Logo(
+            size: logoSize,
+            assetPath: logoAssetPath,
+            networkUrl: logoNetworkUrl,
           ),
-          tooltip: 'Cerrar Sesión',
-          onPressed: () => _confirmarCerrarSesion(context),
-        ),
-        const SizedBox(width: 16),
-      ],
-    );
-  }
-
-  // 🔍 BARRA DE BÚSQUEDA OPTIMIZADA
-  Widget _buildSearchBar(BuildContext context) {
-    // Altura compacta (34)
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0), // Padding externo
-      child: SizedBox(
-        height: 34, 
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onSearchTap,
-            borderRadius: BorderRadius.circular(10),
-            child: Ink(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade300, width: 0.5),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.search_rounded, color: Colors.grey[500], size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Buscar productos...',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                    ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.w800,
+                    color: JPColors.textPrimary,
+                    letterSpacing: -0.2,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: subtitleSize,
+                    color: JPColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
+        ],
+      ),
+      actions: [
+        _BellButton(
+          unread: unreadCount,
+          onTap: onNotificationTap,
+        ),
+        SizedBox(width: horizontalPad - 4),
+      ],
+      bottom: PreferredSize(
+        preferredSize: Size.fromHeight(bottomH),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(horizontalPad, 4, horizontalPad, 6),
+          child: _SearchBar(onTap: onSearchTap, compact: isCompact),
         ),
       ),
     );
   }
+}
 
-  // 🖼️ LÓGICA PARA MOSTRAR EL LOGO O EL PLACEHOLDER
-  Widget _buildLogoWidget() {
-    final path = logoAssetPath?.isNotEmpty == true ? logoAssetPath : _defaultLogoPath;
+class _Logo extends StatelessWidget {
+  final double size;
+  final String? assetPath;
+  final String? networkUrl;
 
-    if (path != null && path.isNotEmpty) {
+  const _Logo({
+    required this.size,
+    this.assetPath,
+    this.networkUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final border = BorderRadius.circular(size * 0.28);
+    if (networkUrl != null && networkUrl!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(8), 
-        child: Image.asset(
-          path,
-          width: _logoSize,
-          height: _logoSize,
+        borderRadius: border,
+        child: CachedNetworkImage(
+          imageUrl: networkUrl!,
+          width: size,
+          height: size,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return _buildPlaceholderLogo();
-          },
+          memCacheWidth: (size * MediaQuery.of(context).devicePixelRatio).round(),
+          placeholder: (_, __) => _placeholder(),
+          errorWidget: (_, __, ___) => _placeholder(),
         ),
       );
-    } else {
-      return _buildPlaceholderLogo();
     }
+
+    if (assetPath != null && assetPath!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: border,
+        child: Image.asset(
+          assetPath!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _placeholder(),
+        ),
+      );
+    }
+
+    return _placeholder();
   }
 
-  // 🚀 WIDGET DEL LOGO DE REEMPLAZO (FALLBACK)
-  Widget _buildPlaceholderLogo() {
+  Widget _placeholder() {
     return Container(
-      width: _logoSize,
-      height: _logoSize,
-      padding: const EdgeInsets.all(6),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: JPColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        color: JPColors.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(size * 0.25),
       ),
-      child: const Icon(
-        Icons.rocket_launch_rounded,
-        color: JPColors.primary,
-        size: 20, 
-      ),
+      child: const Icon(Icons.local_shipping_rounded, color: JPColors.primary, size: 24),
     );
   }
+}
 
-  // 🔔 ICONO DE NOTIFICACIONES CON BADGE
-  Widget _buildNotificationIcon() {
-    final tieneNotificaciones = notificacionesCount > 0;
+class _BellButton extends StatelessWidget {
+  final int unread;
+  final VoidCallback? onTap;
 
+  const _BellButton({required this.unread, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final showBadge = unread > 0;
     return badges.Badge(
-      showBadge: tieneNotificaciones,
-      ignorePointer: true,
-      badgeStyle:const badges.BadgeStyle(
-        badgeColor: JPColors.error,
-        padding:  EdgeInsets.all(4),
-        borderSide: BorderSide(color: Colors.white, width: 1.5),
+      showBadge: showBadge,
+      badgeAnimation: const badges.BadgeAnimation.scale(toAnimate: false),
+      badgeStyle: const badges.BadgeStyle(
+        badgeColor: JPColors.primary,
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        elevation: 0,
       ),
-      position: badges.BadgePosition.topEnd(top: 8, end: 8),
-      badgeContent: const SizedBox.shrink(), 
+      position: badges.BadgePosition.topEnd(top: -6, end: -2),
+      badgeContent: Text(
+        showBadge ? (unread > 9 ? '9+' : '$unread') : '',
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+      ),
       child: IconButton(
-        icon: const Icon(
-          Icons.notifications_none_rounded, 
-          color: JPColors.textPrimary,
-          size: 28,
-        ),
-        onPressed: onNotificationTap,
+        icon: const Icon(Icons.notifications_none_rounded, color: JPColors.textPrimary, size: 26),
+        onPressed: onTap,
         splashRadius: 24,
       ),
     );
   }
+}
 
-  // 🚪 LÓGICA DE CERRAR SESIÓN
-  void _confirmarCerrarSesion(BuildContext context) {
-    final authService = AuthService();
+class _SearchBar extends StatelessWidget {
+  final VoidCallback? onTap;
+  final bool compact;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Cerrar Sesión', 
-          style: TextStyle(fontWeight: FontWeight.bold),
+  const _SearchBar({this.onTap, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = compact ? 12.0 : 14.0;
+    return Material(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(radius),
+        child: Ink(
+          padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14, vertical: compact ? 10 : 12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: Colors.grey.shade300, width: 0.6),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.search_rounded, color: Colors.grey[600], size: compact ? 18 : 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Buscar productos o tiendas',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: compact ? 13 : 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Icon(Icons.tune_rounded, color: Colors.grey[500], size: compact ? 18 : 20),
+            ],
+          ),
         ),
-        content: const Text('¿Estás seguro que quieres salir de la aplicación?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancelar', 
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await authService.logout();
-              if (!context.mounted) return;
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                Rutas.login,
-                (_) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: JPColors.error,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: const Text('Salir'),
-          ),
-        ],
       ),
     );
   }

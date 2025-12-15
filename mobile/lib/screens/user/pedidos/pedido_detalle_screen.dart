@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/pedido_model.dart';
 import '../../../providers/proveedor_pedido.dart';
+import '../../../services/pago_service.dart';
+import 'pantalla_subir_comprobante.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PedidoDetalleScreen extends StatefulWidget {
   final int pedidoId;
@@ -18,6 +21,12 @@ class PedidoDetalleScreen extends StatefulWidget {
 
 class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   bool _isCancelling = false;
+  bool _enviandoCalificacion = false;
+  bool _enviandoCalificacionProveedor = false;
+  final TextEditingController _comentarioCtrl = TextEditingController();
+  final TextEditingController _comentarioProveedorCtrl = TextEditingController();
+  final PagoService _pagoService = PagoService();
+  final Map<int, int> _intentosComprobante = {};
 
   @override
   void initState() {
@@ -32,6 +41,13 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
         provider.cargarDetalle(widget.pedidoId);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _comentarioCtrl.dispose();
+    _comentarioProveedorCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -83,8 +99,24 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                   _buildDireccionesCard(pedido),
                   const SizedBox(height: 16),
 
+                  if (pedido.estado == 'entregado' && pedido.puedeCalificarProveedor) ...[
+                    _buildCalificacionProveedorCTA(pedido),
+                    const SizedBox(height: 16),
+                  ] else if (pedido.calificacionProveedor != null) ...[
+                    _buildCalificacionProveedorResumen(pedido),
+                    const SizedBox(height: 16),
+                  ],
+
                   if (pedido.repartidor != null) ...[
                     _buildRepartidorCard(pedido),
+                    const SizedBox(height: 16),
+                  ],
+
+                  if (pedido.estado == 'entregado' && pedido.puedeCalificarRepartidor) ...[
+                    _buildCalificacionCTA(pedido),
+                    const SizedBox(height: 16),
+                  ] else if (pedido.calificacionRepartidor != null) ...[
+                    _buildCalificacionResumen(pedido),
                     const SizedBox(height: 16),
                   ],
 
@@ -143,12 +175,134 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     );
   }
 
+  Widget _buildCalificacionCTA(Pedido pedido) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.star_rate_rounded, color: Colors.amber),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Califica al repartidor',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: _enviandoCalificacion
+                ? null
+                : () => _mostrarSheetCalificacion(pedido),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Calificar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalificacionResumen(Pedido pedido) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.verified, color: Colors.green),
+          const SizedBox(width: 8),
+          Text(
+            'Calificado: ${pedido.calificacionRepartidor?.toStringAsFixed(1) ?? ''} ⭐',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalificacionProveedorCTA(Pedido pedido) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.store_mall_directory_rounded, color: Colors.orange),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Califica los productos',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: _enviandoCalificacionProveedor
+                ? null
+                : () => _mostrarSheetCalificacionProveedor(pedido),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Calificar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalificacionProveedorResumen(Pedido pedido) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.verified, color: Colors.green),
+          const SizedBox(width: 8),
+          Text(
+            'Productos calificados: ${pedido.calificacionProveedor?.toStringAsFixed(1) ?? ''} ⭐',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- WIDGETS DE UI (Cards y Secciones) ---
 
   Widget _buildHeaderStatus(Pedido pedido) {
     final color = _getColorEstado(pedido.estado);
     final subtotal = pedido.items.fold<double>(0, (sum, item) => sum + item.subtotal);
-    final comision = pedido.gananciaApp;
+    final comision = pedido.tarifaServicio;
     final envio = pedido.datosEnvio;
     final costoEnvio = envio?.costoEnvio ?? 0;
     final recargoNocturno = (envio?.recargoNocturnoAplicado ?? false) ? (envio?.recargoNocturno ?? 0) : 0;
@@ -381,25 +535,50 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   }
 
   Widget _buildAccionesCard(Pedido pedido) {
-    if (pedido.estado == 'cancelado' || !pedido.puedeSerCancelado) {
+    final isCancelVisible = pedido.estado != 'cancelado' && pedido.puedeSerCancelado;
+    final isTransfer = pedido.metodoPago.toLowerCase() == 'transferencia';
+    final sinComprobante = pedido.transferenciaComprobanteUrl == null || pedido.transferenciaComprobanteUrl!.isEmpty;
+    final intentos = (pedido.pagoId != null) ? (_intentosComprobante[pedido.pagoId!] ?? 0) : 0;
+    if (pedido.pagoId != null && !_intentosComprobante.containsKey(pedido.pagoId!)) {
+      _cargarIntentosComprobante(pedido.pagoId!);
+    }
+    final puedeSubirComprobante = isTransfer && sinComprobante && pedido.pagoId != null && intentos < 3;
+
+    if (!isCancelVisible && !puedeSubirComprobante) {
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _isCancelling ? null : () => _mostrarDialogoCancelar(pedido),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.red,
-          side: const BorderSide(color: Colors.red),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        icon: _isCancelling 
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-          : const Icon(Icons.cancel_outlined),
-        label: Text(_isCancelling ? 'Procesando...' : 'Cancelar Pedido'),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (puedeSubirComprobante)
+          ElevatedButton.icon(
+            onPressed: () => _abrirSubirComprobante(pedido),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.upload_file_rounded),
+            label: const Text('Subir comprobante de transferencia'),
+          ),
+        if (puedeSubirComprobante && isCancelVisible) const SizedBox(height: 10),
+        if (isCancelVisible)
+          OutlinedButton.icon(
+            onPressed: _isCancelling ? null : () => _mostrarDialogoCancelar(pedido),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: _isCancelling 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.cancel_outlined),
+            label: Text(_isCancelling ? 'Procesando...' : 'Cancelar Pedido'),
+          ),
+      ],
     );
   }
 
@@ -496,6 +675,311 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
           )
         );
       }
+    }
+  }
+
+  Future<void> _mostrarSheetCalificacion(Pedido pedido) async {
+    double rating = 5;
+    _comentarioCtrl.clear();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setStateModal) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Califica al repartidor',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      final isFilled = index < rating;
+                      return IconButton(
+                        iconSize: 34,
+                        onPressed: () => setStateModal(() => rating = index + 1.0),
+                        icon: Icon(
+                          isFilled ? Icons.star_rounded : Icons.star_border_rounded,
+                          color: Colors.amber,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _comentarioCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Comentario (opcional)',
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _enviandoCalificacion
+                          ? null
+                          : () async {
+                              Navigator.of(ctx).pop();
+                              await _enviarCalificacion(pedido, rating.round(), _comentarioCtrl.text);
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(_enviandoCalificacion ? 'Enviando...' : 'Enviar'),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _enviarCalificacion(Pedido pedido, int rating, String comentario) async {
+    setState(() => _enviandoCalificacion = true);
+    final provider = context.read<PedidoProvider>();
+
+    final ok = await provider.calificarRepartidor(
+      pedidoId: pedido.id,
+      estrellas: rating,
+      comentario: comentario,
+    );
+
+    setState(() => _enviandoCalificacion = false);
+
+    if (ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Gracias por tu calificación!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else if (provider.error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Error al calificar'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _mostrarSheetCalificacionProveedor(Pedido pedido) async {
+    double rating = 5;
+    _comentarioProveedorCtrl.clear();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setStateModal) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Califica los productos',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      final isFilled = index < rating;
+                      return IconButton(
+                        iconSize: 34,
+                        onPressed: () => setStateModal(() => rating = index + 1.0),
+                        icon: Icon(
+                          isFilled ? Icons.star_rounded : Icons.star_border_rounded,
+                          color: Colors.orange,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _comentarioProveedorCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Comentario (opcional)',
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _enviandoCalificacionProveedor
+                          ? null
+                          : () async {
+                              Navigator.of(ctx).pop();
+                              await _enviarCalificacionProveedor(
+                                pedido,
+                                rating.round(),
+                                _comentarioProveedorCtrl.text,
+                              );
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(_enviandoCalificacionProveedor ? 'Enviando...' : 'Enviar'),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _enviarCalificacionProveedor(Pedido pedido, int rating, String comentario) async {
+    setState(() => _enviandoCalificacionProveedor = true);
+    final provider = context.read<PedidoProvider>();
+
+    final ok = await provider.calificarProveedor(
+      pedidoId: pedido.id,
+      estrellas: rating,
+      comentario: comentario,
+    );
+
+    setState(() => _enviandoCalificacionProveedor = false);
+
+    if (ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Gracias por tu calificación!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else if (provider.error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Error al calificar'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _abrirSubirComprobante(Pedido pedido) async {
+    if (pedido.pagoId == null) return;
+    final pagoId = pedido.pagoId!;
+
+    final intentosActual = _intentosComprobante[pagoId] ?? 0;
+    if (intentosActual >= 3) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Límite de 3 intentos para subir comprobante alcanzado.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      setState(() {}); // para ocultar el botón si sigue visible
+      return;
+    }
+
+    await _incrementarIntentosComprobante(pagoId);
+
+    try {
+      final datos = await _pagoService.obtenerDatosBancariosPago(pagoId);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PantallaSubirComprobante(
+            pagoId: pagoId,
+            datosBancarios: datos,
+          ),
+        ),
+      );
+      // Al volver, refrescamos el detalle para actualizar el estado del comprobante
+      if (!mounted) return;
+      final provider = context.read<PedidoProvider>();
+      provider.limpiarError();
+      await provider.cargarDetalle(pedido.id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo obtener datos bancarios: $e')),
+      );
+    }
+  }
+
+  Future<void> _cargarIntentosComprobante(int pagoId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'comprobante_intentos_$pagoId';
+    final intentos = prefs.getInt(key) ?? 0;
+    if (mounted) {
+      setState(() {
+        _intentosComprobante[pagoId] = intentos;
+      });
+    } else {
+      _intentosComprobante[pagoId] = intentos;
+    }
+  }
+
+  Future<void> _incrementarIntentosComprobante(int pagoId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'comprobante_intentos_$pagoId';
+    final intentos = (prefs.getInt(key) ?? 0) + 1;
+    await prefs.setInt(key, intentos);
+    if (mounted) {
+      setState(() {
+        _intentosComprobante[pagoId] = intentos;
+      });
+    } else {
+      _intentosComprobante[pagoId] = intentos;
     }
   }
 

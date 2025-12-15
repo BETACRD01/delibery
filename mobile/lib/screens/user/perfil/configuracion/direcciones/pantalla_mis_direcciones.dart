@@ -218,56 +218,6 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // Header con icono
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: JPColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: JPColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.location_on,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _modoEdicion ? 'Actualiza tu dirección' : 'Agrega una nueva dirección',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: JPColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Usa Google Maps para mayor precisión',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: JPColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
             // Dirección con autocompletado
             _buildCampoDireccionConAutocompletado(),
             const SizedBox(height: 16),
@@ -374,6 +324,9 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
     try {
       setState(() {
         _direccionController.text = prediction.description ?? '';
+        _direccionController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _direccionController.text.length),
+        );
       });
 
       if (prediction.description != null && prediction.description!.isNotEmpty) {
@@ -413,104 +366,119 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
           ],
         ),
         const SizedBox(height: 10),
-        GooglePlaceAutoCompleteTextField(
-          textEditingController: _direccionController,
-          googleAPIKey: "AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA",
-          inputDecoration: InputDecoration(
-            hintText: 'Busca tu dirección en Google Maps...',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide(color: JPColors.primary, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: JPColors.error),
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.all(16),
-            suffixIcon: _direccionController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
-                    onPressed: () {
-                      setState(() {
-                        _direccionController.clear();
-                        _latitud = null;
-                        _longitud = null;
-                      });
-                    },
-                  )
-                : const Icon(Icons.search, color: Colors.grey),
-          ),
-          debounceTime: 600,
-          countries: const ["ec"],
-          isLatLngRequired: true,
-          getPlaceDetailWithLatLng: (Prediction prediction) {
-            _onPlaceSelected(prediction);
-          },
-          itemClick: (Prediction prediction) {
-            _direccionController.text = prediction.description ?? '';
-            _direccionController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _direccionController.text.length),
-            );
-          },
-          itemBuilder: (context, index, Prediction prediction) {
-            return Container(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  const Icon(Icons.location_on, color: JPColors.primary, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      prediction.description ?? "",
-                      style: const TextStyle(fontSize: 14),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+        Stack(
+          children: [
+            GooglePlaceAutoCompleteTextField(
+              textEditingController: _direccionController,
+              googleAPIKey: "AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA",
+              debounceTime: 300,
+              countries: const ["ec"],
+              isLatLngRequired: true,
+              inputDecoration: InputDecoration(
+                hintText: 'Ej: Av. Amazonas y 10 de Agosto',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide(color: JPColors.primary, width: 2),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: JPColors.error),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.all(16),
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.map_outlined, color: JPColors.primary),
+                      tooltip: 'Seleccionar en mapa',
+                      onPressed: _mostrarSeleccionMapaPlaceholder,
                     ),
-                  ),
-                ],
+                    if (_direccionController.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          setState(() {
+                            _direccionController.clear();
+                            _latitud = null;
+                            _longitud = null;
+                          });
+                        },
+                      ),
+                  ],
+                ),
               ),
-            );
-          },
-          seperatedBuilder: const Divider(height: 1),
-          isCrossBtnShown: true,
-          containerHorizontalPadding: 12,
+              textStyle: const TextStyle(fontSize: 14),
+              itemBuilder: (context, index, Prediction prediction) {
+                return ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.place, color: JPColors.primary, size: 18),
+                  title: Text(
+                    prediction.description ?? "",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: prediction.structuredFormatting != null
+                      ? Text(
+                          prediction.structuredFormatting?.secondaryText ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        )
+                      : null,
+                );
+              },
+              seperatedBuilder: const Divider(height: 1),
+              itemClick: (Prediction prediction) {
+                _direccionController.text = prediction.description ?? '';
+                _direccionController.selection = TextSelection.fromPosition(
+                  TextPosition(offset: _direccionController.text.length),
+                );
+              },
+              getPlaceDetailWithLatLng: (Prediction prediction) {
+                _onPlaceSelected(prediction);
+              },
+              isCrossBtnShown: false,
+              containerHorizontalPadding: 0,
+            ),
+          ],
         ),
         if (_latitud != null && _longitud != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: JPColors.success.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: JPColors.success.withValues(alpha: 0.3)),
+            child: Chip(
+              backgroundColor: JPColors.success.withValues(alpha: 0.12),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+              avatar: const Icon(Icons.check_circle, color: JPColors.success, size: 18),
+              label: const Text(
+                'Ubicación confirmada',
+                style: TextStyle(
+                  color: JPColors.success,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle, color: JPColors.success, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'Ubicación confirmada en el mapa',
-                    style: TextStyle(
-                      color: JPColors.success,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
           ),
       ],
+    );
+  }
+
+  /// Placeholder temporal para selección en mapa (si no hay integración de mapa)
+  void _mostrarSeleccionMapaPlaceholder() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Seleccionar en mapa se habilitará próximamente'),
+        duration: Duration(seconds: 2),
+      ),
     );
   }
 
@@ -572,6 +540,8 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
       ],
     );
   }
+
+  /// Estado compacto para ubicación confirmada
 
   Widget _buildCampoTelefono() {
     return Column(

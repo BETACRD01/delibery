@@ -24,6 +24,10 @@ class PantallaAjustes extends StatefulWidget {
 }
 
 class _PantallaAjustesState extends State<PantallaAjustes> {
+  static const _celeste = Color(0xFF2DAAE1);
+  static const _celesteSuave = Color(0xFFE5F5FD);
+  static const _naranja = Color(0xFFFF8A3D);
+
   final _authService = AuthService();
   final _solicitudesService = SolicitudesService();
 
@@ -120,7 +124,7 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9FB),
+      backgroundColor: const Color(0xFFF3F5F9),
       appBar: AppBar(
         title: Text(
           l10n.settings,
@@ -130,7 +134,7 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
           ),
         ),
         backgroundColor: Colors.white,
-        elevation: 0.3,
+        elevation: 0.2,
         shadowColor: Colors.black12,
         foregroundColor: JPColors.textPrimary,
         leading: IconButton(
@@ -142,20 +146,20 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
           ? const Center(child: CircularProgressIndicator(color: JPColors.primary))
           : SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (_esProveedorActivo || _esRepartidorActivo) ...[
                     _buildSectionTitle('Modo de trabajo'),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _buildRoleSelector(),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
                       child: _buildDiagnosticPanel(),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 16),
                   ],
 
                   if (_tieneEstadoVisible('PROVEEDOR') || _tieneEstadoVisible('REPARTIDOR')) ...[
@@ -183,7 +187,7 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
                         title: 'Quiero ser Repartidor',
                         subtitle: 'Gana dinero extra',
                         icon: Icons.two_wheeler_rounded,
-                        color: const Color(0xFF00A86B),
+                        color: _celeste,
                       ),
                     const SizedBox(height: 22),
                   ],
@@ -268,20 +272,20 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        color: JPColors.textSecondary,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF6B7A90),
       ),
     );
   }
 
   Widget _buildRoleSelector() {
     return Container(
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        color: _celesteSuave,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _celeste.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
@@ -301,12 +305,12 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
               child: _buildRoleTab(
                 label: 'Repartidor',
                 icon: Icons.delivery_dining,
-                color: const Color(0xFF00A86B),
+                color: _celeste,
                 isSelected: _rolSeleccionado == 'REPARTIDOR',
                 onTap: () => setState(() => _rolSeleccionado = 'REPARTIDOR'),
               ),
             ),
-        ],
+      ],
       ),
     );
   }
@@ -324,22 +328,29 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.08) : Colors.transparent,
+          color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
-          ),
+          border: Border.all(color: isSelected ? color.withValues(alpha: 0.35) : Colors.transparent),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : null,
         ),
         child: Column(
           children: [
-            Icon(icon, color: isSelected ? color : JPColors.textHint, size: 22),
+            Icon(icon, color: isSelected ? color : JPColors.textHint, size: 20),
             const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? color : JPColors.textHint,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? JPColors.textPrimary : JPColors.textHint,
               ),
             ),
           ],
@@ -363,7 +374,7 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
         title: 'Panel de Repartidor',
         description: 'Ver pedidos disponibles.',
         icon: Icons.delivery_dining_rounded,
-        color: const Color(0xFF00A86B),
+        color: _celeste,
         btnText: 'IR A REPARTIR',
         onTap: () => _cambiarRol('REPARTIDOR'),
       );
@@ -380,32 +391,25 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
     required VoidCallback onTap,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _celeste.withValues(alpha: 0.12)),
       ),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 26),
+                child: Icon(icon, color: color, size: 24),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,18 +424,18 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                    description,
-                     style: const TextStyle(
-                     color: JPColors.textSecondary,
-                     fontSize: 13,
-                     ),
+                      description,
+                      style: const TextStyle(
+                        color: JPColors.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
           _buildGradientActionButton(
             text: btnText,
             color: color,
@@ -448,34 +452,23 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
     required VoidCallback onTap,
   }) {
     return Container(
-      height: 46,
+      height: 38,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          colors: [
-            color,
-            color.withValues(alpha: 0.85)
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.25),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color),
+        color: color.withValues(alpha: 0.06),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: Center(
             child: Text(
               text,
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
+                color: JPColors.textPrimary,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -491,8 +484,8 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
 
     final esPendiente = solicitud.estaPendiente;
     final color = rol == 'PROVEEDOR'
-        ? const Color(0xFFFF8C00)
-        : const Color(0xFF00A86B);
+        ? _naranja
+        : _celeste;
 
     final title = rol == 'PROVEEDOR'
         ? 'Solicitud Proveedor'
@@ -617,8 +610,14 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(children: children),
     );
@@ -638,7 +637,7 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: JPColors.primary.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: JPColors.primary, size: 18),
       ),

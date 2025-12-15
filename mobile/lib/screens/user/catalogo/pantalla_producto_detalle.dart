@@ -2,10 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:math';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
 import '../../../models/producto_model.dart';
+import '../../../services/productos_service.dart';
 
 /// Pantalla de detalle completo de un producto
 class PantallaProductoDetalle extends StatefulWidget {
@@ -18,6 +21,11 @@ class PantallaProductoDetalle extends StatefulWidget {
 class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
   int _cantidad = 1;
   bool _loading = false; // ✅ AGREGADO
+  final ProductosService _productosService = ProductosService();
+  List<ProductoModel> _sugeridos = [];
+  bool _cargandoSugeridos = false;
+  bool _sugerenciasCargadas = false;
+  String? _ultimoProductoId;
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +40,13 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
       );
     }
 
+    // Cargar sugerencias al construir
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarSugerencias(producto);
+    });
+
     return Scaffold(
-      backgroundColor: JPColors.background,
+      backgroundColor: const Color(0xFFF3F5F9),
       body: CustomScrollView(
         slivers: [
           // AppBar con imagen
@@ -49,6 +62,8 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                 _buildDescripcion(producto),
                 const SizedBox(height: 24),
                 _buildInformacionAdicional(producto),
+                const SizedBox(height: 20),
+                _buildSugerencias(),
                 const SizedBox(height: 100), // Espacio para el botón flotante
               ],
             ),
@@ -61,7 +76,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
 
   Widget _buildSliverAppBar(ProductoModel producto) {
     return SliverAppBar(
-      expandedHeight: 300,
+      expandedHeight: 280,
       pinned: true,
       backgroundColor: Colors.white,
       foregroundColor: JPColors.textPrimary,
@@ -92,7 +107,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
+                      colors: [
                       Colors.transparent,
                       Colors.black.withValues(alpha: 0.7), // ✅ CORREGIDO
                     ],
@@ -162,24 +177,6 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
           const SizedBox(height: 12),
 
           // Categoría
-          if (producto.categoriaNombre != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: JPColors.primary.withValues(alpha: 0.1), // ✅ CORREGIDO
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                producto.categoriaNombre!,
-                style: const TextStyle(
-                  color: JPColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-
           // Rating y reseñas
           Row(
             children: [
@@ -342,22 +339,154 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
               titulo: 'Proveedor',
               valor: producto.proveedorNombre!,
             ),
-          _InfoItem(
-            icono: Icons.category,
-            titulo: 'Categoría',
-            valor: producto.categoriaNombre ?? 'Sin categoría',
-          ),
-          _InfoItem(
-            icono: producto.disponible
-                ? Icons.check_circle
-                : Icons.cancel,
-            titulo: 'Estado',
-            valor: producto.disponible ? 'Disponible' : 'No disponible',
-            valorColor: producto.disponible
-                ? JPColors.success
-                : JPColors.error,
-          ),
           const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSugerencias() {
+    if (_cargandoSugeridos) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'También te puede gustar',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: JPColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 150,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: 3,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, __) => Container(
+                  width: 140,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_sugeridos.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'También te puede gustar',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: JPColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 170,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _sugeridos.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final prod = _sugeridos[index];
+                return Container(
+                  width: 150,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 10,
+                        offset: const Offset(0, 6),
+                      )
+                    ],
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      Navigator.pushReplacementNamed(
+                        context,
+                        Rutas.productoDetalle,
+                        arguments: prod,
+                      );
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                          child: SizedBox(
+                            height: 86,
+                            width: double.infinity,
+                            child: prod.imagenUrl != null && prod.imagenUrl!.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: prod.imagenUrl!,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => Container(color: Colors.grey.shade200),
+                                    errorWidget: (_, __, ___) => Container(
+                                      color: Colors.grey.shade200,
+                                      child: const Icon(Icons.fastfood, color: JPColors.textHint),
+                                    ),
+                                  )
+                                : Container(
+                                    color: Colors.grey.shade200,
+                                    child: const Icon(Icons.fastfood, color: JPColors.textHint),
+                                  ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                prod.nombre,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: JPColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                prod.precioFormateado,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: JPColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -365,13 +494,13 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
 
   Widget _buildBottomBar(ProductoModel producto) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1), // ✅ CORREGIDO
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.08), // ✅ CORREGIDO
+            blurRadius: 8,
             offset: const Offset(0, -5),
           ),
         ],
@@ -414,7 +543,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: JPColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -473,6 +602,76 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
       );
     }
   }
+
+  Future<void> _cargarSugerencias(ProductoModel producto) async {
+    final mismoProducto = _ultimoProductoId == producto.id;
+    if (mismoProducto && _sugerenciasCargadas) return;
+    _ultimoProductoId = producto.id;
+    _sugerenciasCargadas = true;
+
+    setState(() => _cargandoSugeridos = true);
+
+    try {
+      final List<ProductoModel> candidatos = [];
+
+      if (producto.proveedorId != null && producto.proveedorId!.isNotEmpty) {
+        final porProveedor = await _productosService.obtenerProductos(
+          proveedorId: producto.proveedorId,
+        );
+        candidatos.addAll(porProveedor);
+      }
+
+      if (producto.categoriaId.isNotEmpty) {
+        final porCategoria = await _productosService.obtenerProductos(
+          categoriaId: producto.categoriaId,
+        );
+        candidatos.addAll(porCategoria);
+      }
+
+      // Complementar con populares/ofertas para cubrir otros proveedores
+      final populares = await _productosService.obtenerProductosMasPopulares(random: true);
+      candidatos.addAll(populares);
+      final ofertas = await _productosService.obtenerProductosEnOferta(random: true);
+      candidatos.addAll(ofertas);
+
+      // Filtrar duplicados y el producto actual
+      final seen = <String>{producto.id};
+      final dedup = <ProductoModel>[];
+      for (final p in candidatos) {
+        if (p.id.isEmpty) continue;
+        if (seen.contains(p.id)) continue;
+        seen.add(p.id);
+        dedup.add(p);
+      }
+
+      // Dar prioridad a disponibles y mezclar para variar el orden
+      dedup.sort((a, b) {
+        if (a.disponible == b.disponible) return 0;
+        return a.disponible ? -1 : 1;
+      });
+      dedup.shuffle(Random());
+
+      // Limitar a 8–10 sugerencias
+      final lista = dedup.where((p) => p.disponible).take(10).toList();
+      if (lista.length < 6) {
+        // si faltan, permitir algunos no disponibles solo para completar la grilla
+        final restantes = dedup.where((p) => !p.disponible).take(2);
+        lista.addAll(restantes);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _sugeridos = lista;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _sugeridos = []);
+    } finally {
+      if (mounted) {
+        setState(() => _cargandoSugeridos = false);
+      }
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -483,13 +682,11 @@ class _InfoItem extends StatelessWidget {
   final IconData icono;
   final String titulo;
   final String valor;
-  final Color? valorColor;
 
   const _InfoItem({
     required this.icono,
     required this.titulo,
     required this.valor,
-    this.valorColor,
   });
 
   @override
@@ -510,10 +707,10 @@ class _InfoItem extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             valor,
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
-              color: valorColor ?? JPColors.textPrimary,
+              color: JPColors.textPrimary,
             ),
           ),
         ],

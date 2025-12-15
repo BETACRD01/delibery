@@ -266,6 +266,70 @@ class PedidoProvider extends ChangeNotifier {
   }
 
   // ───────────────────────────────────────────────────────────────
+  // Calificar repartidor (cliente)
+  // ───────────────────────────────────────────────────────────────
+  Future<bool> calificarRepartidor({
+    required int pedidoId,
+    required int estrellas,
+    String? comentario,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _service.calificarRepartidor(
+        pedidoId: pedidoId,
+        estrellas: estrellas,
+        comentario: comentario,
+      );
+
+      // Refrescar detalle para reflejar cambio
+      _pedidoActual = await _service.obtenerDetalle(pedidoId);
+      _actualizarPedidoEnLista(_pedidoActual!);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> calificarProveedor({
+    required int pedidoId,
+    required int estrellas,
+    String? comentario,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _service.calificarProveedor(
+        pedidoId: pedidoId,
+        estrellas: estrellas,
+        comentario: comentario,
+      );
+
+      _pedidoActual = await _service.obtenerDetalle(pedidoId);
+      _actualizarPedidoEnLista(_pedidoActual!);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────
   // Obtener ganancias
   // ───────────────────────────────────────────────────────────────
   Future<Map<String, dynamic>?> obtenerGanancias(int pedidoId) async {

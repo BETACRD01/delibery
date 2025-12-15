@@ -172,6 +172,8 @@ class Pedido(models.Model):
     comision_proveedor = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     ganancia_app = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
+    tarifa_servicio = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+
     # --- CONTROL ---
     aceptado_por_repartidor = models.BooleanField(default=False)
     # DEPRECADO: Ya no se usa, los proveedores no confirman pedidos
@@ -281,8 +283,20 @@ class Pedido(models.Model):
             self.comision_proveedor = Decimal('0.00')
             self.comision_repartidor = costo_envio + ConfiguracionComisiones.calcular_comision_repartidor()
 
-        # La app se queda con el resto
-        self.ganancia_app = self.total - self.comision_proveedor - self.comision_repartidor
+        # Tarifa de servicio al usuario (solo multi-proveedor)
+        self.tarifa_servicio = Decimal('0.00')
+        num_proveedores = 0
+        try:
+            prov_ids = {item.producto.proveedor_id for item in self.items.all()}
+            num_proveedores = len([p for p in prov_ids if p is not None])
+        except Exception:
+            num_proveedores = 0
+
+        if num_proveedores >= 2:
+            self.tarifa_servicio = Decimal('0.25') if num_proveedores == 2 else Decimal('0.50')
+
+        # La app se queda con el resto (contable, no mostrar al usuario)
+        self.ganancia_app = self.total - self.comision_proveedor - self.comision_repartidor - self.tarifa_servicio
 
         # Validar que no sea negativo (la app nunca pierde, en teoría)
         if self.ganancia_app < 0:

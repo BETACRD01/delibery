@@ -14,6 +14,7 @@ class CategoriaSuperModel {
   final bool activo;
   final int orden;
   final bool destacado;
+  final int? totalProveedores;
 
   const CategoriaSuperModel({
     required this.id,
@@ -26,6 +27,7 @@ class CategoriaSuperModel {
     this.activo = true,
     this.orden = 0,
     this.destacado = false,
+    this.totalProveedores,
   });
 
   // Categorías predefinidas
@@ -86,6 +88,7 @@ class CategoriaSuperModel {
       activo: json['activo'] ?? true,
       orden: json['orden'] ?? 0,
       destacado: json['destacado'] ?? false,
+      totalProveedores: json['total_proveedores'] ?? json['totalProveedores'],
     );
   }
 
@@ -101,6 +104,7 @@ class CategoriaSuperModel {
       'activo': activo,
       'orden': orden,
       'destacado': destacado,
+      'total_proveedores': totalProveedores,
     };
   }
 

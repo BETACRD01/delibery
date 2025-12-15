@@ -22,7 +22,7 @@ class SeccionPromociones extends StatefulWidget {
 }
 
 class _SeccionPromocionesState extends State<SeccionPromociones> {
-  final PageController _pageController = PageController(viewportFraction: 0.9);
+  final PageController _pageController = PageController(viewportFraction: 0.88);
   int _currentPage = 0;
 
   @override
@@ -63,7 +63,7 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
         ),
 
         SizedBox(
-          height: 200,
+          height: 190,
           child: widget.loading
               ? _buildLoadingList()
               : PageView.builder(
@@ -119,12 +119,12 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(width: 16),
+      separatorBuilder: (_, __) => const SizedBox(width: 14),
       itemBuilder: (_, __) => Container(
         width: 300,
         decoration: BoxDecoration(
           color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );
@@ -144,110 +144,68 @@ class _PromocionCardImpacto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardColor = promocion.color;
+    final vence = promocion.textoTiempoRestante;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 310, // Tarjeta ancha y protagonista
+        width: 300, // Tarjeta protagonista pero compacta
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24), // Bordes modernos
+          borderRadius: BorderRadius.circular(20), // Bordes suaves
           boxShadow: [
             BoxShadow(
-              color: cardColor.withValues(alpha: 0.25),
-              blurRadius: 15,
-              offset: const Offset(0, 8), // Sombra inferior suave
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 12,
+              offset: const Offset(0, 6), // Sombra ligera
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // 1. FONDO INTELIGENTE (Color + Imagen)
-              // Ponemos el color de fondo PRIMERO para que si la imagen es PNG transparente,
-              // se vea el color bonito detrás.
+              // Fondo color base
               Container(color: cardColor),
 
               _buildBackgroundImage(),
 
-              // 2. GRADIENTE DE LECTURA (Overlay)
-              // Oscurece la parte de abajo para que el texto blanco resalte
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.1),
-                      Colors.black.withValues(alpha: 0.8), // Negro sólido abajo
+                      Colors.black.withValues(alpha: 0.05),
+                      Colors.black.withValues(alpha: 0.65), // Negro sólido abajo
                     ],
-                    stops: const [0.4, 0.6, 1.0],
+                    stops: const [0.35, 1.0],
                   ),
                 ),
               ),
 
-              // 3. CONTENIDO FLOTANTE
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- STICKER DE DESCUENTO (BADGE) ---
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14, 
-                            vertical: 8
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white, // Fondo blanco puro
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              )
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.local_offer_rounded, 
-                                color: cardColor, 
-                                size: 18
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                promocion.descuento.toUpperCase(),
-                                style: TextStyle(
-                                  color: cardColor, // Texto del color de la promo
-                                  fontSize: 16, // ¡Más grande!
-                                  fontWeight: FontWeight.w900, // Extra Bold
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    _Badge(
+                      icon: Icons.local_offer_rounded,
+                      text: promocion.descuento.isNotEmpty
+                          ? promocion.descuento.toUpperCase()
+                          : 'PROMO',
+                      color: Colors.white,
+                      background: Colors.white.withValues(alpha: 0.14),
                     ),
+                    const SizedBox(height: 12),
 
-                    const Spacer(),
-
-                    // --- TEXTOS LLAMATIVOS ---
                     Text(
                       promocion.titulo,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 24, // Título Grande
-                        fontWeight: FontWeight.w900, // Letra muy gruesa
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
                         height: 1.1,
-                        // Sombra para leer sobre fotos claras
                         shadows: [
                           Shadow(
                             color: Colors.black87,
@@ -265,8 +223,8 @@ class _PromocionCardImpacto extends StatelessWidget {
                     Text(
                       promocion.descripcion,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.95), // Casi blanco
-                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w500,
                         shadows: const [
                           Shadow(
@@ -279,6 +237,15 @@ class _PromocionCardImpacto extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 10),
+                    if (vence.isNotEmpty)
+                      _Badge(
+                        icon: Icons.timer_outlined,
+                        text: vence,
+                        color: Colors.white,
+                        background: Colors.black.withValues(alpha: 0.2),
+                        compact: true,
+                      ),
                   ],
                 ),
               ),
@@ -297,7 +264,7 @@ class _PromocionCardImpacto extends StatelessWidget {
         fit: BoxFit.cover, 
         placeholder: (context, url) => Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withValues(alpha: 0.5)),
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withValues(alpha: 0.4)),
           ),
         ),
         errorWidget: (context, url, error) => _buildFallbackDecoration(),
@@ -316,11 +283,57 @@ class _PromocionCardImpacto extends StatelessWidget {
           bottom: -40,
           child: Icon(
             Icons.fastfood_rounded,
-            size: 200,
-            color: Colors.white.withValues(alpha: 0.15),
+            size: 180,
+            color: Colors.white.withValues(alpha: 0.12),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  final Color background;
+  final bool compact;
+
+  const _Badge({
+    required this.icon,
+    required this.text,
+    required this.color,
+    required this.background,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 6 : 8,
+      ),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: compact ? 14 : 16),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: compact ? 12 : 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

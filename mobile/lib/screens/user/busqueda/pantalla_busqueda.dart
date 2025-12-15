@@ -24,11 +24,17 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
       child: Consumer<BusquedaController>(
         builder: (context, controller, _) {
           return Scaffold(
+            backgroundColor: const Color(0xFFF3F5F9),
             appBar: AppBar(
-              title: const Text('Buscar'),
-              elevation: 0,
+              backgroundColor: Colors.white,
+              elevation: 0.4,
+              foregroundColor: JPColors.textPrimary,
+              titleSpacing: 0,
+              title: const Text(
+                'Buscar productos',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+              ),
               actions: [
-                // Botón de filtros
                 if (controller.controladorBusqueda.text.isNotEmpty)
                   IconButton(
                     icon: Badge(
@@ -37,13 +43,16 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                     ),
                     onPressed: () => _mostrarFiltros(context, controller),
                   ),
-                // Botón de ordenamiento
                 if (controller.resultados.isNotEmpty)
                   IconButton(
-                    icon: const Icon(Icons.sort),
+                    icon: const Icon(Icons.sort_rounded),
                     onPressed: () => _mostrarOrdenamiento(context, controller),
                   ),
               ],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Container(height: 1, color: Colors.grey.shade200),
+              ),
             ),
             body: Column(
               children: [
@@ -79,30 +88,43 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
   // ══════════════════════════════════════════════════════════════════════════
 
   Widget _buildBarraBusqueda(BuildContext context, BusquedaController controller) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0), 
-      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-      child: TextField(
-        controller: controller.controladorBusqueda,
-        onChanged: (query) => controller.buscarProductos(query),
-        decoration: InputDecoration(
-          hintText: 'Buscar productos...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: controller.controladorBusqueda.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: controller.limpiarBusqueda,
-                )
-              : null,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 8,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Material(
+        elevation: 6,
+        shadowColor: Colors.black.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        child: TextField(
+          controller: controller.controladorBusqueda,
+          onChanged: (query) => controller.buscarProductos(query),
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Buscar productos o tiendas',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: controller.controladorBusqueda.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: controller.limpiarBusqueda,
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+              borderSide: BorderSide(color: JPColors.primary, width: 1.2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
           ),
         ),
       ),
@@ -227,25 +249,37 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
     return Column(
       children: [
         // Contador de resultados
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: Colors.grey[100],
-          child: Row(
-            children: [
-              Text(
-                '${controller.resultados.length} producto${controller.resultados.length != 1 ? 's' : ''} encontrado${controller.resultados.length != 1 ? 's' : ''}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.w500,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Text(
+                '${controller.resultados.length} resultado${controller.resultados.length == 1 ? '' : 's'}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: JPColors.textSecondary,
                 ),
               ),
-            ],
+            ),
           ),
         ),
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
             itemCount: controller.resultados.length,
             itemBuilder: (context, index) {
               final ProductoModel producto = controller.resultados[index];
@@ -525,13 +559,21 @@ class _ProductoCard extends StatelessWidget {
     final tieneDescuento = producto.precioAnterior != null &&
         producto.precioAnterior! > producto.precio;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: () {
           Navigator.pushNamed(
             context,
@@ -546,33 +588,37 @@ class _ProductoCard extends StatelessWidget {
             children: [
               // Imagen del producto
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 child: producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: producto.imagenUrl!,
-                        width: 80,
-                        height: 80,
+                        width: 88,
+                        height: 88,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
-                          width: 80,
-                          height: 80,
-                          color: Colors.grey[300],
+                          width: 88,
+                          height: 88,
+                          color: Colors.grey[200],
                           child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(
-                          width: 80,
-                          height: 80,
-                          color: Colors.grey[300],
-                          child: Icon(Icons.fastfood, size: 30, color: Colors.grey[600]),
+                          width: 88,
+                          height: 88,
+                          color: Colors.grey[200],
+                          child: Icon(Icons.fastfood, size: 32, color: Colors.grey[600]),
                         ),
                       )
                     : Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey[300],
-                        child: Icon(Icons.fastfood, size: 30, color: Colors.grey[600]),
+                        width: 88,
+                        height: 88,
+                        color: Colors.grey[200],
+                        child: Icon(Icons.fastfood, size: 32, color: Colors.grey[600]),
                       ),
               ),
               const SizedBox(width: 12),
@@ -585,20 +631,22 @@ class _ProductoCard extends StatelessWidget {
                     Text(
                       producto.nombre,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         fontSize: 16,
+                        height: 1.2,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     _buildProveedorBadge(),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       producto.descripcion,
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: Colors.grey[700],
                         fontSize: 13,
+                        height: 1.3,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -616,11 +664,12 @@ class _ProductoCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[700],
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
 
                     // Precio y botón
                     Row(
@@ -644,7 +693,7 @@ class _ProductoCard extends StatelessWidget {
                               producto.precioFormateado,
                               style: const TextStyle(
                                 fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w800,
                                 color: JPColors.primary,
                               ),
                             ),
@@ -656,13 +705,15 @@ class _ProductoCard extends StatelessWidget {
                           onPressed: producto.disponible
                               ? () async {
                                   await carritoProvider.agregarProducto(producto);
-                                  // No mostrar mensaje de confirmación
                                 }
                               : null,
                           icon: const Icon(Icons.add_shopping_cart, size: 18),
                           label: const Text('Agregar'),
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         ),
                       ],

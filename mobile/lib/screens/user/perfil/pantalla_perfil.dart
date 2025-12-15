@@ -76,7 +76,7 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: JPColors.background,
+      backgroundColor: const Color(0xFFF3F5F9),
       appBar: _buildAppBar(),
       body: AnimatedBuilder(
         animation: _controller,
@@ -167,27 +167,27 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     return Stack(
       children: [
         Container(
-          height: 180,
+          height: 150,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF0B8BD2), Color(0xFF12B6D4)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+              colors: [Color(0xFF0DA1D5), Color(0xFF29C2D3)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 32, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 18),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 12,
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),
               ],
@@ -202,31 +202,31 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF0A8ECF), Color(0xFF0FC2D7)],
+                          colors: [Color(0xFF0DA1D5), Color(0xFF29C2D3)],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: JPColors.primary.withValues(alpha: 0.18),
-                            blurRadius: 8,
+                            color: JPColors.primary.withValues(alpha: 0.16),
+                            blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: JPAvatar(
                         imageUrl: perfil.fotoPerfilUrl,
-                        radius: 54,
+                        radius: 50,
                         onTap: _editarFoto,
                       ),
                     ),
                     Positioned(
                       right: 0,
                       left: 0,
-                      bottom: -4,
+                      bottom: -6,
                       child: Center(child: _buildChangeChip()),
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 Text(
                   perfil.usuarioNombre,
                   style: JPTextStyles.h2.copyWith(fontSize: 22),
@@ -297,59 +297,61 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
       fechaFormateada = '$dia/$mes/${f.year}';
     }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Botón Editar: Este es el principal ahora
-            _buildSectionHeader('Información Personal', onEdit: _editarPerfil),
-            
-            const Divider(height: 28, color: Color(0xFFF0F0F0)),
-            
-            _buildInfoRow(
-              icon: Icons.phone_outlined,
-              label: 'Teléfono',
-              value: perfil.telefono ?? 'Agregar teléfono',
-              isPlaceholder: !perfil.tieneTelefono,
-            ),
-            const SizedBox(height: 18),
-            _buildInfoRow(
-              icon: Icons.cake_outlined,
-              label: 'Nacimiento',
-              value: fechaFormateada,
-              isPlaceholder: perfil.fechaNacimiento == null,
-            ),
-
-            if (!_controller.perfilCompleto) ...[
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: JPColors.warning.withAlpha(25),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: JPColors.warning.withAlpha(76)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline_rounded, color: JPColors.warning, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _controller.mensajeCompletitud,
-                        style: const TextStyle(color: JPColors.warning, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Información Personal', onEdit: _editarPerfil),
+          const SizedBox(height: 14),
+          _buildInfoRow(
+            icon: Icons.phone_outlined,
+            label: 'Teléfono',
+            value: perfil.telefono ?? 'Agregar teléfono',
+            isPlaceholder: !perfil.tieneTelefono,
+          ),
+          const SizedBox(height: 14),
+          _buildInfoRow(
+            icon: Icons.cake_outlined,
+            label: 'Nacimiento',
+            value: fechaFormateada,
+            isPlaceholder: perfil.fechaNacimiento == null,
+          ),
+          if (!_controller.perfilCompleto) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: JPColors.warning.withAlpha(25),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: JPColors.warning.withAlpha(76)),
               ),
-            ],
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: JPColors.warning, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _controller.mensajeCompletitud,
+                      style: const TextStyle(color: JPColors.warning, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -360,38 +362,44 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
   Widget _buildEstadisticas() {
     final perfil = _controller.perfil;
 
-  return Card(
-    elevation: 2,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    margin: EdgeInsets.zero,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatItem(
-              'Pedidos',
-              '${perfil?.totalPedidos ?? 0}',
-            ),
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.03),
+          blurRadius: 12,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+    child: Row(
+      children: [
+        Expanded(
+          child: _buildStatItem(
+            'Pedidos',
+            '${perfil?.totalPedidos ?? 0}',
           ),
-          Container(width: 1, height: 30, color: Colors.grey[200]),
+        ),
+        Container(width: 1, height: 30, color: Colors.grey[200]),
 
-          Expanded(
-            child: _buildStatItem(
-              'Calificación',
-              perfil?.calificacion.toStringAsFixed(1) ?? '0.0',
-            ),
+        Expanded(
+          child: _buildStatItem(
+            'Calificación',
+            perfil?.calificacion.toStringAsFixed(1) ?? '0.0',
           ),
-          Container(width: 1, height: 30, color: Colors.grey[200]),
+        ),
+        Container(width: 1, height: 30, color: Colors.grey[200]),
 
-          Expanded(
-            child: _buildStatItem(
-              'Nivel',
-              _controller.nivelCliente,
-            ),
+        Expanded(
+          child: _buildStatItem(
+            'Nivel',
+            _controller.nivelCliente,
           ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }

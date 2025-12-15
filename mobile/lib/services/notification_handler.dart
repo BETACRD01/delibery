@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:developer' as developer;
 import '../widgets/notificacion_in_app.dart';
+import 'package:provider/provider.dart';
+import '../providers/notificaciones_provider.dart';
 
 /// Servicio para manejar las notificaciones push y navegar a las pantallas correctas
 class NotificationHandler {
@@ -44,6 +46,15 @@ class NotificationHandler {
       name: 'NotificationHandler',
     );
 
+    // Guardar en inbox unificado
+    if (_context != null) {
+      try {
+        _context!.read<NotificacionesProvider>().agregarDesdePush(message);
+      } catch (e) {
+        developer.log('No se pudo guardar notificación en inbox', name: 'NotificationHandler', error: e);
+      }
+    }
+
     // Mostrar notificación in-app si el contexto está disponible
     if (_context != null) {
       NotificacionInApp.mostrar(_context!, message);
@@ -54,6 +65,17 @@ class NotificationHandler {
     if (_context == null) {
       developer.log('Context no disponible para navegar', name: 'NotificationHandler');
       return;
+    }
+
+    // Guardar/actualizar en inbox y marcar como leída
+    try {
+      _context!.read<NotificacionesProvider>().agregarDesdePush(message);
+      final id = message.messageId ?? message.data['id'];
+      if (id != null) {
+        _context!.read<NotificacionesProvider>().marcarComoLeida(id.toString());
+      }
+    } catch (e) {
+      developer.log('No se pudo actualizar inbox al tocar notificación', name: 'NotificationHandler', error: e);
     }
 
     final data = message.data;

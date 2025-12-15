@@ -351,10 +351,18 @@ class CalificacionRapidaSerializer(serializers.Serializer):
         if not calificado:
             raise serializers.ValidationError("No se pudo determinar a quién calificar.")
 
-        return CalificacionService.crear_calificacion(
-            pedido=pedido,
-            calificador=user,
-            calificado=calificado,
-            tipo=tipo,
-            estrellas=validated_data['estrellas']
-        )
+        # Evitar autocalificación (ej: cliente = repartidor en entornos de prueba)
+        if calificado.id == user.id:
+            raise serializers.ValidationError("No puedes calificarte a ti mismo.")
+
+        try:
+            return CalificacionService.crear_calificacion(
+                pedido=pedido,
+                calificador=user,
+                calificado=calificado,
+                tipo=tipo,
+                estrellas=validated_data['estrellas']
+            )
+        except ValidationError as e:
+            # Normalizar errores de modelo a respuesta DRF
+            raise serializers.ValidationError(e.message_dict or e.messages)

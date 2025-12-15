@@ -46,13 +46,14 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Fondo suave
+      backgroundColor: const Color(0xFFF3F5F9), // Fondo suave y uniforme
       appBar: AppBar(
-        title: const Text('Mis Pedidos'),
+        title: const Text('Mis Pedidos', style: TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: false,
-        elevation: 0,
+        elevation: 0.2,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
+        shadowColor: Colors.black12,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -101,15 +102,20 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
   }
 
   Widget _buildTarjetaPedido(PedidoListItem pedido) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
@@ -126,14 +132,14 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
                   Text(
                     pedido.numeroPedido,
                     style: const TextStyle(
-                      fontSize: 16, 
-                      fontWeight: FontWeight.w700
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                   PedidoUtils.buildEstadoBadge(pedido.estado, pedido.estadoDisplay),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Información del proveedor
               if (pedido.proveedorNombre != null)
@@ -146,13 +152,13 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
                 children: [
                   Expanded(
                     child: _buildInfoRow(
-                      Icons.calendar_today_outlined, 
-                      _formatearFecha(pedido.creadoEn)
+                      Icons.calendar_today_outlined,
+                      _formatearFecha(pedido.creadoEn),
                     ),
                   ),
                   _buildInfoRow(
-                    Icons.shopping_bag_outlined, 
-                    '${pedido.cantidadItems} items'
+                    Icons.shopping_bag_outlined,
+                    '${pedido.cantidadItems} items',
                   ),
                 ],
               ),
@@ -172,7 +178,7 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
                       Text('Total', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
                       Text(
                         '\$${pedido.total.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                       ),
                     ],
                   ),
