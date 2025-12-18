@@ -301,20 +301,109 @@ class RepartidorInfo {
   final String nombre;
   final String email;
   final String? telefono;
+  final String? fotoPerfil;
+  final double? calificacionPromedio;
+  final int totalCalificaciones;
+  final Map<String, int>? desgloseCalificaciones;
+  final double? porcentaje5Estrellas;
+  final String? estado;
+  final String? estadoDisplay;
+  final double? latitud;
+  final double? longitud;
+  final DateTime? ultimaLocalizacion;
+  final String? tipoVehiculoActivo;
+  final String? placaVehiculoActiva;
 
   RepartidorInfo({
     required this.id,
     required this.nombre,
     required this.email,
     this.telefono,
+    this.fotoPerfil,
+    this.calificacionPromedio,
+    this.totalCalificaciones = 0,
+    this.desgloseCalificaciones,
+    this.porcentaje5Estrellas,
+    this.estado,
+    this.estadoDisplay,
+    this.latitud,
+    this.longitud,
+    this.ultimaLocalizacion,
+    this.tipoVehiculoActivo,
+    this.placaVehiculoActiva,
   });
 
   factory RepartidorInfo.fromJson(Map<String, dynamic> json) {
+    double? parseDouble(dynamic value) =>
+        value != null ? double.tryParse(value.toString()) : null;
+
+    int parseInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      return DateTime.tryParse(value.toString());
+    }
+
+    Map<String, int>? mapaDesglose;
+    if (json['desglose_calificaciones'] is Map) {
+      mapaDesglose = Map<String, dynamic>.from(json['desglose_calificaciones'])
+          .map(
+            (key, value) => MapEntry(key.toString(), parseInt(value)),
+          );
+    }
+
     return RepartidorInfo(
       id: json['id'],
       nombre: (json['nombre'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
       telefono: json['telefono']?.toString(),
+      fotoPerfil: json['foto_perfil']?.toString(),
+      calificacionPromedio: parseDouble(json['calificacion_promedio']),
+      totalCalificaciones: parseInt(json['total_calificaciones']),
+      desgloseCalificaciones: mapaDesglose,
+      porcentaje5Estrellas: parseDouble(json['porcentaje_5_estrellas']),
+      estado: json['estado']?.toString(),
+      estadoDisplay: json['estado_display']?.toString(),
+      latitud: parseDouble(json['latitud']),
+      longitud: parseDouble(json['longitud']),
+      ultimaLocalizacion: parseDate(json['ultima_localizacion']),
+      tipoVehiculoActivo: json['tipo_vehiculo_activo']?.toString(),
+      placaVehiculoActiva: json['placa_vehiculo_activa']?.toString(),
+    );
+  }
+}
+
+class CalificacionProductoInfo {
+  final double estrellas;
+  final String? comentario;
+  final DateTime? fecha;
+
+  CalificacionProductoInfo({
+    required this.estrellas,
+    this.comentario,
+    this.fecha,
+  });
+
+  factory CalificacionProductoInfo.fromJson(Map<String, dynamic> json) {
+    double parseEstrellas(dynamic value) {
+      if (value == null) return 0;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString()) ?? 0;
+    }
+
+    DateTime? parseFecha(dynamic value) {
+      if (value == null) return null;
+      return DateTime.tryParse(value.toString());
+    }
+
+    return CalificacionProductoInfo(
+      estrellas: parseEstrellas(json['estrellas']),
+      comentario: json['comentario']?.toString(),
+      fecha: parseFecha(json['fecha']),
     );
   }
 }
@@ -328,6 +417,8 @@ class ItemPedido {
   final double precioUnitario;
   final double subtotal;
   final String? notas;
+  final CalificacionProductoInfo? calificacionProductoInfo;
+  final bool puedeCalificarProducto;
 
   ItemPedido({
     required this.id,
@@ -338,9 +429,18 @@ class ItemPedido {
     required this.precioUnitario,
     required this.subtotal,
     this.notas,
+    this.calificacionProductoInfo,
+    this.puedeCalificarProducto = false,
   });
 
   factory ItemPedido.fromJson(Map<String, dynamic> json) {
+    CalificacionProductoInfo? calificacionInfo;
+    if (json['calificacion_producto'] is Map) {
+      calificacionInfo = CalificacionProductoInfo.fromJson(
+        Map<String, dynamic>.from(json['calificacion_producto']),
+      );
+    }
+
     return ItemPedido(
       id: json['id'],
       producto: json['producto'],
@@ -350,6 +450,8 @@ class ItemPedido {
       precioUnitario: double.tryParse(json['precio_unitario'].toString()) ?? 0,
       subtotal: double.tryParse(json['subtotal'].toString()) ?? 0,
       notas: json['notas'],
+      calificacionProductoInfo: calificacionInfo,
+      puedeCalificarProducto: json['puede_calificar_producto'] ?? false,
     );
   }
 

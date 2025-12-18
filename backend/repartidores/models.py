@@ -189,6 +189,17 @@ class Repartidor(TimeStampedModel):
         if not (-180.0 <= lon <= 180.0):
             raise ValidationError(f"Longitud fuera de rango (-180 a 180): {lon}")
 
+        # Validar rango ecuatoriano para evitar violar los CHECK constraints de la tabla
+        if not (-5.0 <= lat <= 2.0):
+            raise ValidationError(
+                "Latitud fuera del territorio ecuatoriano. Usa valores entre -5.0 y 2.0."
+            )
+
+        if not (-92.0 <= lon <= -75.0):
+            raise ValidationError(
+                "Longitud fuera del territorio ecuatoriano. Usa valores entre -92.0 y -75.0."
+            )
+
         self.latitud = float(lat)
         self.longitud = float(lon)
         self.ultima_localizacion = when or timezone.now()

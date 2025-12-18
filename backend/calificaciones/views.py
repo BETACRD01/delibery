@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from .models import Calificacion, ResumenCalificacion, TipoCalificacion
+from .models import Calificacion, CalificacionProducto, ResumenCalificacion, TipoCalificacion
 from .serializers import (
     CalificacionListSerializer,
     CalificacionDetailSerializer,
@@ -245,14 +245,23 @@ class CalificacionViewSet(viewsets.ModelViewSet):
         )
         serializer.is_valid(raise_exception=True)
         calificacion = serializer.save()
-        
+        payload = {
+            'id': getattr(calificacion, 'id', None),
+            'estrellas': calificacion.estrellas,
+        }
+
+        if isinstance(calificacion, CalificacionProducto):
+            payload.update({
+                'tipo': TipoCalificacion.CLIENTE_A_PRODUCTO,
+                'producto_id': calificacion.producto_id,
+                'item_id': calificacion.item_id,
+            })
+        else:
+            payload['tipo'] = calificacion.tipo
+
         return Response({
             'message': '¡Gracias por tu calificación!',
-            'calificacion': {
-                'id': calificacion.id,
-                'estrellas': calificacion.estrellas,
-                'tipo': calificacion.tipo,
-            }
+            'calificacion': payload,
         }, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['get'], url_path='pedido/(?P<pedido_id>[^/.]+)')

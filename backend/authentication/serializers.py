@@ -32,11 +32,14 @@ class UserSerializer(serializers.ModelSerializer):
             'notificaciones_email', 'notificaciones_marketing', 'notificaciones_push',
             # Estado de cuenta
             'cuenta_desactivada', 'fecha_desactivacion',
+            # Roles y permisos
+            'tipo_usuario', 'rol_activo', 'roles_aprobados',
         ]
         read_only_fields = [
             'id', 'created_at', 'edad',
             'terminos_fecha_aceptacion', 'terminos_ip_aceptacion',
             'fecha_desactivacion',
+            'roles_aprobados', 'rol_activo',
         ]
 
     def get_edad(self, obj):

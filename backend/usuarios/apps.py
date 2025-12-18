@@ -12,4 +12,4 @@ class UsuariosConfig(AppConfig):
         """
         Importa las señales cuando la app está lista
         """
-        import usuarios.models  # Esto carga las señales definidas en models.py
+        import usuarios.signals  # Necesario para registrar post_save

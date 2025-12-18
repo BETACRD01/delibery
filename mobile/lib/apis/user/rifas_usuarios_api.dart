@@ -2,8 +2,8 @@
 
 import 'dart:developer' as developer;
 
-import 'subapis/http_client.dart';
-import '../config/api_config.dart';
+import '../subapis/http_client.dart';
+import '../../config/api_config.dart';
 
 class RifasUsuariosApi {
   final _client = ApiClient();
@@ -12,7 +12,10 @@ class RifasUsuariosApi {
     try {
       return await _client.get(ApiConfig.rifasActiva);
     } catch (e) {
-      developer.log('Error obteniendo rifa activa: $e', name: 'RifasUsuariosApi');
+      developer.log(
+        'Error obteniendo rifa activa: $e',
+        name: 'RifasUsuariosApi',
+      );
       rethrow;
     }
   }

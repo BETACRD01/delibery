@@ -1,13 +1,13 @@
 // lib/models/categoria_model.dart
 
-import 'package:flutter/material.dart'; 
+import 'package:flutter/material.dart';
 
 class CategoriaModel {
   final String id;
   final String nombre;
   final String? imagenUrl;
   final int? totalProductos;
-  
+
   // Campos visuales
   final IconData? icono;
   final Color? color;
@@ -25,7 +25,7 @@ class CategoriaModel {
   factory CategoriaModel.fromJson(Map<String, dynamic> json) {
     // 1. Extraemos el bloque de configuración visual
     final uiData = json['ui_data'] as Map<String, dynamic>?;
-    
+
     String? urlDetectada;
     IconData? iconoDetectado;
     Color? colorDetectado;
@@ -38,7 +38,7 @@ class CategoriaModel {
 
       if (tipo == 'IMAGEN') {
         // El backend dice que hay foto
-        urlDetectada = contenido; 
+        urlDetectada = contenido;
       } else if (tipo == 'ICONO') {
         // El backend dice qué icono usar (Ej: "local_pizza")
         iconoDetectado = _mapIcono(contenido);
@@ -50,7 +50,8 @@ class CategoriaModel {
       }
     } else {
       // Soporte Legacy: Si el backend no mandó ui_data, buscamos donde siempre
-      urlDetectada = json['imagen_url'];
+      urlDetectada =
+          json['imagen_url'] ?? json['imagen'] ?? json['image'] ?? json['foto'];
     }
 
     return CategoriaModel(
@@ -73,18 +74,29 @@ class CategoriaModel {
   /// Convierte el texto "local_pizza" en el icono real Icons.local_pizza
   static IconData _mapIcono(String? nombreIcono) {
     switch (nombreIcono) {
-      case 'fastfood': return Icons.fastfood;
-      case 'lunch_dining': return Icons.lunch_dining;
-      case 'local_pizza': return Icons.local_pizza;
-      case 'local_drink': return Icons.local_drink;
-      case 'cake': return Icons.cake;
-      case 'icecream': return Icons.icecream;
-      case 'medical_services': return Icons.medical_services;
-      case 'liquor': return Icons.liquor;
-      case 'local_cafe': return Icons.local_cafe;
-      case 'breakfast_dining': return Icons.breakfast_dining;
-      case 'category': 
-      default: return Icons.category_outlined; // Fallback
+      case 'fastfood':
+        return Icons.fastfood;
+      case 'lunch_dining':
+        return Icons.lunch_dining;
+      case 'local_pizza':
+        return Icons.local_pizza;
+      case 'local_drink':
+        return Icons.local_drink;
+      case 'cake':
+        return Icons.cake;
+      case 'icecream':
+        return Icons.icecream;
+      case 'medical_services':
+        return Icons.medical_services;
+      case 'liquor':
+        return Icons.liquor;
+      case 'local_cafe':
+        return Icons.local_cafe;
+      case 'breakfast_dining':
+        return Icons.breakfast_dining;
+      case 'category':
+      default:
+        return Icons.category_outlined; // Fallback
     }
   }
 

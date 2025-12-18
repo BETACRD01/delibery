@@ -11,6 +11,7 @@ import '../../../models/producto_model.dart';
 import '../busqueda/pantalla_busqueda.dart';
 import '../../../providers/notificaciones_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../services/auth_service.dart';
 import 'widgets/inicio/home_app_bar.dart';
 
 // Widgets de la UI
@@ -66,11 +67,10 @@ class _PantallaHomeState extends State<PantallaHome> {
       value: _homeController,
       child: Scaffold(
         backgroundColor: JPColors.background,
-        // Extracción del FAB
         floatingActionButton: const _CarritoFAB(),
-        // Extracción del cuerpo principal, pasando el callback del carrito
         body: _HomeContent(
           onAgregarCarrito: _agregarProductoAlCarrito,
+          onLogoutTap: () => _cerrarSesion(context),
         ),
       ),
     );
@@ -81,32 +81,74 @@ class _PantallaHomeState extends State<PantallaHome> {
   // ════════════════════════════════════════════════════════════════════════════
   
   Future<void> _agregarProductoAlCarrito(BuildContext context, dynamic producto) async {
-    // Lectura del Provider y ScaffoldMessenger ANTES del await
     final carrito = context.read<ProveedorCarrito>();
     final messenger = ScaffoldMessenger.of(context);
+    final topPadding = MediaQuery.of(context).viewPadding.top;
 
     final success = await carrito.agregarProducto(producto);
 
-    // Verificación de 'mounted' después del await
     if (!mounted) return;
 
-    // Solo mostrar mensaje en caso de error
-    if (!success) {
+    if (success) {
+      final nombre = producto is ProductoModel ? producto.nombre : 'producto';
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 16),
+          duration: const Duration(milliseconds: 1800),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          backgroundColor: Colors.grey[900],
           content: Row(
             children: [
-              const Icon(Icons.error_outline, color: Colors.white, size: 20),
+              const Icon(Icons.check_circle, color: Colors.white, size: 20),
               const SizedBox(width: 10),
-              Expanded(child: Text(carrito.error ?? 'Error al agregar producto')),
+              Expanded(
+                child: Text(
+                  '✅ Agregado al carrito · $nombre',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
-          backgroundColor: JPColors.error,
-          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Ver carrito',
+            textColor: JPColors.primary,
+            onPressed: () => Rutas.irA(context, Rutas.carrito),
+          ),
         ),
       );
+      return;
     }
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(carrito.error ?? 'Error al agregar producto')),
+          ],
+        ),
+        backgroundColor: JPColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _cerrarSesion(BuildContext context) async {
+    final auth = AuthService();
+    try {
+      await auth.logout();
+    } catch (_) {
+      // ignorar errores secundarios
+    }
+    if (!context.mounted) return;
+    await Rutas.irAYLimpiar(context, Rutas.login);
   }
 }
 
@@ -116,10 +158,13 @@ class _PantallaHomeState extends State<PantallaHome> {
 
 /// Widget que contiene el CustomScrollView y todas las secciones de la Home.
 class _HomeContent extends StatelessWidget {
-  // Callback para agregar producto al carrito (delega la lógica al State)
   final Function(BuildContext, dynamic) onAgregarCarrito;
+  final VoidCallback? onLogoutTap;
 
-  const _HomeContent({required this.onAgregarCarrito});
+  const _HomeContent({
+    required this.onAgregarCarrito,
+    this.onLogoutTap,
+  });
 
   // Método para mostrar el modal de búsqueda
   void _mostrarBusqueda(BuildContext context) {
@@ -164,6 +209,7 @@ class _HomeContent extends StatelessWidget {
                 unreadCount: inbox.noLeidas.length,
                 onNotificationTap: () => Rutas.irANotificaciones(context),
                 onSearchTap: () => _mostrarBusqueda(context),
+                onLogoutTap: onLogoutTap,
                 logoAssetPath: 'assets/images/Beta.png',
               ),
               SliverToBoxAdapter(

@@ -43,7 +43,7 @@ dependencies:
   http: ^1.2.0
   http_parser: ^4.0.2
   flutter_secure_storage: ^9.0.0
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.5.4
 
   # ---------------------------------------------------------------------------
   # 📱 HARDWARE & PERMISOS (Compatibles con Dart 3.10)
@@ -74,6 +74,7 @@ dependencies:
   intl_phone_field: ^3.2.0
   image: ^4.1.7
   badges: ^3.1.2
+  path_provider: ^2.1.5
 
 
 ###############################################################################

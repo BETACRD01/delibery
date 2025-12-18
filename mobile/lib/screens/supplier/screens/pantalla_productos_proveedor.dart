@@ -1,6 +1,9 @@
 // lib/screens/supplier/screens/pantalla_productos_proveedor.dart
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../config/api_config.dart';
 import '../../../controllers/supplier/supplier_controller.dart';
@@ -340,6 +343,10 @@ class _FormularioProductoState extends State<_FormularioProducto> {
   final _precioController = TextEditingController();
   final _stockController = TextEditingController();
   bool _disponible = true;
+  File? _imagenSeleccionada;
+  bool _guardandoProducto = false;
+  final ImagePicker _picker = ImagePicker();
+  String? _errorProducto;
 
   static const Color _exito = Color(0xFF10B981);
 
@@ -397,25 +404,43 @@ class _FormularioProductoState extends State<_FormularioProducto> {
             ),
             const SizedBox(height: 16),
             
-            // Imagen
             Center(
               child: GestureDetector(
-                onTap: () {
-                  // Seleccionar imagen
-                },
+                onTap: _mostrarOpcionesImagen,
                 child: Container(
-                  width: 100,
-                  height: 100,
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
-                  child: Icon(Icons.add_a_photo_outlined, size: 32, color: Colors.grey.shade400),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: _imagenSeleccionada != null
+                        ? Image.file(_imagenSeleccionada!, fit: BoxFit.cover)
+                        : widget.producto?.imagenUrl != null
+                            ? Image.network(
+                                widget.producto!.imagenUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 32),
+                              )
+                            : Center(
+                                child: Icon(Icons.add_a_photo_outlined, size: 32, color: Colors.grey.shade400),
+                              ),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
+            if (_errorProducto != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  _errorProducto!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
 
             TextField(
               controller: _nombreController,
@@ -475,13 +500,19 @@ class _FormularioProductoState extends State<_FormularioProducto> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _guardar,
+                onPressed: _guardandoProducto ? null : () => _guardar(context),
                 style: FilledButton.styleFrom(
                   backgroundColor: _exito,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: Text(widget.producto != null ? 'Guardar Cambios' : 'Agregar Producto'),
+                child: _guardandoProducto
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(widget.producto != null ? 'Guardar Cambios' : 'Agregar Producto'),
               ),
             ),
           ],
@@ -490,20 +521,100 @@ class _FormularioProductoState extends State<_FormularioProducto> {
     );
   }
 
-  void _guardar() {
-    if (_nombreController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El nombre es requerido')),
-      );
+  Future<void> _guardar(BuildContext context) async {
+    final nombre = _nombreController.text.trim();
+    if (nombre.isEmpty) {
+      setState(() => _errorProducto = 'El nombre es requerido');
       return;
     }
 
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(widget.producto != null ? 'Producto actualizado' : 'Producto agregado'),
-        backgroundColor: _exito,
+    final descripcion = _descripcionController.text.trim();
+    final precio = double.tryParse(_precioController.text.replaceAll(',', '.')) ?? 0.0;
+    if (precio <= 0) {
+      setState(() => _errorProducto = 'Ingresa un precio válido');
+      return;
+    }
+
+    final stock = int.tryParse(_stockController.text) ?? 0;
+
+    setState(() {
+      _guardandoProducto = true;
+      _errorProducto = null;
+    });
+
+    final controller = context.read<SupplierController>();
+    final data = {
+      'nombre': nombre,
+      'descripcion': descripcion,
+      'precio': precio,
+      'stock': stock,
+      'disponible': _disponible ? 'true' : 'false',
+    };
+
+    final ok = await controller.crearProducto(
+      data,
+      imagen: _imagenSeleccionada,
+    );
+
+    setState(() => _guardandoProducto = false);
+
+    if (ok) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(widget.producto != null ? 'Producto actualizado' : 'Producto agregado'),
+          backgroundColor: _exito,
+        ),
+      );
+    } else if (controller.error != null) {
+      setState(() => _errorProducto = controller.error);
+    }
+  }
+
+  void _mostrarOpcionesImagen() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galería'),
+              onTap: () {
+                Navigator.pop(context);
+                _seleccionarImagen(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Cámara'),
+              onTap: () {
+                Navigator.pop(context);
+                _seleccionarImagen(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _seleccionarImagen(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(source: source, imageQuality: 70);
+      if (picked == null) return;
+      setState(() {
+        _imagenSeleccionada = File(picked.path);
+      });
+    } catch (e) {
+      setState(() {
+        _errorProducto = 'No se pudo cargar la imagen';
+      });
+    }
   }
 }

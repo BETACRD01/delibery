@@ -31,6 +31,13 @@ class Categoria(models.Model):
         null=True,
         verbose_name='Imagen'
     )
+
+    imagen_url = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name='URL Imagen',
+        help_text='URL externa si no se sube archivo'
+    )
     
     activo = models.BooleanField(default=True, verbose_name='Activo')
     
@@ -49,6 +56,13 @@ class Categoria(models.Model):
     @property
     def total_productos(self):
         return self.productos.filter(disponible=True).count()
+
+    @property
+    def imagen_final(self):
+        """Retorna la URL de imagen, ya sea archivo o URL externa."""
+        if self.imagen:
+            return self.imagen.url
+        return self.imagen_url
 
 
 # ═══════════════════════════════════════════════════════════════════════

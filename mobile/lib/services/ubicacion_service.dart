@@ -293,6 +293,11 @@ class UbicacionService {
 
       _log('[DEBUG] Enviando ubicacion al backend: ${position.latitude}, ${position.longitude}');
 
+      if (!_latitudEnEcuador(position.latitude)) {
+        _log('[DEBUG] Latitud fuera de Ecuador (${position.latitude}), no se envía al backend');
+        return;
+      }
+
       await _repartidorService.actualizarUbicacion(
         latitud: position.latitude,
         longitud: position.longitude,
@@ -316,6 +321,8 @@ class UbicacionService {
       _log('Error de conexion enviando ubicacion', error: e);
     }
   }
+
+  bool _latitudEnEcuador(double lat) => lat >= -5.0 && lat <= 2.0;
 
   // ---------------------------------------------------------------------------
   // CONTROL Y GESTION

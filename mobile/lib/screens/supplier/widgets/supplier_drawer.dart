@@ -20,12 +20,11 @@ class SupplierDrawer extends StatelessWidget {
   // ---------------------------------------------------------------------------
   // PALETA DE COLORES
   // ---------------------------------------------------------------------------
-  static const Color _primario = Color(0xFF1E88E5);      
-  static const Color _primarioOscuro = Color(0xFF1565C0);
-  static const Color _exito = Color(0xFF43A047);         
-  static const Color _alerta = Color(0xFFFB8C00);        
-  static const Color _peligro = Color(0xFFE53935);       
-  static const Color _textoSecundario = Color(0xFF6B7280);
+  static const Color _primario = Color(0xFF1E88E5);
+  static const Color _exito = Color(0xFF43A047);
+  static const Color _alerta = Color(0xFFFB8C00);
+  static const Color _peligro = Color(0xFFE53935);
+  static const Color _rojo = Color(0xFFEF4444);
   static const Color _fondoTarjeta = Color(0xFFF8FAFC);
 
   @override
@@ -41,7 +40,8 @@ class SupplierDrawer extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  // Alerta de verificación
+                  _buildRoleCard(context),
+                  const SizedBox(height: 8),
                   Consumer<SupplierController>(
                     builder: (context, controller, child) {
                       if (!controller.verificado) {
@@ -51,19 +51,8 @@ class SupplierDrawer extends StatelessWidget {
                     },
                   ),
 
-                  // Selector de roles
-                  Consumer<ProveedorRoles>(
-                    builder: (context, proveedorRoles, child) {
-                      if (!proveedorRoles.tieneMultiplesRoles) {
-                        return const SizedBox.shrink();
-                      }
-                      return _buildSelectorRoles(context, proveedorRoles);
-                    },
-                  ),
-
                   const SizedBox(height: 8),
 
-                  // Menú principal
                   _buildMenuItem(
                     context,
                     icon: Icons.inventory_2_outlined,
@@ -72,7 +61,9 @@ class SupplierDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const PantallaProductosProveedor()),
+                        MaterialPageRoute(
+                          builder: (_) => const PantallaProductosProveedor(),
+                        ),
                       );
                     },
                   ),
@@ -84,7 +75,9 @@ class SupplierDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const PantallaEstadisticasProveedor()),
+                        MaterialPageRoute(
+                          builder: (_) => const PantallaEstadisticasProveedor(),
+                        ),
                       );
                     },
                   ),
@@ -116,7 +109,9 @@ class SupplierDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const PantallaConfiguracionProveedor()),
+                        MaterialPageRoute(
+                          builder: (_) => const PantallaConfiguracionProveedor(),
+                        ),
                       );
                     },
                   ),
@@ -128,7 +123,9 @@ class SupplierDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const PantallaAyudaProveedor()),
+                        MaterialPageRoute(
+                          builder: (_) => const PantallaAyudaProveedor(),
+                        ),
                       );
                     },
                   ),
@@ -164,18 +161,29 @@ class SupplierDrawer extends StatelessWidget {
     return Consumer<SupplierController>(
       builder: (context, controller, child) {
         return Container(
+          width: double.infinity,
           padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 16,
-            bottom: 20,
+            top: MediaQuery.of(context).padding.top + 20,
             left: 20,
             right: 20,
+            bottom: 22,
           ),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_primario, _primarioOscuro],
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1E88E5), Color(0xFF0D47A1)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,19 +191,19 @@ class SupplierDrawer extends StatelessWidget {
               Row(
                 children: [
                   _buildLogoAvatar(controller),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          controller.nombreNegocio.isNotEmpty 
-                              ? controller.nombreNegocio 
+                          controller.nombreNegocio.isNotEmpty
+                              ? controller.nombreNegocio
                               : 'Mi Negocio',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -205,9 +213,14 @@ class SupplierDrawer extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const Icon(
+                    Icons.circle,
+                    size: 10,
+                    color: Colors.white70,
+                  ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Icon(
@@ -218,8 +231,8 @@ class SupplierDrawer extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      controller.email.isNotEmpty 
-                          ? controller.email 
+                      controller.email.isNotEmpty
+                          ? controller.email
                           : 'Sin email',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
@@ -257,12 +270,12 @@ class SupplierDrawer extends StatelessWidget {
         ],
       ),
       child: ClipOval(
-        child: _buildLogoImage(logoUrl),
+        child: _buildLogoImage(logoUrl, controller),
       ),
     );
   }
 
-  Widget _buildLogoImage(String? logoUrl) {
+  Widget _buildLogoImage(String? logoUrl, SupplierController controller) {
     if (logoUrl == null || logoUrl.isEmpty) {
       // ✅ CORRECCIÓN: Agregado 'const'
       return Container(
@@ -278,6 +291,17 @@ class SupplierDrawer extends StatelessWidget {
     String urlCompleta = logoUrl;
     if (!logoUrl.startsWith('http')) {
       urlCompleta = '${ApiConfig.baseUrl}$logoUrl';
+    }
+
+    if (controller.esLogoCaido(urlCompleta)) {
+      return Container(
+        color: _fondoTarjeta,
+        child: const Icon(
+          Icons.store,
+          size: 28,
+          color: _primario,
+        ),
+      );
     }
 
     return Image.network(
@@ -306,7 +330,10 @@ class SupplierDrawer extends StatelessWidget {
         );
       },
       errorBuilder: (context, error, stackTrace) {
-        // ✅ CORRECCIÓN: Agregado 'const'
+        // Delay the mark to next frame to avoid notifyListeners during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          controller.marcarLogoCaido(urlCompleta);
+        });
         return Container(
           color: _fondoTarjeta,
           child: const Icon(
@@ -351,10 +378,6 @@ class SupplierDrawer extends StatelessWidget {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // MENÚ ITEMS
-  // ---------------------------------------------------------------------------
-
   Widget _buildMenuItem(
     BuildContext context, {
     required IconData icon,
@@ -363,7 +386,7 @@ class SupplierDrawer extends StatelessWidget {
     Color? color,
     Widget? badge,
   }) {
-    final itemColor = color ?? _textoSecundario;
+    final itemColor = color ?? Colors.black87;
 
     return ListTile(
       leading: Icon(icon, color: itemColor, size: 22),
@@ -373,7 +396,7 @@ class SupplierDrawer extends StatelessWidget {
             child: Text(
               title,
               style: TextStyle(
-                color: color ?? Colors.black87,
+                color: itemColor,
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -388,24 +411,18 @@ class SupplierDrawer extends StatelessWidget {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // ALERTA VERIFICACIÓN
-  // ---------------------------------------------------------------------------
-
   Widget _buildAlertaVerificacion() {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        // ✅ CORRECCIÓN: .withValues()
         color: _alerta.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          // ✅ CORRECCIÓN: .withValues()
           color: _alerta.withValues(alpha: 0.3),
         ),
       ),
-      child: const Row( // ✅ CORRECCIÓN: Agregado 'const'
+      child: const Row(
         children: [
           Icon(Icons.info_outline, color: _alerta, size: 20),
           SizedBox(width: 12),
@@ -425,136 +442,239 @@ class SupplierDrawer extends StatelessWidget {
   }
 
   // ---------------------------------------------------------------------------
+  // MENÚ ITEMS
+  // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // ALERTA VERIFICACIÓN
+  // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
   // SELECTOR DE ROLES
   // ---------------------------------------------------------------------------
 
-  Widget _buildSelectorRoles(BuildContext context, ProveedorRoles proveedorRoles) {
+  Widget _buildRoleCard(BuildContext context) {
+    return Consumer<ProveedorRoles>(
+      builder: (context, proveedorRoles, _) {
+        if (!proveedorRoles.tieneMultiplesRoles) {
+          return const SizedBox.shrink();
+        }
+        final rolesDisponibles = proveedorRoles.rolesDisponibles
+            .where((r) => r.toUpperCase() != 'PROVEEDOR')
+            .toList();
+        if (rolesDisponibles.isEmpty) return const SizedBox.shrink();
+
+        final tituloActivo = proveedorRoles.rolActivo != null
+            ? _getNombreRol(proveedorRoles.rolActivo!)
+            : _getNombreRol(rolesDisponibles.first);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Material(
+            color: Colors.transparent,
+            elevation: 4,
+            shadowColor: Colors.black.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(24),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(24),
+              onTap: () => _mostrarCambiarRolSheet(context, proveedorRoles),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.white,
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: _primario.withValues(alpha: 0.15),
+                      child: const Icon(
+                        Icons.swap_horiz,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Cambiar rol',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Actualmente: $tituloActivo',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      color: Colors.grey[400],
+                      size: 24,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _mostrarCambiarRolSheet(
+    BuildContext parentContext,
+    ProveedorRoles proveedorRoles,
+  ) {
     final rolesDisponibles = proveedorRoles.rolesDisponibles
         .where((r) => r.toUpperCase() != 'PROVEEDOR')
         .toList();
 
-    if (rolesDisponibles.isEmpty) return const SizedBox.shrink();
+    if (rolesDisponibles.isEmpty) return;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _fondoTarjeta,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Cambiar Rol',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: _textoSecundario,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: rolesDisponibles.map((rol) {
-              return ActionChip(
-                avatar: Icon(
-                  _getIconoRol(rol),
-                  size: 16,
-                  color: _getColorRol(rol),
-                ),
-                label: Text(
-                  _getNombreRol(rol),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _getColorRol(rol),
+    bool isChanging = false;
+
+    showModalBottomSheet(
+      context: parentContext,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: const EdgeInsets.only(
+                top: 16,
+                left: 20,
+                right: 20,
+                bottom: 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 48,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
-                ),
-                // ✅ CORRECCIÓN: .withValues()
-                backgroundColor: _getColorRol(rol).withValues(alpha: 0.1),
-                side: BorderSide.none,
-                onPressed: () => _confirmarCambioRol(context, proveedorRoles, rol),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Cambiar rol',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Selecciona el rol que quieras activar.',
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: rolesDisponibles.map((rol) {
+                      final isDisabled = isChanging;
+                      return ActionChip(
+                        backgroundColor: Colors.grey.shade100,
+                        label: Text(
+                          _getNombreRol(rol),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        onPressed: isDisabled
+                            ? null
+                            : () async {
+                                final navigatorState = Navigator.of(parentContext);
+                                final scaffoldMessenger =
+                                    ScaffoldMessenger.of(parentContext);
+                                final sheetMessenger =
+                                    ScaffoldMessenger.of(sheetContext);
+                                final rutaHome = _rutaHomePorRol(rol);
+                                setSheetState(() => isChanging = true);
+                                try {
+                                  final success =
+                                      await proveedorRoles.cambiarARol(rol);
+                                  if (!success) {
+                                    throw Exception('No puedes activar $rol');
+                                  }
+                                  if (sheetContext.mounted) {
+                                    Navigator.of(sheetContext).pop();
+                                  }
+                                  await navigatorState.pushNamedAndRemoveUntil(
+                                    rutaHome,
+                                    (route) => false,
+                                  );
+                                  if (scaffoldMessenger.mounted) {
+                                    scaffoldMessenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Rol cambiado a ${_getNombreRol(rol)}',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (sheetMessenger.mounted) {
+                                    sheetMessenger.showSnackBar(
+                                      SnackBar(
+                                        backgroundColor: _rojo,
+                                        content: Text(
+                                          e.toString(),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  setSheetState(() => isChanging = false);
+                                }
+                              },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
-  }
-
-  void _confirmarCambioRol(
-    BuildContext context,
-    ProveedorRoles proveedorRoles,
-    String nuevoRol,
-  ) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cambiar a ${_getNombreRol(nuevoRol)}'),
-        content: const Text('¿Deseas cambiar de Rol?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              Navigator.pop(context);
-              _ejecutarCambioRol(context, proveedorRoles, nuevoRol);
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: _getColorRol(nuevoRol),
-            ),
-            child: const Text('Cambiar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _ejecutarCambioRol(
-    BuildContext context,
-    ProveedorRoles proveedorRoles,
-    String nuevoRol,
-  ) async {
-    try {
-      await proveedorRoles.cambiarARol(nuevoRol);
-      
-      if (!context.mounted) return;
-
-      String rolDestino = nuevoRol;
-      if (nuevoRol.toUpperCase() == 'USUARIO') rolDestino = 'CLIENTE';
-
-      await Rutas.irAHomePorRol(context, rolDestino);
-      
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    }
   }
 
   // ---------------------------------------------------------------------------
   // HELPERS
   // ---------------------------------------------------------------------------
 
-  IconData _getIconoRol(String rol) {
+  String _rutaHomePorRol(String rol) {
     switch (rol.toUpperCase()) {
+      case 'ADMINISTRADOR':
+        return Rutas.adminHome;
+      case 'REPARTIDOR':
+        return Rutas.repartidorHome;
+      case 'PROVEEDOR':
+        return Rutas.proveedorHome;
       case 'CLIENTE':
       case 'USUARIO':
-        return Icons.person_outline;
-      case 'REPARTIDOR':
-        return Icons.delivery_dining;
-      case 'ADMINISTRADOR':
-        return Icons.admin_panel_settings_outlined;
-      case 'PROVEEDOR':
-        return Icons.store;
       default:
-        return Icons.help_outline;
+        return Rutas.inicio;
     }
   }
 
@@ -574,17 +694,4 @@ class SupplierDrawer extends StatelessWidget {
     }
   }
 
-  Color _getColorRol(String rol) {
-    switch (rol.toUpperCase()) {
-      case 'CLIENTE':
-      case 'USUARIO':
-        return _primario;
-      case 'REPARTIDOR':
-        return _alerta;
-      case 'ADMINISTRADOR':
-        return const Color(0xFF7B1FA2);
-      default:
-        return _textoSecundario;
-    }
-  }
 }

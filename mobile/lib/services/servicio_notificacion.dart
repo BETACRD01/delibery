@@ -4,21 +4,22 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:developer' as developer;
 import 'dart:async'; // Necesario para Timer, Future.delayed y reintentos
-import '../apis/usuarios_api.dart';
+import '../apis/user/usuarios_api.dart';
 import '../apis/helpers/api_exception.dart'; // Importar ApiException
 
 class NotificationService {
   // ---------------------------------------------------------------------------
   // DEPENDENCIAS
   // ---------------------------------------------------------------------------
-  
+
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
   final UsuariosApi _usuariosApi = UsuariosApi();
 
   // 💡 CONSTANTES PARA REINTENTOS
   static const int _maxRetries = 3;
-  static const Duration _baseDelay = Duration(seconds: 5); 
+  static const Duration _baseDelay = Duration(seconds: 5);
 
   void _log(String message, {Object? error}) {
     developer.log(message, name: 'NotificationService', error: error);
@@ -101,7 +102,9 @@ class NotificationService {
         return; // Éxito, salir de la función
       } on ApiException catch (e) {
         if (e.isNetworkError) {
-          _log('Sin conexion al registrar token FCM; se intentara de nuevo mas tarde');
+          _log(
+            'Sin conexion al registrar token FCM; se intentara de nuevo mas tarde',
+          );
           return;
         }
         if (e.statusCode == 429 && attempt < _maxRetries) {
@@ -115,7 +118,10 @@ class NotificationService {
           continue;
         } else {
           // Error 429 en último intento o cualquier otro error fatal
-          _log('Error fatal registrando token FCM (Intento $attempt)', error: e);
+          _log(
+            'Error fatal registrando token FCM (Intento $attempt)',
+            error: e,
+          );
           return; // Salir de la función después del último intento o error no-429
         }
       } catch (e) {
@@ -126,21 +132,22 @@ class NotificationService {
     }
   }
 
-Future<void> _retryEnviarToken(String token, int attempt) async {
-  try {
-    final response = await _usuariosApi.registrarFCMToken(token);
-    
-    // Verificacion flexible de exito
-    if (response['success'] == true || response.containsKey('mensaje')) {
-      _log('Token FCM registrado en backend correctamente (Intento $attempt)');
-    } else {
-      _log('Respuesta inesperada al registrar token: $response');
-    }
-  } on ApiException { 
+  Future<void> _retryEnviarToken(String token, int attempt) async {
+    try {
+      final response = await _usuariosApi.registrarFCMToken(token);
 
-    rethrow; 
+      // Verificacion flexible de exito
+      if (response['success'] == true || response.containsKey('mensaje')) {
+        _log(
+          'Token FCM registrado en backend correctamente (Intento $attempt)',
+        );
+      } else {
+        _log('Respuesta inesperada al registrar token: $response');
+      }
+    } on ApiException {
+      rethrow;
+    }
   }
-}
 
   Future<void> eliminarToken() async {
     try {
@@ -159,14 +166,15 @@ Future<void> _retryEnviarToken(String token, int attempt) async {
   // ---------------------------------------------------------------------------
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'high_importance_channel',
-      'Notificaciones Importantes',
-      channelDescription: 'Canal para notificaciones de alta prioridad',
-      importance: Importance.high,
-      priority: Priority.high,
-      showWhen: true,
-    );
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'high_importance_channel',
+          'Notificaciones Importantes',
+          channelDescription: 'Canal para notificaciones de alta prioridad',
+          importance: Importance.high,
+          priority: Priority.high,
+          showWhen: true,
+        );
 
     const NotificationDetails notificationDetails = NotificationDetails(
       android: androidDetails,

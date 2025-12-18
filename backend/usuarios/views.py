@@ -17,8 +17,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
 
-from authentication.models import User
+from authentication.models import User, validar_celular
 from .models import Perfil, DireccionFavorita, MetodoPago, UbicacionUsuario, SolicitudCambioRol
 from .serializers import (
     PerfilSerializer,
@@ -128,8 +129,13 @@ def actualizar_perfil(request):
         with transaction.atomic():
             # 1. Actualización de Celular (Modelo User)
             if nuevo_celular:
-                if not re.match(r"^09\d{8}$", nuevo_celular):
-                    raise DRFValidationError({"telefono": "El celular debe comenzar con 09 y tener 10 dígitos."})
+                try:
+                    validar_celular(nuevo_celular)
+                except DjangoValidationError as exc:
+                    mensaje = exc.message if hasattr(exc, "message") and exc.message else None
+                    if not mensaje and exc.messages:
+                        mensaje = exc.messages[0]
+                    raise DRFValidationError({"telefono": mensaje or "El celular tiene un formato inválido."})
                 
                 if User.objects.filter(celular=nuevo_celular).exclude(id=user.id).exists():
                     raise DRFValidationError({"telefono": "Este número ya está registrado."})
@@ -539,8 +545,9 @@ def cambiar_rol_activo(request):
     # 1. Validar si el usuario realmente tiene ese perfil
     tiene_permiso = False
     
-    if nuevo_rol == "CLIENTE":
-        tiene_permiso = True
+    if nuevo_rol in {"CLIENTE", "USUARIO"}:
+        # Solo validamos que el Perfil existe y el usuario está activo
+        tiene_permiso = hasattr(user, "perfil") and user.is_active
     elif nuevo_rol == "PROVEEDOR":
         # Verificamos si existe la relación en la BD
         if hasattr(user, 'proveedor') and user.proveedor.activo:

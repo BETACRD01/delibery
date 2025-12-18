@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
-
+from django.template import context as django_template_context
 # ==========================================
 # 1. INICIALIZACIÓN Y ENTORNO
 # ==========================================
@@ -23,6 +23,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Configuración de Logging para Settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('settings')
+
+try:
+    def _fixed_basecontext_copy(self):
+        duplicate = object.__new__(type(self))
+        duplicate.__dict__ = self.__dict__.copy()
+        duplicate.dicts = self.dicts[:] if hasattr(self, "dicts") else []
+        return duplicate
+
+    django_template_context.BaseContext.__copy__ = _fixed_basecontext_copy
+except Exception:
+    logger.warning("No se aplicó el parche de compatibilidad BaseContext.__copy__ (django.template.context)", exc_info=True)
 
 # Flag de entorno de pruebas
 TESTING = "test" in sys.argv
@@ -92,6 +103,8 @@ if NETWORK_DETECTION_ENABLED and CONFIG_RED:
 
 # Añadir comodines seguros
 ALLOWED_HOSTS.extend(["0.0.0.0", "10.0.2.2", "backend"])
+if "*" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("*")
 
 # ==========================================
 # 3. APLICACIONES INSTALADAS
@@ -168,16 +181,22 @@ WSGI_APPLICATION = "settings.wsgi.application"
 # 5. BASE DE DATOS & CACHÉ
 # ==========================================
 
+def _get_conn_max_age():
+    try:
+        return int(os.getenv("DB_CONN_MAX_AGE", "0"))
+    except ValueError:
+        return 0
+
 DATABASES = {
     "default": {
         # Si usas PostGIS, cambia el motor: 'django.contrib.gis.db.backends.postgis'
-        "ENGINE": "django.db.backends.postgresql", 
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("POSTGRES_DB"),
         "USER": os.getenv("POSTGRES_USER"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 600,
+        "CONN_MAX_AGE": _get_conn_max_age(),
         "OPTIONS": {"connect_timeout": 10},
     }
 }
@@ -382,8 +401,8 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+Path(MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
 
 # Templates
 TEMPLATES = [

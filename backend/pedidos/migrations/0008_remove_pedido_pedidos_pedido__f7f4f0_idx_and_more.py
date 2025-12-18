@@ -12,9 +12,18 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveIndex(
-            model_name='pedido',
-            name='pedidos_pedido__f7f4f0_idx',
+        migrations.RunSQL(
+            sql="DROP INDEX IF EXISTS pedidos_pedido__f7f4f0_idx;",
+            reverse_sql=(
+                "CREATE INDEX pedidos_pedido__f7f4f0_idx "
+                "ON pedidos_pedido (pedido_grupo, creado_en DESC);"
+            ),
+            state_operations=[
+                migrations.RemoveIndex(
+                    model_name='pedido',
+                    name='pedidos_pedido__f7f4f0_idx',
+                ),
+            ],
         ),
         migrations.AlterField(
             model_name='pedido',

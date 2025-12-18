@@ -1,8 +1,11 @@
+// lib/screens/delivery/ganancias/pantalla_ganancias_repartidor.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile/models/entrega_historial.dart';
+import 'package:mobile/services/repartidor_service.dart';
 
-/// 💵 Pantalla de Ganancias del Repartidor
-/// Muestra resumen de ingresos, historial de entregas y estadísticas
+/// Pantalla de ganancias vinculada al backend y alineada al diseño tipo iOS.
 class PantallaGananciasRepartidor extends StatefulWidget {
   const PantallaGananciasRepartidor({super.key});
 
@@ -13,227 +16,276 @@ class PantallaGananciasRepartidor extends StatefulWidget {
 
 class _PantallaGananciasRepartidorState
     extends State<PantallaGananciasRepartidor> {
-  // ==========================================================
-  // COLORES BASE
-  // ==========================================================
-  static const Color _naranja = Color(0xFFFF9800);
-  static const Color _verde = Color(0xFF4CAF50);
-  static const Color _grisFondo = Color(0xFFF5F5F5);
+  static const Color _surface = Color(0xFFF2F4F7);
+  static const Color _accent = Color(0xFF0A84FF);
+  static const Color _success = Color(0xFF34C759);
+  static const Color _cardBorder = Color(0xFFE1E4EB);
+  static const Color _shadowColor = Color(0x1A000000);
 
-  // ==========================================================
-  // DATOS SIMULADOS (puedes conectarlo con Firestore o API)
-  // ==========================================================
-  double gananciasTotales = 256.75;
-  double gananciasSemana = 48.20;
-  double gananciasHoy = 12.50;
+  final RepartidorService _service = RepartidorService();
+  final DateFormat _fechaFormat = DateFormat('dd/MM/yyyy HH:mm');
+  List<EntregaHistorial> _entregas = [];
+  bool _loading = true;
+  String? _error;
 
-  final List<Map<String, dynamic>> entregas = [
-    {
-      'fecha': DateTime(2025, 11, 5, 14, 30),
-      'monto': 6.5,
-      'cliente': 'Juan Pérez',
-      'direccion': 'Av. Tena y Amazonas',
-    },
-    {
-      'fecha': DateTime(2025, 11, 5, 16, 45),
-      'monto': 6.0,
-      'cliente': 'María Gómez',
-      'direccion': 'Barrio El Progreso',
-    },
-    {
-      'fecha': DateTime(2025, 11, 4, 12, 20),
-      'monto': 7.0,
-      'cliente': 'Carlos Quishpe',
-      'direccion': 'Parque Central',
-    },
-    {
-      'fecha': DateTime(2025, 11, 3, 19, 10),
-      'monto': 8.0,
-      'cliente': 'Ana López',
-      'direccion': 'Av. del Ejército',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _cargarGanancias();
+  }
 
-  // ==========================================================
-  // CONSTRUCCIÓN DE UI
-  // ==========================================================
+  Future<void> _cargarGanancias() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final response = await _service.obtenerHistorialEntregas();
+      final parsed = HistorialEntregasResponse.fromJson(response);
+      setState(() {
+        _entregas = parsed.entregas.reversed.toList();
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  double get _gananciaTotal =>
+      _entregas.fold(0.0, (sum, item) => sum + item.montoTotal);
+
+  double get _gananciaSemana {
+    final ahora = DateTime.now();
+    final sieteDiasAntes = ahora.subtract(const Duration(days: 7));
+    return _entregas
+        .where(
+          (entrega) => _parseFecha(
+            entrega.fechaEntregado,
+          ).isAfter(sieteDiasAntes.subtract(const Duration(seconds: 1))),
+        )
+        .fold(0.0, (sum, item) => sum + item.montoTotal);
+  }
+
+  double get _gananciaHoy {
+    final ahora = DateTime.now();
+    return _entregas
+        .where((entrega) {
+          final fecha = _parseFecha(entrega.fechaEntregado);
+          return fecha.year == ahora.year &&
+              fecha.month == ahora.month &&
+              fecha.day == ahora.day;
+        })
+        .fold(0.0, (sum, item) => sum + item.montoTotal);
+  }
+
+  DateTime _parseFecha(String valor) {
+    try {
+      return DateTime.parse(valor);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _grisFondo,
+      backgroundColor: _surface,
       appBar: AppBar(
-        title: const Text('Mis Ganancias'),
-        backgroundColor: _naranja,
+        backgroundColor: Colors.white,
         elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildResumenGeneral(),
-          const SizedBox(height: 16),
-          _buildEstadisticasSemanal(),
-          const SizedBox(height: 16),
-          _buildListaEntregas(),
-        ],
-      ),
-    );
-  }
-
-  // ==========================================================
-  // RESUMEN GENERAL
-  // ==========================================================
-  Widget _buildResumenGeneral() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient:const LinearGradient(
-          colors: [_naranja, _verde],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.black87),
+        title: const Text(
+          'Mis ganancias',
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
-        borderRadius: BorderRadius.circular(16),
       ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'Resumen General',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '\$${gananciasTotales.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Ganancia total acumulada',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==========================================================
-  // ESTADÍSTICAS SEMANALES
-  // ==========================================================
-  Widget _buildEstadisticasSemanal() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Estadísticas recientes',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildEstadisticaItem('Hoy', gananciasHoy, Icons.today),
-                _buildEstadisticaItem(
-                  'Semana',
-                  gananciasSemana,
-                  Icons.bar_chart,
-                ),
-                _buildEstadisticaItem(
-                  'Total',
-                  gananciasTotales,
-                  Icons.attach_money,
-                ),
-              ],
-            ),
+            _buildResumen(),
+            const SizedBox(height: 16),
+            Expanded(child: _buildListado()),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEstadisticaItem(String titulo, double valor, IconData icono) {
+  Widget _buildResumen() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _cardBorder),
+        boxShadow: const [
+          BoxShadow(color: _shadowColor, blurRadius: 14, offset: Offset(0, 8)),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Resumen de ganancias',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '\$${_gananciaTotal.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Total acumulado',
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildIndicador('Hoy', _gananciaHoy, _accent),
+              _buildIndicador('Últimos 7 días', _gananciaSemana, _success),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndicador(String label, double monto, Color color) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icono, color: _naranja, size: 28),
-        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 4),
         Text(
-          '\$${valor.toStringAsFixed(2)}',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          '\$${monto.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontSize: 16,
+          ),
         ),
-        Text(titulo, style: TextStyle(color: Colors.grey[600])),
       ],
     );
   }
 
-  // ==========================================================
-  // LISTA DE ENTREGAS
-  // ==========================================================
-  Widget _buildListaEntregas() {
-  if (entregas.isEmpty) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
+  Widget _buildListado() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.inbox,
-              size: 60,
-              color: Colors.grey,
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 56),
+            const SizedBox(height: 12),
+            const Text(
+              'Error cargando las ganancias',
+              style: TextStyle(color: Colors.black87),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
-              'No hay entregas registradas',
-              style: TextStyle(
-                color: Colors.grey,
+              _error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _cargarGanancias,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _accent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
+              child: const Text('Reintentar'),
             ),
           ],
         ),
+      );
+    }
+
+    if (_entregas.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(28),
+          child: Text(
+            'Las ganancias aparecerán aquí en cuanto completes tu primera entrega.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: _accent,
+      onRefresh: _cargarGanancias,
+      child: ListView.separated(
+        padding: const EdgeInsets.only(bottom: 12),
+        itemBuilder: (_, index) => _buildEntregaCard(_entregas[index]),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemCount: _entregas.length,
       ),
     );
   }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text(
-              'Historial de Entregas',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ),
-          const Divider(height: 1),
-          // ✅ Eliminado .toList() innecesario
-          ...entregas.map((e) => _buildEntregaItem(e)),
+  Widget _buildEntregaCard(EntregaHistorial entrega) {
+    final fecha = _fechaFormat.format(_parseFecha(entrega.fechaEntregado));
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _cardBorder),
+        boxShadow: const [
+          BoxShadow(color: _shadowColor, blurRadius: 12, offset: Offset(0, 6)),
         ],
       ),
-    );
-  }
-
-  Widget _buildEntregaItem(Map<String, dynamic> e) {
-    final fecha = DateFormat('dd/MM/yyyy hh:mm a').format(e['fecha']);
-    return ListTile(
-      leading: const Icon(Icons.delivery_dining, color: _verde),
-      title: Text('${e['cliente']} - \$${e['monto']}'),
-      subtitle: Text('${e['direccion']}\n$fecha'),
-      isThreeLine: true,
-      // ✅ Corregido: Color con MaterialColor válido
-      trailing: Icon(Icons.check_circle, color: Colors.green.shade400),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: _accent.withValues(alpha: 0.1),
+          child: Icon(
+            entrega.tieneComprobante ? Icons.check_circle : Icons.info_outline,
+            color: entrega.tieneComprobante ? _success : Colors.grey[600],
+          ),
+        ),
+        title: Text(
+          'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '${entrega.clienteNombre} · $fecha\nMétodo: ${entrega.metodoPago}',
+          style: const TextStyle(fontSize: 13),
+        ),
+        isThreeLine: true,
+        trailing: entrega.tieneComprobante
+            ? const Icon(Icons.receipt_long, color: _success)
+            : const SizedBox.shrink(),
+      ),
     );
   }
 }

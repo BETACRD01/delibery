@@ -5,11 +5,10 @@ import '../../../theme/jp_theme.dart';
 import '../../../controllers/user/perfil_controller.dart';
 import 'editar/pantalla_editar_informacion.dart';
 import 'editar/pantalla_editar_foto.dart';
-import '../../solicitudes_rol/pantalla_mis_solicitudes.dart';
-import '../../solicitudes_rol/pantalla_solicitar_rol.dart';
 import 'configuracion/pantalla_configuracion.dart'; 
 import 'rifas/pantalla_rifa_activa.dart';
-
+import '../../solicitudes_rol/pantalla_mis_solicitudes.dart';
+import '../../solicitudes_rol/pantalla_solicitar_rol.dart';
 /// 👤 PANTALLA DE PERFIL
 class PantallaPerfil extends StatefulWidget {
   const PantallaPerfil({super.key});
@@ -69,6 +68,20 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     if (resultado == true) _recargarDatos();
   }
 
+  void _irASeleccionarRol() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PantallaSolicitarRol()),
+    );
+  }
+
+  void _verMisSolicitudes() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PantallaMisSolicitudes()),
+    );
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // 🎨 UI PRINCIPAL
   // ══════════════════════════════════════════════════════════════════════════
@@ -112,9 +125,10 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
                         const SizedBox(height: 16),
                         _buildEstadisticas(),
                         const SizedBox(height: 16),
-                        _buildRifasCard(),
-                        const SizedBox(height: 24),
-                        _buildCambioRol(),
+                        _buildSolicitudesRolCard(),
+                        const SizedBox(height: 16),
+                      _buildRifasCard(),
+                      const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -532,27 +546,17 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // 🚀 BANNER CAMBIO ROL
-  // ══════════════════════════════════════════════════════════════════════════
-  Widget _buildCambioRol() {
+  Widget _buildSolicitudesRolCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            JPColors.primary.withValues(alpha: 0.12),
-            Colors.white,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -561,68 +565,26 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text('Solicitudes de rol', style: JPTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          const Text(
+            'Solicita ser Proveedor o Repartidor y mantén tu historial visible para el admin.',
+            style: TextStyle(color: JPColors.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _irASeleccionarRol,
+                  child: const Text('Solicitar rol'),
                 ),
-                child: const Icon(Icons.rocket_launch_rounded, color: JPColors.primary, size: 22),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Genera ingresos extra',
-                  style: JPTextStyles.h3.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Conviértete en Proveedor o Repartidor hoy mismo.',
-            style: TextStyle(
-              color: JPColors.textSecondary,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _irASeleccionarRol,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: JPColors.primary,
-                    side: BorderSide(color: JPColors.primary.withValues(alpha: 0.6)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text(
-                    'Aplicar ahora',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: _verMisSolicitudes,
-                style: TextButton.styleFrom(
-                  foregroundColor: JPColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                ),
-                child: const Text(
-                  'Ver solicitudes',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  onPressed: _verMisSolicitudes,
+                  child: const Text('Ver solicitudes'),
                 ),
               ),
             ],
@@ -632,6 +594,9 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🚀 BANNER CAMBIO ROL
+  // ══════════════════════════════════════════════════════════════════════════
   // ══════════════════════════════════════════════════════════════════════════
   // 🧩 WIDGETS AUXILIARES
   // ══════════════════════════════════════════════════════════════════════════
@@ -742,23 +707,6 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
   // ══════════════════════════════════════════════════════════════════════════
   // ⚙️ LÓGICA DE ACCIONES
   // ══════════════════════════════════════════════════════════════════════════
-
-  void _irASeleccionarRol() async {
-    final resultado = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (context) => const PantallaSolicitarRol()),
-    );
-    if (resultado == true) {
-      // Acción al volver si es necesaria
-    }
-  }
-
-  void _verMisSolicitudes() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const PantallaMisSolicitudes()),
-    );
-  }
 
   void _verRifaActiva() {
     Navigator.push(

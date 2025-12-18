@@ -51,12 +51,14 @@ class _PantallaSuperState extends State<PantallaSuper> {
                 onRefresh: controller.refrescar,
                 color: Colors.teal,
                 child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
                   slivers: [
-                    SliverToBoxAdapter(
+                    const SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                        child: const Column(
+                        padding: EdgeInsets.fromLTRB(16, 12, 16, 10),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -95,7 +97,11 @@ class _PantallaSuperState extends State<PantallaSuper> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.local_shipping_outlined, size: 100, color: Colors.grey[400]),
+          Icon(
+            Icons.local_shipping_outlined,
+            size: 100,
+            color: Colors.grey[400],
+          ),
           const SizedBox(height: 24),
           Text(
             'No hay categorías',
@@ -135,16 +141,13 @@ class _PantallaSuperState extends State<PantallaSuper> {
               mainAxisSpacing: spacing,
               childAspectRatio: 0.82,
             ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final categoria = controller.categorias[index];
-                return _CategoriaCard(
-                  categoria: categoria,
-                  onTap: () => _onCategoriaPressed(categoria),
-                );
-              },
-              childCount: controller.categorias.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final categoria = controller.categorias[index];
+              return _CategoriaCard(
+                categoria: categoria,
+                onTap: () => _onCategoriaPressed(categoria),
+              );
+            }, childCount: controller.categorias.length),
           );
         },
       ),
@@ -192,7 +195,9 @@ class _CategoriaCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
               child: Container(
                 height: 96,
                 width: double.infinity,
@@ -201,10 +206,18 @@ class _CategoriaCard extends StatelessWidget {
                   imageUrl: categoria.imagenUrl ?? '',
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Center(
-                    child: Icon(categoria.icono, color: color.withValues(alpha: 0.35), size: 42),
+                    child: Icon(
+                      categoria.icono,
+                      color: color.withValues(alpha: 0.35),
+                      size: 42,
+                    ),
                   ),
                   errorWidget: (_, __, ___) => Center(
-                    child: Icon(categoria.icono, color: color.withValues(alpha: 0.35), size: 42),
+                    child: Icon(
+                      categoria.icono,
+                      color: color.withValues(alpha: 0.35),
+                      size: 42,
+                    ),
                   ),
                 ),
               ),
@@ -257,7 +270,10 @@ class _CategoriaCard extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
@@ -265,7 +281,11 @@ class _CategoriaCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.store_mall_directory, size: 14, color: Color(0xFF45525F)),
+                        const Icon(
+                          Icons.store_mall_directory,
+                          size: 14,
+                          color: Color(0xFF45525F),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '${categoria.totalProveedores ?? 0} prov.',
@@ -279,7 +299,11 @@ class _CategoriaCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: Colors.grey[400],
+                  ),
                 ],
               ),
             ),

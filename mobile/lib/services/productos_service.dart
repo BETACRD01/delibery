@@ -1,6 +1,7 @@
 // lib/services/productos_service.dart
 
 import 'dart:convert';
+import 'dart:io';
 import '../config/api_config.dart';
 import '../apis/subapis/http_client.dart';
 import '../models/producto_model.dart';
@@ -129,6 +130,43 @@ class ProductosService {
     }
   }
 
+  Future<ProductoModel> crearProducto(
+    Map<String, dynamic> data, {
+    File? imagen,
+  }) async {
+    try {
+      final response = await _client.multipart(
+        'POST',
+        ApiConfig.productosLista,
+        _mapearCampos(data),
+        imagen != null ? {'imagen': imagen} : {},
+      );
+      final payload = response['producto'] ?? response;
+      return ProductoModel.fromJson(payload as Map<String, dynamic>);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<ProductoModel> actualizarProducto(
+    int id,
+    Map<String, dynamic> data, {
+    File? imagen,
+  }) async {
+    try {
+      final response = await _client.multipart(
+        'PATCH',
+        ApiConfig.productoDetalle(id),
+        _mapearCampos(data),
+        imagen != null ? {'imagen': imagen} : {},
+      );
+      final payload = response['producto'] ?? response;
+      return ProductoModel.fromJson(payload as Map<String, dynamic>);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // PROMOCIONES / BANNERS
   // ---------------------------------------------------------------------------
@@ -155,6 +193,60 @@ class ProductosService {
     } catch (e) {
       return [];
     }
+  }
+
+  Future<PromocionModel> crearPromocion(
+    Map<String, dynamic> data, {
+    File? imagen,
+  }) async {
+    try {
+      final response = await _client.multipart(
+        'POST',
+        ApiConfig.productosPromociones,
+        _mapearCampos(data),
+        imagen != null ? {'imagen': imagen} : {},
+      );
+      final payload = response['promocion'] ?? response;
+      return PromocionModel.fromJson(payload as Map<String, dynamic>);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<PromocionModel> actualizarPromocion(
+    int id,
+    Map<String, dynamic> data, {
+    File? imagen,
+  }) async {
+    try {
+      final response = await _client.multipart(
+        'PATCH',
+        ApiConfig.promocionDetalle(id),
+        _mapearCampos(data),
+        imagen != null ? {'imagen': imagen} : {},
+      );
+      final payload = response['promocion'] ?? response;
+      return PromocionModel.fromJson(payload as Map<String, dynamic>);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> eliminarPromocion(int id) async {
+    try {
+      await _client.delete(ApiConfig.promocionDetalle(id));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Map<String, String> _mapearCampos(Map<String, dynamic> data) {
+    final Map<String, String> campos = {};
+    data.forEach((key, value) {
+      if (value == null) return;
+      campos[key] = value is String ? value : value.toString();
+    });
+    return campos;
   }
 
   // ---------------------------------------------------------------------------

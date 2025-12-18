@@ -10,9 +10,9 @@ import '../../../../../theme/jp_theme.dart';
 class HomeAppBar extends StatelessWidget {
   final VoidCallback? onNotificationTap;
   final VoidCallback? onSearchTap;
+  final VoidCallback? onLogoutTap;
   final int unreadCount;
   final String title;
-  final String subtitle;
   final String? logoAssetPath;
   final String? logoNetworkUrl;
 
@@ -20,9 +20,9 @@ class HomeAppBar extends StatelessWidget {
     super.key,
     this.onNotificationTap,
     this.onSearchTap,
+    this.onLogoutTap,
     this.unreadCount = 0,
     this.title = 'JP Express',
-    this.subtitle = 'Entrega rápida y confiable',
     this.logoAssetPath = 'assets/images/Beta.png',
     this.logoNetworkUrl,
   });
@@ -31,9 +31,8 @@ class HomeAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isCompact = width < 340;
-    final logoSize = isCompact ? 48.0 : 56.0;
+    final logoSize = isCompact ? 56.0 : 68.0;
     final titleSize = isCompact ? 18.0 : 20.5;
-    final subtitleSize = isCompact ? 12.0 : 13.0;
     final horizontalPad = isCompact ? 14.0 : 18.0;
     final toolbarH = isCompact ? 64.0 : 70.0;
     // Altura del buscador aún más compacta
@@ -74,26 +73,15 @@ class HomeAppBar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: subtitleSize,
-                    color: JPColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
               ],
             ),
           ),
         ],
       ),
       actions: [
-        _BellButton(
-          unread: unreadCount,
-          onTap: onNotificationTap,
-        ),
+        _BellButton(unread: unreadCount, onTap: onNotificationTap),
+        const SizedBox(width: 6),
+        _LogoutButton(onLogout: onLogoutTap),
         SizedBox(width: horizontalPad - 4),
       ],
       bottom: PreferredSize(
@@ -112,11 +100,7 @@ class _Logo extends StatelessWidget {
   final String? assetPath;
   final String? networkUrl;
 
-  const _Logo({
-    required this.size,
-    this.assetPath,
-    this.networkUrl,
-  });
+  const _Logo({required this.size, this.assetPath, this.networkUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +113,8 @@ class _Logo extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          memCacheWidth: (size * MediaQuery.of(context).devicePixelRatio).round(),
+          memCacheWidth: (size * MediaQuery.of(context).devicePixelRatio)
+              .round(),
           placeholder: (_, __) => _placeholder(),
           errorWidget: (_, __, ___) => _placeholder(),
         ),
@@ -160,7 +145,11 @@ class _Logo extends StatelessWidget {
         color: JPColors.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(size * 0.25),
       ),
-      child: const Icon(Icons.local_shipping_rounded, color: JPColors.primary, size: 24),
+      child: const Icon(
+        Icons.local_shipping_rounded,
+        color: JPColors.primary,
+        size: 24,
+      ),
     );
   }
 }
@@ -185,13 +174,67 @@ class _BellButton extends StatelessWidget {
       position: badges.BadgePosition.topEnd(top: -6, end: -2),
       badgeContent: Text(
         showBadge ? (unread > 9 ? '9+' : '$unread') : '',
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       child: IconButton(
-        icon: const Icon(Icons.notifications_none_rounded, color: JPColors.textPrimary, size: 26),
+        icon: const Icon(
+          Icons.notifications_none_rounded,
+          color: JPColors.textPrimary,
+          size: 26,
+        ),
         onPressed: onTap,
         splashRadius: 24,
       ),
+    );
+  }
+}
+
+class _LogoutButton extends StatelessWidget {
+  final VoidCallback? onLogout;
+
+  const _LogoutButton({this.onLogout});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.logout_rounded, color: JPColors.error, size: 26),
+      tooltip: 'Cerrar sesión',
+      onPressed: () => _showLogoutDialog(context),
+      splashRadius: 24,
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Cerrar sesión'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [Text('¿Deseas cerrar sesión?')],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: JPColors.error),
+              onPressed: () {
+                Navigator.of(context).pop();
+                onLogout?.call();
+              },
+              child: const Text('Cerrar sesión'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -208,12 +251,17 @@ class _SearchBar extends StatelessWidget {
     return Material(
       color: Colors.white,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radius),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(radius),
         child: Ink(
-          padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14, vertical: compact ? 10 : 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 12 : 14,
+            vertical: compact ? 10 : 12,
+          ),
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(radius),
@@ -221,7 +269,11 @@ class _SearchBar extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(Icons.search_rounded, color: Colors.grey[600], size: compact ? 18 : 20),
+              Icon(
+                Icons.search_rounded,
+                color: Colors.grey[600],
+                size: compact ? 18 : 20,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -235,7 +287,11 @@ class _SearchBar extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(Icons.tune_rounded, color: Colors.grey[500], size: compact ? 18 : 20),
+              Icon(
+                Icons.tune_rounded,
+                color: Colors.grey[500],
+                size: compact ? 18 : 20,
+              ),
             ],
           ),
         ),

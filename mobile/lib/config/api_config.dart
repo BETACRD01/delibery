@@ -1,176 +1,169 @@
 // lib/config/api_config.dart
-
 import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:flutter/material.dart';
 
 class ApiConfig {
-  // ---------------------------------------------------------------------------
-  // 1. CONSTANTES DE RED (IPs)
-  // ---------------------------------------------------------------------------
+  ApiConfig._();
 
-  static const String _redCasaPrefix = '192.168.1';
-  // IP fija del backend en la red local (interfaz wlo1)
-  static const String _ipBackendLocal = '192.168.1.5';
-  static const String _redInstitucionalPrefix = '172.16';
-  static const String _ipInstitucional = '172.16.60.5';
-  static const String _redHotspotPrefix = '192.168.137';
-  static const String _ipHotspot = '192.168.137.1';
-  static const String _ipEmulador = '10.0.2.2';
-  static const String _envHost = String.fromEnvironment('API_HOST');
-  static const String _envPort = String.fromEnvironment('API_PORT');
-  static const String _defaultPort = '8000';
-  static const bool enableEmulatorFallback = bool.fromEnvironment('ENABLE_EMULATOR_FALLBACK', defaultValue: false);
+  // ============================================================================
+  // CONSTANTES DE RED
+  // ============================================================================
 
-  // ---------------------------------------------------------------------------
-  // 2. ESTADO INTERNO
-  // ---------------------------------------------------------------------------
+  static const _redCasa = '192.168.1';
+  static const _ipLocal = '192.168.1.5';
+  static const _redInstitucional = '172.16';
+  static const _ipInstitucional = '172.16.61.251';
+  static const _redHotspot = '192.168.137';
+  static const _ipHotspot = '192.168.137.1';
+  static const _ipEmulador = '10.0.2.2';
+  static const _envHost = String.fromEnvironment('API_HOST');
+  static const _envPort = String.fromEnvironment('API_PORT');
+  static const _defaultPort = '8000';
+  static const enableEmulatorFallback = bool.fromEnvironment(
+    'ENABLE_EMULATOR_FALLBACK',
+    defaultValue: false,
+  );
 
-  static String? _cachedServerIp;
-  static String? _lastDetectedNetwork;
-  static bool _isInitialized = false;
-  static bool _forceManualIp = false;
+  // ============================================================================
+  // ESTADO INTERNO
+  // ============================================================================
+
+  static String? _cachedIp;
+  static String? _network;
+  static bool _initialized = false;
+  static bool _manualMode = false;
   static String? _manualIp;
-  static bool _isEmulatorDevice = false;
+  static bool _isEmulator = false;
 
-  // ---------------------------------------------------------------------------
-  // 3. LOGICA DE INICIALIZACION
-  // ---------------------------------------------------------------------------
+  // ============================================================================
+  // INICIALIZACIÓN Y DETECCIÓN
+  // ============================================================================
 
   static Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_initialized) return;
 
-    // Permite forzar la IP desde --dart-define=API_HOST para no depender de detección.
     if (_envHost.isNotEmpty) {
-      _lastDetectedNetwork = 'MANUAL_ENV';
+      _network = 'MANUAL_ENV';
       setManualIp(_envHost);
-      _isInitialized = true;
-      await printDebugInfo();
+      _initialized = true;
+      await _printDebug();
       return;
     }
 
     try {
-      await detectServerIp();
-      _isInitialized = true;
-      await printDebugInfo();
-    } catch (e) {
-      // Fallback si la detección falla, usa la IP local configurada
-      _cachedServerIp = _ipBackendLocal;
-      _lastDetectedNetwork = 'LOCAL (Fallback)';
-      _isInitialized = true;
+      await _detectIp();
+      _initialized = true;
+      await _printDebug();
+    } catch (_) {
+      _cachedIp = _ipLocal;
+      _network = 'LOCAL (Fallback)';
+      _initialized = true;
     }
   }
 
-  static Future<String> detectServerIp() async {
+  static Future<String> _detectIp() async {
     try {
-      if (await _isRunningOnEmulator()) {
-        _lastDetectedNetwork = 'EMULADOR';
-        _cachedServerIp = _ipEmulador;
+      if (await _checkEmulator()) {
+        _network = 'EMULADOR';
+        _cachedIp = _ipEmulador;
         return _buildUrl(_ipEmulador);
       }
 
-      final info = NetworkInfo();
-      final wifiIP = await info.getWifiIP();
+      final wifiIP = await NetworkInfo().getWifiIP();
 
       if (wifiIP == null || wifiIP.isEmpty) {
-        // Usa el backend local si no hay conexión WiFi activa
-        _cachedServerIp = _ipBackendLocal;
-        _lastDetectedNetwork = 'LOCAL (Sin WiFi)';
-        return _buildUrl(_ipBackendLocal);
+        _cachedIp = _ipLocal;
+        _network = 'LOCAL (Sin WiFi)';
+        return _buildUrl(_ipLocal);
       }
 
-      // Si estamos en la red de casa, usamos directamente la IP local del backend
-      if (wifiIP.startsWith(_redCasaPrefix)) {
-        _lastDetectedNetwork = 'CASA/RED_LOCAL';
-        _cachedServerIp = _ipBackendLocal;
-        return _buildUrl(_cachedServerIp!);
+      final configs = {
+        _redCasa: ('CASA/RED_LOCAL', _ipLocal),
+        _redHotspot: ('HOTSPOT', _ipHotspot),
+        _redInstitucional: ('INSTITUCIONAL', _ipInstitucional),
+      };
+
+      for (final entry in configs.entries) {
+        if (wifiIP.startsWith(entry.key)) {
+          _network = entry.value.$1;
+          _cachedIp = entry.value.$2;
+          return _buildUrl(_cachedIp!);
+        }
       }
 
-      if (wifiIP.startsWith(_redHotspotPrefix)) {
-        _lastDetectedNetwork = 'HOTSPOT';
-        _cachedServerIp = _ipHotspot;
-        return _buildUrl(_ipHotspot);
-      }
-
-      if (wifiIP.startsWith(_redInstitucionalPrefix)) {
-        _lastDetectedNetwork = 'INSTITUCIONAL';
-        _cachedServerIp = _ipInstitucional;
-        return _buildUrl(_ipInstitucional);
-      }
-
-      _lastDetectedNetwork = 'DESCONOCIDA';
-      _cachedServerIp = _ipBackendLocal; // Fallback al backend local para desarrollo
-      return _buildUrl(_ipBackendLocal);
-
-    } catch (e) {
-      _cachedServerIp = _ipBackendLocal;
-      _lastDetectedNetwork = 'ERROR';
-      return _buildUrl(_ipBackendLocal);
+      _network = 'DESCONOCIDA';
+      _cachedIp = _ipLocal;
+      return _buildUrl(_ipLocal);
+    } catch (_) {
+      _cachedIp = _ipLocal;
+      _network = 'ERROR';
+      return _buildUrl(_ipLocal);
     }
   }
 
-  static Future<bool> _isRunningOnEmulator() async {
+  static Future<bool> _checkEmulator() async {
     if (!Platform.isAndroid) return false;
     try {
-      final isEmu = Platform.environment.containsKey('ANDROID_EMULATOR') || await _checkEmulatorByNetwork();
-      if (isEmu) _isEmulatorDevice = true;
-      return isEmu;
-    } catch (e) { return false; }
+      if (Platform.environment.containsKey('ANDROID_EMULATOR')) {
+        _isEmulator = true;
+        return true;
+      }
+      final wifiIP = await NetworkInfo().getWifiIP();
+      _isEmulator = wifiIP == '10.0.2.15' || wifiIP == '10.0.2.16';
+      return _isEmulator;
+    } catch (_) {
+      return false;
+    }
   }
 
-  static Future<bool> _checkEmulatorByNetwork() async {
-    try {
-      final info = NetworkInfo();
-      final wifiIP = await info.getWifiIP();
-      return wifiIP == '10.0.2.15' || wifiIP == '10.0.2.16';
-    } catch (e) { return false; }
+  static String _buildUrl(String ip) => 'http://$ip:$puerto';
+
+  static Future<String> refreshNetwork() async {
+    _cachedIp = null;
+    _network = null;
+    return await _detectIp();
   }
 
-  static String _buildUrl(String ip) => 'http://$ip:$puertoServidor';
+  // ============================================================================
+  // URL BASE
+  // ============================================================================
 
-  static Future<String> refreshNetworkDetection() async {
-    _cachedServerIp = null;
-    _lastDetectedNetwork = null;
-    return await detectServerIp();
-  }
-
-  // ---------------------------------------------------------------------------
-  // 4. GESTION DE URL BASE Y MANUAL
-  // ---------------------------------------------------------------------------
+  static const _prodUrl = 'https://api.deliber.com';
+  static const _isProd = bool.fromEnvironment('dart.vm.product');
 
   static Future<String> getBaseUrl() async {
-    if (const bool.fromEnvironment('dart.vm.product')) return 'https://api.deliber.com';
-    if (_cachedServerIp != null) return _buildUrl(_cachedServerIp!);
-    return await detectServerIp();
+    if (_isProd) return _prodUrl;
+    if (_cachedIp != null) return _buildUrl(_cachedIp!);
+    return await _detectIp();
   }
 
   static String get baseUrl {
-    if (const bool.fromEnvironment('dart.vm.product')) return 'https://api.deliber.com';
-    if (_envHost.isNotEmpty) return _buildUrl(_envHost); // Prioriza la IP pasada por --dart-define
-    if (_forceManualIp && _manualIp != null) return _buildUrl(_manualIp!);
-    if (_cachedServerIp != null) return _buildUrl(_cachedServerIp!);
-    // Usa la IP local como último recurso en desarrollo
-    return _buildUrl(_ipBackendLocal); 
+    if (_isProd) return _prodUrl;
+    if (_envHost.isNotEmpty) return _buildUrl(_envHost);
+    if (_manualMode && _manualIp != null) return _buildUrl(_manualIp!);
+    if (_cachedIp != null) return _buildUrl(_cachedIp!);
+    return _buildUrl(_ipLocal);
   }
 
   static String get apiUrl => '$baseUrl/api';
 
   static void setManualIp(String ip) {
-    _forceManualIp = true;
+    _manualMode = true;
     _manualIp = ip;
-    _cachedServerIp = ip;
+    _cachedIp = ip;
   }
 
   static void disableManualIp() {
-    _forceManualIp = false;
+    _manualMode = false;
     _manualIp = null;
-    _cachedServerIp = null;
+    _cachedIp = null;
   }
 
-  // ---------------------------------------------------------------------------
-  // 5. DEFINICION DE RUTAS (ENDPOINTS)
-  // ---------------------------------------------------------------------------
+  // ============================================================================
+  // ENDPOINTS BASE
+  // ============================================================================
 
   static String get _auth => '$apiUrl/auth';
   static String get _users => '$apiUrl/usuarios';
@@ -180,347 +173,417 @@ class ApiConfig {
   static String get _admin => '$apiUrl/admin';
   static String get _payments => '$apiUrl/pagos';
   static String get _ratings => '$apiUrl/calificaciones';
+  static String get _super => '$apiUrl/super-categorias';
 
-  // --- A. AUTENTICACION ---
+  // ============================================================================
+  // AUTH
+  // ============================================================================
+
   static String get registro => '$_auth/registro/';
   static String get login => '$_auth/login/';
   static String get googleLogin => '$_auth/google-login/';
   static String get perfil => '$_auth/perfil/';
   static String get logout => '$_auth/logout/';
-  static String get infoRol => '$_users/verificar-roles/';
   static String get verificarToken => '$_auth/verificar-token/';
   static String get actualizarPerfil => '$_auth/actualizar-perfil/';
   static String get cambiarPassword => '$_auth/cambiar-password/';
-  static String get solicitarCodigoRecuperacion => '$_auth/solicitar-codigo-recuperacion/';
+  static String get solicitarCodigoRecuperacion =>
+      '$_auth/solicitar-codigo-recuperacion/';
   static String get verificarCodigoRecuperacion => '$_auth/verificar-codigo/';
-  static String get resetPasswordConCodigo => '$_auth/reset-password-con-codigo/';
-  static String get actualizarPreferencias => '$_auth/preferencias-notificaciones/';
+  static String get resetPasswordConCodigo =>
+      '$_auth/reset-password-con-codigo/';
+  static String get actualizarPreferencias =>
+      '$_auth/preferencias-notificaciones/';
   static String get desactivarCuenta => '$_auth/desactivar-cuenta/';
   static String get tokenRefresh => '$_auth/token/refresh/';
 
-  // --- B. USUARIOS ---
+  // ============================================================================
+  // USUARIOS
+  // ============================================================================
+
+  static String get infoRol => '$_users/verificar-roles/';
   static String get usuariosPerfil => '$_users/perfil/';
   static String get usuariosActualizarPerfil => '$_users/perfil/actualizar/';
   static String get usuariosEstadisticas => '$_users/perfil/estadisticas/';
-  static String usuariosPerfilPublico(int id) => '$_users/perfil/publico/$id/';
   static String get usuariosFotoPerfil => '$_users/perfil/foto/';
-  
+  static String usuariosPerfilPublico(int id) => '$_users/perfil/publico/$id/';
+
   static String get usuariosDirecciones => '$_users/direcciones/';
   static String usuariosDireccion(String id) => '$_users/direcciones/$id/';
-  static String get usuariosDireccionPredeterminada => '$_users/direcciones/predeterminada/';
-  static String get usuariosUbicacionActualizar => '$_users/ubicacion/actualizar/';
+  static String get usuariosDireccionPredeterminada =>
+      '$_users/direcciones/predeterminada/';
+  static String get usuariosUbicacionActualizar =>
+      '$_users/ubicacion/actualizar/';
   static String get usuariosUbicacionMia => '$_users/ubicacion/mia/';
-  
+
   static String get usuariosMetodosPago => '$_users/metodos-pago/';
   static String usuariosMetodoPago(String id) => '$_users/metodos-pago/$id/';
-  static String get usuariosMetodoPagoPredeterminado => '$_users/metodos-pago/predeterminado/';
+  static String get usuariosMetodoPagoPredeterminado =>
+      '$_users/metodos-pago/predeterminado/';
+
   static String get usuariosFCMToken => '$_users/fcm-token/';
   static String get usuariosEliminarFCMToken => '$_users/fcm-token/eliminar/';
   static String get usuariosEstadoNotificaciones => '$_users/notificaciones/';
-  static String get rifasMisParticipaciones => '$apiUrl/rifas/participaciones/mis-participaciones/';
-  // Nota: la app de rifas se incluye en la ruta /api/rifas/, y el router de DRF registra "rifas" y "participaciones"
+
+  static String get usuariosSolicitudesCambioRol =>
+      '$_users/solicitudes-cambio-rol/';
+  static String usuariosSolicitudCambioRolDetalle(String id) =>
+      '$_users/solicitudes-cambio-rol/$id/';
+  static String get usuariosCambiarRolActivo => '$_users/cambiar-rol-activo/';
+  static String get usuariosMisRoles => '$_users/mis-roles/';
+
+  // ============================================================================
+  // RIFAS
+  // ============================================================================
+
+  static String get rifasMisParticipaciones =>
+      '$apiUrl/rifas/participaciones/mis-participaciones/';
   static String get rifasActiva => '$apiUrl/rifas/rifas/activa/';
   static String get rifasEstadisticas => '$apiUrl/rifas/rifas/estadisticas/';
   static String get rifasAdminBase => '$apiUrl/rifas/rifas/';
 
-  static String get usuariosSolicitudesCambioRol => '$_users/solicitudes-cambio-rol/';
-  static String usuariosSolicitudCambioRolDetalle(String id) => '$_users/solicitudes-cambio-rol/$id/';
-  static String get usuariosCambiarRolActivo => '$_users/cambiar-rol-activo/';
-  static String get usuariosMisRoles => '$_users/mis-roles/';
+  // ============================================================================
+  // PRODUCTOS Y CARRITO
+  // ============================================================================
 
-  // --- C. PRODUCTOS Y CARRITO ---
   static String get productosCategorias => '$_products/categorias/';
   static String get productosLista => '$_products/productos/';
-  static String productoDetalle(int id) => '$_products/productos/$id/';
   static String get productosDestacados => '$_products/productos/destacados/';
   static String get productosPromociones => '$_products/promociones/';
+  static String productoDetalle(int id) => '$_products/productos/$id/';
+  static String promocionDetalle(int id) => '$_products/promociones/$id/';
 
   static String get carrito => '$_products/carrito/';
   static String get carritoAgregar => '$_products/carrito/agregar/';
   static String get carritoLimpiar => '$_products/carrito/limpiar/';
   static String get carritoCheckout => '$_products/carrito/checkout/';
-  static String carritoItemCantidad(int id) => '$_products/carrito/item/$id/cantidad/';
+  static String carritoItemCantidad(int id) =>
+      '$_products/carrito/item/$id/cantidad/';
   static String carritoRemoverItem(int id) => '$_products/carrito/item/$id/';
   static String get enviosCotizar => '$apiUrl/envios/cotizar/';
 
-  // --- D. PROVEEDORES ---
+  // ============================================================================
+  // PROVEEDORES
+  // ============================================================================
+
   static String get proveedores => '$_suppliers/';
-  static String proveedorDetalle(int id) => '$_suppliers/$id/';
-  static String proveedorActualizar(int id) => '$_suppliers/$id/';
   static String get miProveedor => '$_suppliers/mi_proveedor/';
-  static String get miProveedorEditarPerfil => '$_suppliers/editar_mi_perfil/'; 
-  static String get miProveedorEditarContacto => '$_suppliers/editar_mi_contacto/'; 
+  static String get miProveedorEditarPerfil => '$_suppliers/editar_mi_perfil/';
+  static String get miProveedorEditarContacto =>
+      '$_suppliers/editar_mi_contacto/';
   static String get proveedoresActivos => '$_suppliers/activos/';
   static String get proveedoresAbiertos => '$_suppliers/abiertos/';
   static String get proveedoresPorTipo => '$_suppliers/por_tipo/';
-  static String proveedoresPorTipoUrl(String tipo) => '$_suppliers/por_tipo/?tipo=$tipo';
-  
+
+  static String proveedorDetalle(int id) => '$_suppliers/$id/';
+  static String proveedorActualizar(int id) => '$_suppliers/$id/';
   static String proveedorActivar(int id) => '$_suppliers/$id/activar/';
   static String proveedorDesactivar(int id) => '$_suppliers/$id/desactivar/';
   static String proveedorVerificar(int id) => '$_suppliers/$id/verificar/';
+  static String proveedoresPorTipoUrl(String tipo) =>
+      '$_suppliers/por_tipo/?tipo=$tipo';
 
-  static String buildProveedoresUrl({bool? activos, bool? verificados, String? tipo, String? ciudad, String? search}) {
-    final params = <String, String>{};
-    if (activos != null) params['activos'] = activos.toString();
-    if (verificados != null) params['verificados'] = verificados.toString();
-    if (tipo != null) params['tipo_proveedor'] = tipo;
-    if (ciudad != null) params['ciudad'] = ciudad;
-    if (search != null) params['search'] = search;
-    
-    if (params.isEmpty) return proveedores;
-    final qs = params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
-    return '$proveedores?$qs';
-  }
+  static String buildProveedoresUrl({
+    bool? activos,
+    bool? verificados,
+    String? tipo,
+    String? ciudad,
+    String? search,
+  }) => _buildQueryUrl(proveedores, {
+    'activos': activos,
+    'verificados': verificados,
+    'tipo_proveedor': tipo,
+    'ciudad': ciudad,
+    'search': search,
+  });
 
-  // --- E. REPARTIDORES ---
+  // ============================================================================
+  // REPARTIDORES
+  // ============================================================================
+
   static String get repartidorPerfil => '$_delivery/perfil/';
-  static String get repartidorPerfilActualizar => '$_delivery/perfil/actualizar/';
+  static String get repartidorPerfilActualizar =>
+      '$_delivery/perfil/actualizar/';
   static String get repartidorEstadisticas => '$_delivery/perfil/estadisticas/';
   static String get miRepartidor => '$_delivery/mi_repartidor/';
   static String get miRepartidorEditarPerfil => '$_delivery/editar_mi_perfil/';
-  static String get miRepartidorEditarContacto => '$_delivery/editar_mi_contacto/';
+  static String get miRepartidorEditarContacto =>
+      '$_delivery/editar_mi_contacto/';
   static String get repartidorEstado => '$_delivery/estado/';
   static String get repartidorEstadoHistorial => '$_delivery/estado/historial/';
   static String get repartidorUbicacion => '$_delivery/ubicacion/';
-  static String get repartidorUbicacionHistorial => '$_delivery/ubicacion/historial/';
-  static String get repartidorHistorialEntregas => '$_delivery/historial-entregas/';
-  static String get repartidorPedidosDisponibles => '$_delivery/pedidos-disponibles/';
+  static String get repartidorUbicacionHistorial =>
+      '$_delivery/ubicacion/historial/';
+  static String get repartidorHistorialEntregas =>
+      '$_delivery/historial-entregas/';
+  static String get repartidorPedidosDisponibles =>
+      '$_delivery/pedidos-disponibles/';
   static String get repartidorMisPedidos => '$_delivery/mis-pedidos/';
-  static String repartidorPedidoDetalle(int id) => '$_delivery/pedidos/$id/detalle/';
-  static String repartidorPedidoAceptar(int id) => '$_delivery/pedidos/$id/aceptar/';
-  static String repartidorPedidoRechazar(int id) => '$_delivery/pedidos/$id/rechazar/';
-  static String repartidorPedidoMarcarEnCamino(int id) => '$_delivery/pedidos/$id/marcar-en-camino/';
-  static String repartidorPedidoMarcarEntregado(int id) => '$_delivery/pedidos/$id/marcar-entregado/';
   static String get repartidorVehiculos => '$_delivery/vehiculos/';
   static String get repartidorVehiculosCrear => '$_delivery/vehiculos/crear/';
-  static String repartidorVehiculo(int id) => '$_delivery/vehiculos/$id/';
-  static String repartidorVehiculoActivar(int id) => '$_delivery/vehiculos/$id/activar/';
   static String get repartidorCalificaciones => '$_delivery/calificaciones/';
-  static String repartidorCalificarCliente(int id) => '$_delivery/calificaciones/clientes/$id/';
-
-  // --- CALIFICACIONES GENERALES ---
-  static String get calificacionesRapida => '$_ratings/rapida/';
-  static String calificacionesPendientesPedido(int pedidoId) => '$_ratings/pendientes/$pedidoId/';
-
-  // 🆕 Datos bancarios del repartidor
   static String get repartidorDatosBancarios => '$_delivery/datos-bancarios/';
 
-  // --- F. ADMIN ---
-  static String get adminProveedores => '$_admin/proveedores/';
-  static String adminProveedorDetalle(int id) => '$_admin/proveedores/$id/';
-  static String adminProveedorEditarContacto(int id) => '$_admin/proveedores/$id/editar_contacto/';
-  static String adminProveedorVerificar(int id) => '$_admin/proveedores/$id/verificar/';
-  static String adminProveedorDesactivar(int id) => '$_admin/proveedores/$id/desactivar/';
-  static String adminProveedorActivar(int id) => '$_admin/proveedores/$id/activar/';
-  static String get adminProveedoresPendientes => '$_admin/proveedores/pendientes/';
+  static String repartidorPedidoDetalle(int id) =>
+      '$_delivery/pedidos/$id/detalle/';
+  static String repartidorPedidoAceptar(int id) =>
+      '$_delivery/pedidos/$id/aceptar/';
+  static String repartidorPedidoRechazar(int id) =>
+      '$_delivery/pedidos/$id/rechazar/';
+  static String repartidorPedidoMarcarEnCamino(int id) =>
+      '$_delivery/pedidos/$id/marcar-en-camino/';
+  static String repartidorPedidoMarcarEntregado(int id) =>
+      '$_delivery/pedidos/$id/marcar-entregado/';
+  static String repartidorVehiculo(int id) => '$_delivery/vehiculos/$id/';
+  static String repartidorVehiculoActivar(int id) =>
+      '$_delivery/vehiculos/$id/activar/';
+  static String repartidorCalificarCliente(int id) =>
+      '$_delivery/calificaciones/clientes/$id/';
+  static String repartidorPerfilPublicoPedido(int pedidoId) =>
+      '$_delivery/publico/$pedidoId/';
+  static String repartidorPublicoInfo(int repartidorId) =>
+      '$_delivery/publico/$repartidorId/info/';
 
-  static String buildAdminProveedoresUrl({bool? verificado, bool? activo, String? tipoProveedor, String? search}) {
-    final params = <String, String>{};
-    if (verificado != null) params['verificado'] = verificado.toString();
-    if (activo != null) params['activo'] = activo.toString();
-    if (tipoProveedor != null) params['tipo_proveedor'] = tipoProveedor;
-    if (search != null) params['search'] = search;
-    
-    if (params.isEmpty) return adminProveedores;
-    final qs = params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
-    return '$adminProveedores?$qs';
-  }
+  // ============================================================================
+  // CALIFICACIONES
+  // ============================================================================
 
-  static String get adminRepartidores => '$_admin/repartidores/';
-  static String adminRepartidorDetalle(int id) => '$_admin/repartidores/$id/';
-  static String adminRepartidorEditarContacto(int id) => '$_admin/repartidores/$id/editar_contacto/';
-  static String adminRepartidorVerificar(int id) => '$_admin/repartidores/$id/verificar/';
-  static String adminRepartidorDesactivar(int id) => '$_admin/repartidores/$id/desactivar/';
-  static String adminRepartidorActivar(int id) => '$_admin/repartidores/$id/activar/';
-  static String get adminRepartidoresPendientes => '$_admin/repartidores/pendientes/';
+  static String get calificacionesRapida => '$_ratings/rapida/';
+  static String calificacionesPendientesPedido(int pedidoId) =>
+      '$_ratings/pendientes/$pedidoId/';
 
-  static String buildAdminRepartidoresUrl({bool? verificado, bool? activo, String? estado, String? search}) {
-    final params = <String, String>{};
-    if (verificado != null) params['verificado'] = verificado.toString();
-    if (activo != null) params['activo'] = activo.toString();
-    if (estado != null) params['estado'] = estado;
-    if (search != null) params['search'] = search;
-    
-    if (params.isEmpty) return adminRepartidores;
-    final qs = params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
-    return '$adminRepartidores?$qs';
-  }
+  // ============================================================================
+  // ADMIN
+  // ============================================================================
 
-  // --- F. ADMIN - USUARIOS ---
-  static String get adminUsuarios => '$_admin/usuarios/';
-  static String adminUsuarioDetalle(int id) => '$_admin/usuarios/$id/';
-  static String adminUsuarioResetPassword(int id) => '$_admin/usuarios/$id/resetear_password/';
-  static String buildAdminUsuariosUrl({String? search, bool? activo, bool? rol}) {
-    final params = <String, String>{};
-    if (search != null && search.isNotEmpty) params['search'] = search;
-    if (activo != null) params['activo'] = activo.toString();
-    if (rol != null) params['rol'] = rol.toString();
-    if (params.isEmpty) return adminUsuarios;
-    final qs = params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
-    return '$adminUsuarios?$qs';
-  }
-
-  static String get adminSolicitudesCambioRol => '$_admin/solicitudes-cambio-rol/';
-  static String adminSolicitudCambioRolDetalle(String id) => '$_admin/solicitudes-cambio-rol/$id/';
-  static String adminAceptarSolicitud(String id) => '$_admin/solicitudes-cambio-rol/$id/aceptar/';
-  static String adminRechazarSolicitud(String id) => '$_admin/solicitudes-cambio-rol/$id/rechazar/';
-  static String get adminSolicitudesPendientes => '$_admin/solicitudes-cambio-rol/pendientes/';
-  static String get adminSolicitudesEstadisticas => '$_admin/solicitudes-cambio-rol/estadisticas/';
   static String get adminDashboard => '$_admin/dashboard/';
   static String get adminAcciones => '$_admin/acciones/';
 
-  // --- G. PEDIDOS ---
+  // Admin - Proveedores
+  static String get adminProveedores => '$_admin/proveedores/';
+  static String get adminProveedoresPendientes =>
+      '$_admin/proveedores/pendientes/';
+  static String adminProveedorDetalle(int id) => '$_admin/proveedores/$id/';
+  static String adminProveedorEditarContacto(int id) =>
+      '$_admin/proveedores/$id/editar_contacto/';
+  static String adminProveedorVerificar(int id) =>
+      '$_admin/proveedores/$id/verificar/';
+  static String adminProveedorDesactivar(int id) =>
+      '$_admin/proveedores/$id/desactivar/';
+  static String adminProveedorActivar(int id) =>
+      '$_admin/proveedores/$id/activar/';
+
+  static String buildAdminProveedoresUrl({
+    bool? verificado,
+    bool? activo,
+    String? tipoProveedor,
+    String? search,
+  }) => _buildQueryUrl(adminProveedores, {
+    'verificado': verificado,
+    'activo': activo,
+    'tipo_proveedor': tipoProveedor,
+    'search': search,
+  });
+
+  // Admin - Repartidores
+  static String get adminRepartidores => '$_admin/repartidores/';
+  static String get adminRepartidoresPendientes =>
+      '$_admin/repartidores/pendientes/';
+  static String adminRepartidorDetalle(int id) => '$_admin/repartidores/$id/';
+  static String adminRepartidorEditarContacto(int id) =>
+      '$_admin/repartidores/$id/editar_contacto/';
+  static String adminRepartidorVerificar(int id) =>
+      '$_admin/repartidores/$id/verificar/';
+  static String adminRepartidorDesactivar(int id) =>
+      '$_admin/repartidores/$id/desactivar/';
+  static String adminRepartidorActivar(int id) =>
+      '$_admin/repartidores/$id/activar/';
+
+  static String buildAdminRepartidoresUrl({
+    bool? verificado,
+    bool? activo,
+    String? estado,
+    String? search,
+  }) => _buildQueryUrl(adminRepartidores, {
+    'verificado': verificado,
+    'activo': activo,
+    'estado': estado,
+    'search': search,
+  });
+
+  // Admin - Usuarios
+  static String get adminUsuarios => '$_admin/usuarios/';
+  static String adminUsuarioDetalle(int id) => '$_admin/usuarios/$id/';
+  static String adminUsuarioResetPassword(int id) =>
+      '$_admin/usuarios/$id/resetear_password/';
+
+  static String buildAdminUsuariosUrl({
+    String? search,
+    bool? activo,
+    bool? rol,
+  }) => _buildQueryUrl(adminUsuarios, {
+    'search': search,
+    'activo': activo,
+    'rol': rol,
+  });
+
+  // Admin - Solicitudes
+  static String get adminSolicitudesCambioRol =>
+      '$_admin/solicitudes-cambio-rol/';
+  static String get adminSolicitudesPendientes =>
+      '$_admin/solicitudes-cambio-rol/pendientes/';
+  static String get adminSolicitudesEstadisticas =>
+      '$_admin/solicitudes-cambio-rol/estadisticas/';
+  static String adminSolicitudCambioRolDetalle(String id) =>
+      '$_admin/solicitudes-cambio-rol/$id/';
+  static String adminAceptarSolicitud(String id) =>
+      '$_admin/solicitudes-cambio-rol/$id/aceptar/';
+  static String adminRechazarSolicitud(String id) =>
+      '$_admin/solicitudes-cambio-rol/$id/rechazar/';
+
+  // ============================================================================
+  // PEDIDOS
+  // ============================================================================
+
   static String get pedidos => '$apiUrl/pedidos/';
+  static String get misGruposPedidos => '$apiUrl/pedidos/mis-grupos/';
   static String pedidoDetalle(int id) => '$apiUrl/pedidos/$id/';
-  static String pedidoAceptarRepartidor(int id) => '$apiUrl/pedidos/$id/aceptar-repartidor/';
-  static String pedidoConfirmarProveedor(int id) => '$apiUrl/pedidos/$id/confirmar-proveedor/';
+  static String pedidoAceptarRepartidor(int id) =>
+      '$apiUrl/pedidos/$id/aceptar-repartidor/';
+  static String pedidoConfirmarProveedor(int id) =>
+      '$apiUrl/pedidos/$id/confirmar-proveedor/';
   static String pedidoCambiarEstado(int id) => '$apiUrl/pedidos/$id/estado/';
   static String pedidoCancelar(int id) => '$apiUrl/pedidos/$id/cancelar/';
   static String pedidoGanancias(int id) => '$apiUrl/pedidos/$id/ganancias/';
+  static String listarPedidosGrupo(String grupo) =>
+      '$apiUrl/pedidos/grupos/$grupo/';
 
   static String buildPedidosUrl({
     String? estado,
     String? tipo,
     int page = 1,
     int pageSize = 20,
-  }) {
-    final params = <String, String>{
-      'page': page.toString(),
-      'page_size': pageSize.toString(),
-    };
+  }) => _buildQueryUrl(pedidos, {
+    'estado': estado,
+    'tipo': tipo,
+    'page': page,
+    'page_size': pageSize,
+  });
 
-    if (estado != null) params['estado'] = estado;
-    if (tipo != null) params['tipo'] = tipo;
+  // ============================================================================
+  // PAGOS
+  // ============================================================================
 
-    final qs = params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
-    return '$pedidos?$qs';
-  }
+  static String obtenerDatosBancariosPago(int pagoId) =>
+      '$_payments/pagos/$pagoId/datos-bancarios/';
+  static String subirComprobantePago(int pagoId) =>
+      '$_payments/pagos/$pagoId/subir-comprobante/';
+  static String verComprobanteRepartidor(int pagoId) =>
+      '$_payments/pagos/$pagoId/ver-comprobante/';
+  static String marcarComprobanteVisto(int pagoId) =>
+      '$_payments/pagos/$pagoId/marcar-visto/';
 
-  // Pedidos Agrupados (Multi-Proveedor)
-  static String listarPedidosGrupo(String pedidoGrupo) => '$apiUrl/pedidos/grupos/$pedidoGrupo/';
-  static String get misGruposPedidos => '$apiUrl/pedidos/mis-grupos/';
+  // ============================================================================
+  // SUPER (Supermercados, Farmacias, etc.)
+  // ============================================================================
 
-  // --- H. PAGOS ---
-  static String obtenerDatosBancariosPago(int pagoId) => '$_payments/pagos/$pagoId/datos-bancarios/';
-  static String subirComprobantePago(int pagoId) => '$_payments/pagos/$pagoId/subir-comprobante/';
-  static String verComprobanteRepartidor(int pagoId) => '$_payments/pagos/$pagoId/ver-comprobante/';
-  static String marcarComprobanteVisto(int pagoId) => '$_payments/pagos/$pagoId/marcar-visto/';
-
-  // --- I. SUPER (Supermercados, Farmacias, Bebidas, Mensajería, Tiendas) ---
-  // ✅ CORREGIDO: Cambiado de '/super' a '/super-categorias' sin barra final
-  static String get _super => '$apiUrl/super-categorias';
-
-  // Categorías Super
   static String get superCategorias => '$_super/categorias/';
-  static String superCategoriaDetalle(String id) => '$_super/categorias/$id/';
-  static String superCategoriaProductos(String id) => '$_super/categorias/$id/productos/';
-
-  // Proveedores Super
   static String get superProveedores => '$_super/proveedores/';
-  static String superProveedorDetalle(int id) => '$_super/proveedores/$id/';
-  static String superProveedorProductos(int id) => '$_super/proveedores/$id/productos/';
   static String get superProveedoresAbiertos => '$_super/proveedores/abiertos/';
-  static String superProveedoresPorCategoria(String categoriaId) => '$_super/proveedores/por_categoria/?categoria=$categoriaId';
-
-  // Productos Super
   static String get superProductos => '$_super/productos/';
-  static String superProductoDetalle(int id) => '$_super/productos/$id/';
   static String get superProductosOfertas => '$_super/productos/ofertas/';
   static String get superProductosDestacados => '$_super/productos/destacados/';
 
-  // ---------------------------------------------------------------------------
-  // 6. CONSTANTES Y CONFIGURACION
-  // ---------------------------------------------------------------------------
+  static String superCategoriaDetalle(String id) => '$_super/categorias/$id/';
+  static String superCategoriaProductos(String id) =>
+      '$_super/categorias/$id/productos/';
+  static String superProveedorDetalle(int id) => '$_super/proveedores/$id/';
+  static String superProveedorProductos(int id) =>
+      '$_super/proveedores/$id/productos/';
+  static String superProveedoresPorCategoria(String categoriaId) =>
+      '$_super/proveedores/por_categoria/?categoria=$categoriaId';
+  static String superProductoDetalle(int id) => '$_super/productos/$id/';
 
-  static const String apiKeyMobile = 'mobile_app_deliber_2025_aW7xK3pM9qR5tL2nV8jH4cF6gB1dY0sZ';
-  static const String apiKeyWeb = 'web_admin_deliber_2025_XkJ9mP3nQ7wR2vL5zT8hF1cY4gN6sB0d';
+  // ============================================================================
+  // CONSTANTES
+  // ============================================================================
+
+  static const apiKeyMobile =
+      'mobile_app_deliber_2025_aW7xK3pM9qR5tL2nV8jH4cF6gB1dY0sZ';
+  static const apiKeyWeb =
+      'web_admin_deliber_2025_XkJ9mP3nQ7wR2vL5zT8hF1cY4gN6sB0d';
   static String get currentApiKey => apiKeyMobile;
 
-  static String get puertoServidor => _envPort.isNotEmpty ? _envPort : _defaultPort;
-  static String get localBackendIp => _ipBackendLocal;
+  static String get puerto => _envPort.isNotEmpty ? _envPort : _defaultPort;
+  static String get localBackendIp => _ipLocal;
   static String get emulatorHost => _ipEmulador;
 
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
-  static const Duration sendTimeout = Duration(seconds: 30);
-  
-  static const int maxRetries = 3;
-  static const Duration retryDelay = Duration(seconds: 2);
-  
-  static const int codigoLongitud = 6;
-  static const int codigoExpiracionMinutos = 15;
-  static const int maxIntentosVerificacion = 5;
+  static const connectTimeout = Duration(seconds: 30);
+  static const receiveTimeout = Duration(seconds: 30);
+  static const sendTimeout = Duration(seconds: 30);
+  static const maxRetries = 3;
+  static const retryDelay = Duration(seconds: 2);
 
-  static const String rolUsuario = 'USUARIO';
-  static const String rolRepartidor = 'REPARTIDOR';
-  static const String rolProveedor = 'PROVEEDOR';
-  static const String rolAdministrador = 'ADMINISTRADOR';
+  static const codigoLongitud = 6;
+  static const codigoExpiracionMinutos = 15;
+  static const maxIntentosVerificacion = 5;
 
-  static const List<String> tiposProveedor = [
-    'restaurante', 'farmacia', 'supermercado', 'tienda', 'otro'
+  static const rolUsuario = 'USUARIO';
+  static const rolRepartidor = 'REPARTIDOR';
+  static const rolProveedor = 'PROVEEDOR';
+  static const rolAdministrador = 'ADMINISTRADOR';
+
+  static const tiposProveedor = [
+    'restaurante',
+    'farmacia',
+    'supermercado',
+    'tienda',
+    'otro',
   ];
 
-  static const int statusOk = 200;
-  static const int statusCreated = 201;
-  static const int statusBadRequest = 400;
-  static const int statusUnauthorized = 401;
-  static const int statusForbidden = 403;
-  static const int statusNotFound = 404;
-  static const int statusTooManyRequests = 429;
-  static const int statusServerError = 500;
+  // HTTP Status
+  static const statusOk = 200;
+  static const statusCreated = 201;
+  static const statusBadRequest = 400;
+  static const statusUnauthorized = 401;
+  static const statusForbidden = 403;
+  static const statusNotFound = 404;
+  static const statusTooManyRequests = 429;
+  static const statusServerError = 500;
 
-  static const String errorNetwork = 'Error de conexion. Verifica tu internet.';
-  static const String errorTimeout = 'La peticion tardo demasiado. Intenta de nuevo.';
-  static const String errorUnauthorized = 'Sesion expirada. Inicia sesion nuevamente.';
-  static const String errorServer = 'Error del servidor. Intenta mas tarde.';
-  static const String errorUnknown = 'Ocurrio un error inesperado.';
-  static const String errorRateLimit = 'Demasiados intentos. Espera un momento.';
+  // Error Messages
+  static const errorNetwork = 'Error de conexion. Verifica tu internet.';
+  static const errorTimeout = 'La peticion tardo demasiado. Intenta de nuevo.';
+  static const errorUnauthorized = 'Sesion expirada. Inicia sesion nuevamente.';
+  static const errorServer = 'Error del servidor. Intenta mas tarde.';
+  static const errorUnknown = 'Ocurrio un error inesperado.';
+  static const errorRateLimit = 'Demasiados intentos. Espera un momento.';
 
-  // ---------------------------------------------------------------------------
-  // 7. DEBUGGER
-  // ---------------------------------------------------------------------------
+  // ============================================================================
+  // HELPERS
+  // ============================================================================
 
-  static Future<void> printDebugInfo() async {
-    const bool isProd = bool.fromEnvironment('dart.vm.product');
-    final currentUrl = await getBaseUrl();
-    final buffer = StringBuffer();
-    
-    buffer.writeln('--- Deliber API Config ---');
-    buffer.writeln('Env: ${isProd ? "PROD" : "DEV"}');
-    buffer.writeln('URL: $currentUrl');
-    
-    if (_lastDetectedNetwork != null) buffer.writeln('Red: $_lastDetectedNetwork');
-    if (_cachedServerIp != null) buffer.writeln('IP: $_cachedServerIp:$puertoServidor');
-    if (_forceManualIp) buffer.writeln('Manual: $_manualIp');
-
-    developer.log(buffer.toString(), name: 'Deliber API');
-  }
-
-  // ---------------------------------------------------------------------------
-  // 8. HELPERS
-  // ---------------------------------------------------------------------------
-
-  static bool get isProduction => const bool.fromEnvironment('dart.vm.product');
-  static bool get isDevelopment => !isProduction;
+  static bool get isProduction => _isProd;
+  static bool get isDevelopment => !_isProd;
   static bool get isHttps => baseUrl.startsWith('https');
-  static String? get currentNetwork => _lastDetectedNetwork;
-  static String? get currentServerIp => _cachedServerIp;
-  static bool get isInitialized => _isInitialized;
+  static String? get currentNetwork => _network;
+  static String? get currentServerIp => _cachedIp;
+  static bool get isInitialized => _initialized;
+  static bool get isEmulatorDevice => _isEmulator;
 
   static String getMediaUrl(String? path) {
     if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    return '$baseUrl$path';
+    return path.startsWith('http') ? path : '$baseUrl$path';
   }
 
   static bool isValidUrl(String url) {
     try {
       final uri = Uri.parse(url);
       return uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https');
-    } catch (e) { return false; }
+    } catch (_) {
+      return false;
+    }
   }
-
-  static bool get isEmulatorDevice => _isEmulatorDevice;
 
   static bool validarHorarios(String? apertura, String? cierre) {
     if (apertura == null || cierre == null) return true;
@@ -528,11 +591,37 @@ class ApiConfig {
       final open = _parseTime(apertura);
       final close = _parseTime(cierre);
       return (close.hour * 60 + close.minute) > (open.hour * 60 + open.minute);
-    } catch (e) { return false; }
+    } catch (_) {
+      return false;
+    }
   }
 
   static TimeOfDay _parseTime(String time) {
     final parts = time.split(':');
     return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+  }
+
+  static String _buildQueryUrl(String base, Map<String, dynamic> params) {
+    final filtered = params.entries.where(
+      (e) => e.value != null && e.value.toString().isNotEmpty,
+    );
+    if (filtered.isEmpty) return base;
+    final qs = filtered
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value.toString())}')
+        .join('&');
+    return '$base?$qs';
+  }
+
+  static Future<void> _printDebug() async {
+    final buffer = StringBuffer()
+      ..writeln('--- Deliber API Config ---')
+      ..writeln('Env: ${_isProd ? "PROD" : "DEV"}')
+      ..writeln('URL: ${await getBaseUrl()}');
+
+    if (_network != null) buffer.writeln('Red: $_network');
+    if (_cachedIp != null) buffer.writeln('IP: $_cachedIp:$puerto');
+    if (_manualMode) buffer.writeln('Manual: $_manualIp');
+
+    developer.log(buffer.toString(), name: 'Deliber API');
   }
 }

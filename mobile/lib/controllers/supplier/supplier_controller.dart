@@ -89,12 +89,19 @@ class SupplierController extends ChangeNotifier {
   final List<ProductoModel> _productos = [];
   final List<Map<String, dynamic>> _pedidosPendientes = [];
   final List<PromocionModel> _promociones = [];
+  final Set<String> _logosCaidos = {};
 
   List<ProductoModel> get productos => _productos;
   List<Map<String, dynamic>> get pedidosPendientes => _pedidosPendientes;
   List<PromocionModel> get promociones => _promociones;
   int get totalProductos => _productos.length;
   int get pedidosPendientesCount => _pedidosPendientes.length;
+
+  bool _procesandoProducto = false;
+  bool _procesandoPromocion = false;
+
+  bool get procesandoProducto => _procesandoProducto;
+  bool get procesandoPromocion => _procesandoPromocion;
 
   // Estadísticas
   double get ventasHoy => 0.0;
@@ -296,6 +303,10 @@ class SupplierController extends ChangeNotifier {
       _proveedor = await _proveedorService.subirMiLogo(logoFile);
 
       debugPrint('Logo subido: ${_proveedor!.logoUrlCompleta}');
+      final nuevoLogo = _proveedor?.logoUrlCompleta;
+      if (nuevoLogo != null && nuevoLogo.isNotEmpty) {
+        limpiarLogoCaido(nuevoLogo);
+      }
       _subiendoLogo = false;
       _error = null;
       notifyListeners();
@@ -425,28 +436,100 @@ class SupplierController extends ChangeNotifier {
   // ============================================================
   // PROMOCIONES (stubs sin endpoints de escritura)
   // ============================================================
-  Future<bool> crearPromocion(Map<String, dynamic> data) async {
-    _error = 'Gestión de promociones no implementada en este build';
+  Future<bool> crearProducto(
+    Map<String, dynamic> data, {
+    File? imagen,
+  }) async {
+    if (_proveedor == null) {
+      _error = 'No se encontró tu perfil como proveedor';
+      notifyListeners();
+      return false;
+    }
+
+    _procesandoProducto = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final producto = await _productosService.crearProducto(data, imagen: imagen);
+      _productos.insert(0, producto);
+      _procesandoProducto = false;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _handleApiException(e, contexto: 'crear_producto');
+    } catch (e) {
+      _error = 'Error creando producto: $e';
+    }
+    _procesandoProducto = false;
     notifyListeners();
     return false;
   }
 
-  Future<bool> actualizarPromocion(int id, Map<String, dynamic> data) async {
-    _error = 'Gestión de promociones no implementada en este build';
+  Future<bool> crearPromocion(
+    Map<String, dynamic> data, {
+    File? imagen,
+  }) async {
+    if (_proveedor == null) {
+      _error = 'No se encontró tu perfil como proveedor';
+      notifyListeners();
+      return false;
+    }
+
+    _procesandoPromocion = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final promocion = await _productosService.crearPromocion(data, imagen: imagen);
+      _promociones.insert(0, promocion);
+      _procesandoPromocion = false;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _handleApiException(e, contexto: 'crear_promocion');
+    } catch (e) {
+      _error = 'Error creando promoción: $e';
+    }
+    _procesandoPromocion = false;
     notifyListeners();
     return false;
   }
 
   Future<bool> eliminarPromocion(int id) async {
-    _error = 'Gestión de promociones no implementada en este build';
+    _error = null;
     notifyListeners();
-    return false;
+    try {
+      await _productosService.eliminarPromocion(id);
+      _promociones.removeWhere((promo) => promo.id == id.toString());
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'No se pudo eliminar la promoción';
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> cambiarEstadoPromocion(int id, bool activa) async {
-    _error = 'Gestión de promociones no implementada en este build';
+    _error = null;
     notifyListeners();
-    return false;
+    try {
+      final promocion = await _productosService.actualizarPromocion(
+        id,
+        {'activa': activa ? 'true' : 'false'},
+      );
+      final index = _promociones.indexWhere((promo) => promo.id == id.toString());
+      if (index >= 0) {
+        _promociones[index] = promocion;
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'No se pudo actualizar la promoción';
+      notifyListeners();
+      return false;
+    }
   }
 
   /// Cierra la sesión del usuario
@@ -468,6 +551,20 @@ class SupplierController extends ChangeNotifier {
   void limpiarError() {
     _error = null;
     notifyListeners();
+  }
+
+  bool esLogoCaido(String url) => _logosCaidos.contains(url);
+
+  void marcarLogoCaido(String url) {
+    if (_logosCaidos.add(url)) {
+      notifyListeners();
+    }
+  }
+
+  void limpiarLogoCaido(String url) {
+    if (_logosCaidos.remove(url)) {
+      notifyListeners();
+    }
   }
 
   // ============================================================

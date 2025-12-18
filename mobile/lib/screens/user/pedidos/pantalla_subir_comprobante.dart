@@ -33,9 +33,56 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
 
   File? _imagenComprobante;
   bool _isLoading = false;
+  bool _datosModificados = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bancoOrigenController.addListener(_marcarComoModificado);
+    _numeroOperacionController.addListener(_marcarComoModificado);
+  }
+
+  void _marcarComoModificado() {
+    if (!_datosModificados) {
+      setState(() => _datosModificados = true);
+    }
+  }
+
+  Future<bool> _confirmarSalida() async {
+    if (!_datosModificados && _imagenComprobante == null) {
+      return true; // No hay datos, puede salir sin confirmar
+    }
+
+    final resultado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Salir sin enviar?'),
+        content: const Text(
+          'Si sales ahora, perderás la imagen y los datos ingresados. El comprobante debe ser enviado inmediatamente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Quedarme'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'Salir sin enviar',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return resultado ?? false;
+  }
 
   @override
   void dispose() {
+    _bancoOrigenController.removeListener(_marcarComoModificado);
+    _numeroOperacionController.removeListener(_marcarComoModificado);
     _bancoOrigenController.dispose();
     _numeroOperacionController.dispose();
     super.dispose();
@@ -53,6 +100,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
       if (pickedFile != null) {
         setState(() {
           _imagenComprobante = File(pickedFile.path);
+          _datosModificados = true;
         });
       }
     } catch (e) {
@@ -66,7 +114,10 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_imagenComprobante == null) {
-      JPSnackbar.warning(context, 'Debe seleccionar una imagen del comprobante');
+      JPSnackbar.warning(
+        context,
+        'Debe seleccionar una imagen del comprobante',
+      );
       return;
     }
 
@@ -132,88 +183,101 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: JPColors.background,
-      appBar: AppBar(
-        title: const Text('Subir Comprobante'),
-        backgroundColor: JPColors.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Información de cuenta bancaria
-              _buildDatosBancariosCard(),
-              const SizedBox(height: 24),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
 
-              // Instrucciones
-              _buildInstruccionesCard(),
-              const SizedBox(height: 24),
+        final shouldPop = await _confirmarSalida();
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: JPColors.background,
+        appBar: AppBar(
+          title: const Text('Subir Comprobante'),
+          backgroundColor: JPColors.primary,
+          foregroundColor: Colors.white,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Información de cuenta bancaria
+                _buildDatosBancariosCard(),
+                const SizedBox(height: 24),
 
-              // Selección de imagen
-              const Text(
-                'Comprobante de transferencia',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: JPColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildImagenSelector(),
-              const SizedBox(height: 24),
+                // Instrucciones
+                _buildInstruccionesCard(),
+                const SizedBox(height: 24),
 
-              // Datos opcionales
-              const Text(
-                'Información adicional (opcional)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: JPColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildBancoOrigenField(),
-              const SizedBox(height: 16),
-              _buildNumeroOperacionField(),
-              const SizedBox(height: 32),
-
-              // Botón de enviar
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _subirComprobante,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: JPColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                // Selección de imagen
+                const Text(
+                  'Comprobante de transferencia',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: JPColors.textPrimary,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          'Subir Comprobante',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                _buildImagenSelector(),
+                const SizedBox(height: 24),
+
+                // Datos opcionales
+                const Text(
+                  'Información adicional (opcional)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: JPColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildBancoOrigenField(),
+                const SizedBox(height: 16),
+                _buildNumeroOperacionField(),
+                const SizedBox(height: 32),
+
+                // Botón de enviar
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _subirComprobante,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: JPColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Text(
+                            'Subir Comprobante',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -256,8 +320,14 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
             ),
             const Divider(height: 24),
             _buildDatoRow('Banco', widget.datosBancarios.banco),
-            _buildDatoRow('Tipo de cuenta', widget.datosBancarios.tipoCuentaDisplay),
-            _buildDatoRow('Número de cuenta', widget.datosBancarios.numeroCuenta),
+            _buildDatoRow(
+              'Tipo de cuenta',
+              widget.datosBancarios.tipoCuentaDisplay,
+            ),
+            _buildDatoRow(
+              'Número de cuenta',
+              widget.datosBancarios.numeroCuenta,
+            ),
             _buildDatoRow('Titular', widget.datosBancarios.titular),
             _buildDatoRow('Cédula', widget.datosBancarios.cedulaTitular),
             const Divider(height: 24),
@@ -336,11 +406,14 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildInstruccionItem('Realiza la transferencia a la cuenta indicada'),
+          _buildInstruccionItem(
+            'Realiza la transferencia a la cuenta indicada',
+          ),
           _buildInstruccionItem('Toma una foto clara del comprobante'),
           _buildInstruccionItem('Sube la imagen usando el botón de abajo'),
           _buildInstruccionItem(
-              'El repartidor verificará el comprobante antes de la entrega'),
+            'El repartidor verificará el comprobante antes de la entrega',
+          ),
         ],
       ),
     );
@@ -387,26 +460,16 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
         child: _imagenComprobante != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  _imagenComprobante!,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.file(_imagenComprobante!, fit: BoxFit.cover),
               )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.camera_alt,
-                    size: 48,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.camera_alt, size: 48, color: Colors.grey[400]),
                   const SizedBox(height: 12),
                   Text(
                     'Toca para seleccionar imagen',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ],
               ),

@@ -48,21 +48,44 @@ MAX_INTENTOS_CODIGO = 5
 # ==========================================
 
 
+ROLE_MAP = {
+    'cliente': 'USUARIO',
+    'usuario': 'USUARIO',
+    'proveedor': 'PROVEEDOR',
+    'repartidor': 'REPARTIDOR',
+    'admin': 'ADMINISTRADOR',
+    'administrador': 'ADMINISTRADOR',
+}
+
+
+def _obtener_rol_estandarizado(user):
+    """
+    Devuelve un rol en mayúsculas según el rol activo/tipo del usuario.
+    """
+    valor = (user.rol_activo or user.tipo_usuario or '').lower()
+    if valor in ROLE_MAP:
+        return ROLE_MAP[valor]
+    return 'USUARIO'
+
+
 def get_tokens_for_user(user):
     """
     Genera tokens JWT con claims personalizados
     """
+    rol = _obtener_rol_estandarizado(user)
     refresh = RefreshToken.for_user(user)
 
     # Agregar claims personalizados al token
     refresh["user_id"] = user.id
     refresh["email"] = user.email
+    refresh["rol"] = rol
 
     return {
         "refresh": str(refresh),
         "access": str(refresh.access_token),
         "user_id": user.id,
         "email": user.email,
+        "rol": rol,
     }
 
 

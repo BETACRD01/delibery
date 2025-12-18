@@ -12,6 +12,8 @@ import '../../widgets/mapa_pedidos_widget.dart';
 import '../../controllers/delivery/repartidor_controller.dart';
 import 'widgets/repartidor_drawer.dart';
 import 'widgets/lista_vacia_widget.dart';
+import '../../screens/user/pedidos/pantalla_subir_comprobante.dart';
+import '../../services/pago_service.dart';
 import 'pantalla_ver_comprobante.dart';
 
 /// ✅ REFACTORIZADA: Pantalla principal para REPARTIDORES
@@ -37,10 +39,13 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
   // ============================================
   // COLORES
   // ============================================
-  static const Color _naranja = Color(0xFFFF9800);
-  static const Color _naranjaOscuro = Color(0xFFF57C00);
-  static const Color _verde = Color(0xFF4CAF50);
+  static const Color _accent = Color(0xFF0A84FF);
+  static const Color _success = Color(0xFF34C759);
   static const Color _rojo = Color(0xFFF44336);
+  static const Color _surface = Color(0xFFF2F4F7);
+  static const Color _cardBorder = Color(0xFFE1E4EB);
+  static const Color _shadowColor = Color(0x1A000000);
+  final PagoService _pagoService = PagoService();
 
   // ============================================
   // CICLO DE VIDA
@@ -103,7 +108,8 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     final accion = data['accion']?.toString();
 
     // CASO 1: Pedido aceptado por otro repartidor - removerlo de la lista
-    if (tipoEvento == 'pedido_aceptado' || accion == 'remover_pedido_disponible') {
+    if (tipoEvento == 'pedido_aceptado' ||
+        accion == 'remover_pedido_disponible') {
       final pedidoIdRaw = data['pedido_id'];
       if (pedidoIdRaw != null) {
         final pedidoId = int.tryParse(pedidoIdRaw.toString());
@@ -115,16 +121,16 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     }
 
     // CASO 2: Nuevo pedido disponible
-    final tipo = (data['tipo'] ?? data['type'] ?? accion ?? tipoEvento)?.toString();
-    final pedidoIdRaw = data['pedido_id'] ??
-        data['pedido'] ??
-        data['order_id'] ??
-        data['id'];
+    final tipo = (data['tipo'] ?? data['type'] ?? accion ?? tipoEvento)
+        ?.toString();
+    final pedidoIdRaw =
+        data['pedido_id'] ?? data['pedido'] ?? data['order_id'] ?? data['id'];
     if (pedidoIdRaw == null) return;
 
     // Solo atender eventos de nuevo pedido para repartidor
     const tiposValidos = {'nuevo_pedido', 'pedido_disponible', 'new_order'};
-    final esRepartidor = tipoEvento == 'repartidor' || accion == 'ver_pedido_disponible';
+    final esRepartidor =
+        tipoEvento == 'repartidor' || accion == 'ver_pedido_disponible';
     if (!esRepartidor && tipo != null && !tiposValidos.contains(tipo)) return;
 
     final pedidoId = int.tryParse(pedidoIdRaw.toString());
@@ -162,10 +168,15 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     // Remover del controller
     _controller.removerPedidoDisponible(pedidoId);
 
-    debugPrint('[Push Repartidor] Pedido #$pedidoId removido - fue aceptado por otro repartidor');
+    debugPrint(
+      '[Push Repartidor] Pedido #$pedidoId removido - fue aceptado por otro repartidor',
+    );
   }
 
-  Future<void> _mostrarDialogoNuevoPedido(int pedidoId, Map<String, dynamic> data) async {
+  Future<void> _mostrarDialogoNuevoPedido(
+    int pedidoId,
+    Map<String, dynamic> data,
+  ) async {
     final cliente = data['cliente']?.toString() ?? 'Cliente';
     final total = data['total']?.toString() ?? '—';
 
@@ -186,7 +197,10 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
               Text('Total: $total'),
             ],
             const SizedBox(height: 12),
-            const Text('¿Quieres aceptarlo?', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text(
+              '¿Quieres aceptarlo?',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
           ],
         ),
         actions: [
@@ -199,7 +213,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
               Navigator.pop(context);
               await _aceptarPedido(pedidoId);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: _verde),
+            style: ElevatedButton.styleFrom(backgroundColor: _success),
             child: const Text('Aceptar'),
           ),
         ],
@@ -226,32 +240,80 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
         // Cambiar a la pestaña "En Curso" para que el usuario vea el pedido aceptado
         _tabController.animateTo(1);
 
+        if (_requiereSubirComprobante(detallePedido)) {
+          await _mostrarSubirComprobante(
+            detallePedido.pagoId!,
+            pedidoId: detallePedido.id,
+          );
+          if (!mounted) return;
+        }
+
         // Mostrar mensaje con información del pedido aceptado
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               'Pedido #${detallePedido.numeroPedido} aceptado\n'
               'Cliente: ${detallePedido.cliente.nombre}\n'
-              'Destino: ${detallePedido.direccionEntrega}'
+              'Destino: ${detallePedido.direccionEntrega}',
             ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
           ),
         );
       } else {
+        final mensajeError =
+            _controller.error ?? 'No se pudo aceptar el pedido';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo aceptar el pedido'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
         );
       }
-    } catch (_) {
+    } catch (e) {
+      if (!mounted) return;
+      final mensajeError = _controller.error ?? 'Error aceptando el pedido';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  bool _requiereSubirComprobante(PedidoDetalladoRepartidor pedido) {
+    final esTransferencia = pedido.metodoPago.toLowerCase() == 'transferencia';
+    final sinComprobante =
+        (pedido.transferenciaComprobanteUrl ?? '').isEmpty;
+    return esTransferencia && sinComprobante && pedido.pagoId != null;
+  }
+
+  Future<void> _mostrarSubirComprobante(
+    int pagoId, {
+    int? pedidoId,
+  }) async {
+    try {
+      final datos = await _pagoService.obtenerDatosBancariosPago(pagoId);
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PantallaSubirComprobante(
+            pagoId: pagoId,
+            datosBancarios: datos,
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      await _controller.cargarPedidosActivos();
+      await _controller.cargarPedidosDisponibles();
+      if (pedidoId != null) {
+        await _controller.cargarPedidosActivos();
+      }
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error aceptando el pedido'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text('No se pudo iniciar el comprobante: $e'),
+          backgroundColor: _rojo,
         ),
       );
     }
@@ -270,64 +332,61 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     }
   }
 
-Future<void> _mostrarDialogoAccesoDenegado() async {
-  if (!mounted) return;
+  Future<void> _mostrarDialogoAccesoDenegado() async {
+    if (!mounted) return;
 
-  await showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) {
-      return PopScope(
-        canPop: false,
-        child: AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.block, color: _rojo),
-              SizedBox(width: 12),
-              Text('Acceso Denegado'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Esta sección es exclusiva para repartidores.',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Text(_controller.error ?? ''),
-              const SizedBox(height: 8),
-              const Text(
-                'Serás redirigido a tu pantalla correspondiente.',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _naranja,
-              ),
-              child: const Text('Entendido'),
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.block, color: _rojo),
+                SizedBox(width: 12),
+                Text('Acceso Denegado'),
+              ],
             ),
-          ],
-        ),
-      );
-    },
-  );
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Esta sección es exclusiva para repartidores.',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(_controller.error ?? ''),
+                const SizedBox(height: 8),
+                const Text(
+                  'Serás redirigido a tu pantalla correspondiente.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: _accent),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
 
-  if (!mounted) return;
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (mounted) {
-      Rutas.irAYLimpiar(context, Rutas.login);
-    }
-  });
-}
-
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Rutas.irAYLimpiar(context, Rutas.login);
+      }
+    });
+  }
 
   // ============================================
   // ACCIONES
@@ -472,7 +531,9 @@ Future<void> _mostrarDialogoAccesoDenegado() async {
     if (pedido.items?.isNotEmpty ?? false) {
       buffer.writeln('📝 *Detalle:*');
       for (final item in pedido.items!) {
-        buffer.writeln('   • ${item.cantidad}x ${item.productoNombre} - \$${item.subtotal.toStringAsFixed(2)}');
+        buffer.writeln(
+          '   • ${item.cantidad}x ${item.productoNombre} - \$${item.subtotal.toStringAsFixed(2)}',
+        );
       }
       buffer.writeln('');
     } else if (pedido.descripcion != null && pedido.descripcion!.isNotEmpty) {
@@ -482,10 +543,14 @@ Future<void> _mostrarDialogoAccesoDenegado() async {
 
     // Totales
     buffer.writeln('💰 *Subtotal:* \$${pedido.subtotal.toStringAsFixed(2)}');
-    buffer.writeln('🚗 *Costo de envío:* \$${pedido.costoEnvio.toStringAsFixed(2)}');
+    buffer.writeln(
+      '🚗 *Costo de envío:* \$${pedido.costoEnvio.toStringAsFixed(2)}',
+    );
 
     if (pedido.descuento != null && pedido.descuento! > 0) {
-      buffer.writeln('🎟️ *Descuento:* -\$${pedido.descuento!.toStringAsFixed(2)}');
+      buffer.writeln(
+        '🎟️ *Descuento:* -\$${pedido.descuento!.toStringAsFixed(2)}',
+      );
     }
 
     buffer.writeln('💵 *Total:* \$${pedido.total.toStringAsFixed(2)}');
@@ -501,7 +566,9 @@ Future<void> _mostrarDialogoAccesoDenegado() async {
     buffer.writeln('🏠 *Entrega:* ${pedido.direccionEntrega}');
 
     // Notas especiales si existen
-    if (pedido.descripcion != null && pedido.descripcion!.isNotEmpty && (pedido.items?.isEmpty ?? true)) {
+    if (pedido.descripcion != null &&
+        pedido.descripcion!.isNotEmpty &&
+        (pedido.items?.isEmpty ?? true)) {
       buffer.writeln('');
       buffer.writeln('📌 *Nota especial:* ${pedido.descripcion}');
     }
@@ -602,6 +669,7 @@ Future<void> _mostrarDialogoAccesoDenegado() async {
       listenable: _controller,
       builder: (context, child) {
         return Scaffold(
+          backgroundColor: _surface,
           appBar: _buildAppBar(),
           drawer: _buildDrawer(),
           body: _buildBody(),
@@ -614,22 +682,16 @@ Future<void> _mostrarDialogoAccesoDenegado() async {
   // APP BAR
   // ============================================
 
-PreferredSizeWidget _buildAppBar() {
-  return AppBar(
-    title: const Text('Dashboard Repartidor'),
-    elevation: 0,
-    flexibleSpace: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _naranja,
-            _naranjaOscuro,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: false,
+      title: const Text(
+        'Dashboard',
+        style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
       ),
-    ),
+      iconTheme: const IconThemeData(color: Colors.black87),
       actions: [
         IconButton(
           icon: const Icon(Icons.map),
@@ -641,15 +703,32 @@ PreferredSizeWidget _buildAppBar() {
           child: Center(
             child: Row(
               children: [
-                Icon(
-                  _controller.getIconoEstado(_controller.estadoActual),
-                  color: _controller.estaDisponible ? _verde : Colors.grey[300],
-                  size: 20,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  _controller.estadoActual.nombre,
-                  style: const TextStyle(fontSize: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _cardBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _controller.getIconoEstado(_controller.estadoActual),
+                        color: _controller.estaDisponible
+                            ? _success
+                            : Colors.grey,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _controller.estadoActual.nombre,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -661,14 +740,44 @@ PreferredSizeWidget _buildAppBar() {
           tooltip: 'Actualizar',
         ),
       ],
-      bottom: TabBar(
-        controller: _tabController,
-        indicatorColor: Colors.white,
-        tabs: const [
-          Tab(text: 'Pendientes', icon: Icon(Icons.list_alt, size: 20)),
-          Tab(text: 'En Curso', icon: Icon(Icons.delivery_dining, size: 20)),
-          Tab(text: 'Historial', icon: Icon(Icons.history, size: 20)),
-        ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F5F9),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _cardBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: _accent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              indicatorPadding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 6,
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.grey[600],
+              tabs: const [
+                Tab(text: 'Pendientes'),
+                Tab(text: 'En curso'),
+                Tab(text: 'Historial'),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -725,7 +834,7 @@ PreferredSizeWidget _buildAppBar() {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: _naranja),
+          const CircularProgressIndicator(color: _accent),
           const SizedBox(height: 16),
           Text('Cargando datos...', style: TextStyle(color: Colors.grey[600])),
         ],
@@ -757,7 +866,7 @@ PreferredSizeWidget _buildAppBar() {
               icon: const Icon(Icons.refresh),
               label: const Text('Reintentar'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _naranja,
+                backgroundColor: _accent,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 12,
@@ -767,6 +876,24 @@ PreferredSizeWidget _buildAppBar() {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSurfaceCard({
+    required Widget child,
+    EdgeInsetsGeometry margin = const EdgeInsets.only(bottom: 16),
+  }) {
+    return Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _cardBorder),
+        boxShadow: const [
+          BoxShadow(color: _shadowColor, blurRadius: 12, offset: Offset(0, 6)),
+        ],
+      ),
+      child: child,
     );
   }
 
@@ -803,9 +930,8 @@ PreferredSizeWidget _buildAppBar() {
     final total = payload?['total']?.toString();
     final cliente = payload?['cliente']?.toString();
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return _buildSurfaceCard(
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -813,20 +939,30 @@ PreferredSizeWidget _buildAppBar() {
           children: [
             Row(
               children: [
-                const Icon(Icons.new_releases, color: _naranja),
+                const Icon(Icons.new_releases, color: _accent),
                 const SizedBox(width: 8),
-                Text('Nuevo encargo #$pedidoId',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700)),
+                Text(
+                  'Nuevo encargo #$pedidoId',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
             if (cliente != null) ...[
               const SizedBox(height: 8),
-              Text('Cliente: $cliente'),
+              Text(
+                'Cliente: $cliente',
+                style: const TextStyle(color: Colors.grey),
+              ),
             ],
             if (total != null) ...[
               const SizedBox(height: 4),
-              Text('Total: $total'),
+              Text(
+                'Total: $total',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ],
             const SizedBox(height: 12),
             Row(
@@ -840,7 +976,12 @@ PreferredSizeWidget _buildAppBar() {
                       });
                     },
                     style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey[700],
                       side: BorderSide(color: Colors.grey.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text('Ignorar'),
                   ),
@@ -850,7 +991,12 @@ PreferredSizeWidget _buildAppBar() {
                   child: ElevatedButton(
                     onPressed: () => _aceptarPedido(pedidoId),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _verde,
+                      backgroundColor: _success,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text('Aceptar'),
                   ),
@@ -864,86 +1010,122 @@ PreferredSizeWidget _buildAppBar() {
   }
 
   Widget _buildCardPedidoDisponible(PedidoDisponible pedido) {
-    return Card(
-      margin: const EdgeInsets.only(top: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return _buildSurfaceCard(
+      margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.delivery_dining, color: _naranja),
-                const SizedBox(width: 8),
+                const Icon(Icons.delivery_dining, color: _accent, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Text('${pedido.proveedorNombre} - #${pedido.numeroPedido}',
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    '${pedido.proveedorNombre} • #${pedido.numeroPedido}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-                Text('${pedido.distanciaKm.toStringAsFixed(1)} km',
-                    style: const TextStyle(color: Colors.grey)),
+                Text(
+                  '${pedido.distanciaKm.toStringAsFixed(1)} km',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
               ],
             ),
-            const SizedBox(height: 6),
-            // Muestra solo la ZONA general, NO la dirección exacta (privacidad)
+            const SizedBox(height: 10),
             Row(
               children: [
                 const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 Expanded(
-                  child: Text(pedido.zonaEntrega,
-                      style: const TextStyle(color: Colors.black87)),
+                  child: Text(
+                    pedido.zonaEntrega,
+                    style: const TextStyle(color: Colors.black87),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Row(
               children: [
                 const Icon(Icons.timer, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text('${pedido.tiempoEstimadoMin} min est.',
-                    style: const TextStyle(color: Colors.grey)),
-                const SizedBox(width: 12),
+                const SizedBox(width: 6),
+                Text(
+                  '${pedido.tiempoEstimadoMin} min est.',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(width: 16),
                 const Icon(Icons.attach_money, size: 16, color: Colors.grey),
-                const SizedBox(width: 2),
-                Text('\$${pedido.total.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 4),
+                Text(
+                  '\$${pedido.total.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 6),
-            // Método de pago
+            const SizedBox(height: 8),
             Row(
               children: [
                 const Icon(Icons.payment, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text('Pago: ${pedido.metodoPago}',
-                    style: const TextStyle(color: Colors.black87)),
+                const SizedBox(width: 6),
+                Text(
+                  'Pago: ${pedido.metodoPago}',
+                  style: const TextStyle(color: Colors.black87),
+                ),
                 if (pedido.comisionRepartidor != null) ...[
-                  const SizedBox(width: 12),
-                  const Icon(Icons.monetization_on, size: 16, color: _verde),
+                  const Spacer(),
+                  const Icon(Icons.monetization_on, size: 16, color: _success),
                   const SizedBox(width: 4),
-                  Text('Comisión: \$${pedido.comisionRepartidor!.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          color: _verde, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Comisión \$${pedido.comisionRepartidor!.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: _success,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => _controller.rechazarPedido(pedido.id),
-                    child: const Text('Rechazar'),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Rechazar',
+                      style: TextStyle(color: Colors.black87),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => _aceptarPedido(pedido.id),
-                    style: ElevatedButton.styleFrom(backgroundColor: _verde),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _accent,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                     child: const Text('Aceptar'),
                   ),
                 ),
@@ -982,27 +1164,31 @@ PreferredSizeWidget _buildAppBar() {
   }
 
   Widget _buildCardPedidoActivo(PedidoDetalladoRepartidor pedido) {
-    return Card(
+    return _buildSurfaceCard(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ENCABEZADO CON NÚMERO DE PEDIDO Y ESTADO
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: _verde.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
+                    color: _success.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.delivery_dining, size: 18, color: _verde),
+                      const Icon(
+                        Icons.delivery_dining,
+                        size: 18,
+                        color: _success,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '#${pedido.numeroPedido}',
@@ -1018,18 +1204,14 @@ PreferredSizeWidget _buildAppBar() {
                 _buildChipEstado(pedido.estado),
               ],
             ),
-            const Divider(height: 24),
-
-            // INFORMACIÓN DEL CLIENTE (ahora tiene acceso a datos completos)
+            const SizedBox(height: 12),
             _buildSeccion(
               icono: Icons.person,
               titulo: 'Cliente',
               contenido: pedido.cliente.nombre,
             ),
-            const SizedBox(height: 12),
-
-            // TELÉFONO DEL CLIENTE CON BOTONES PARA LLAMAR Y WHATSAPP
             if (pedido.cliente.telefono != null) ...[
+              const SizedBox(height: 10),
               Row(
                 children: [
                   const Icon(Icons.phone, color: Colors.grey, size: 20),
@@ -1041,7 +1223,7 @@ PreferredSizeWidget _buildAppBar() {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.call, color: _verde),
+                    icon: const Icon(Icons.call, color: _success),
                     onPressed: () => _llamarCliente(pedido.cliente.telefono),
                     tooltip: 'Llamar al cliente',
                   ),
@@ -1052,36 +1234,30 @@ PreferredSizeWidget _buildAppBar() {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
             ],
-
-            // DIRECCIÓN COMPLETA DE ENTREGA
+            const SizedBox(height: 12),
             _buildSeccion(
               icono: Icons.location_on,
-              titulo: 'Dirección de Entrega',
+              titulo: 'Dirección de entrega',
               contenido: pedido.direccionEntrega,
             ),
-            const SizedBox(height: 12),
-
-            // Instrucciones de entrega
             if ((pedido.instruccionesEntrega ?? '').isNotEmpty) ...[
+              const SizedBox(height: 12),
               _buildSeccion(
                 icono: Icons.info_outline,
-                titulo: 'Instrucciones de entrega',
+                titulo: 'Instrucciones',
                 contenido: pedido.instruccionesEntrega!,
               ),
-              const SizedBox(height: 12),
             ],
-
-            // Comprobante de transferencia (si aplica)
             if (pedido.metodoPago.toLowerCase() == 'transferencia') ...[
+              const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1089,107 +1265,127 @@ PreferredSizeWidget _buildAppBar() {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.account_balance_wallet, color: _naranja, size: 20),
-                        const SizedBox(width: 8),
-                       const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Pago por transferencia',
-                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                              ),
-                            ],
+                        const Icon(
+                          Icons.account_balance_wallet,
+                          color: _accent,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Pago por transferencia',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Colors.grey[800],
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Chip(
                           label: Text(
-                            (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty
+                            (pedido.transferenciaComprobanteUrl ?? '')
+                                    .isNotEmpty
                                 ? 'Comprobante listo'
                                 : 'Pendiente',
                             style: TextStyle(
-                              color: (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty
+                              color:
+                                  (pedido.transferenciaComprobanteUrl ?? '')
+                                      .isNotEmpty
                                   ? Colors.green[800]
-                                  : Colors.orange[800],
+                                  : Colors.orange[700],
                               fontWeight: FontWeight.bold,
+                              fontSize: 12,
                             ),
                           ),
-                          backgroundColor: (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty
-                              ? Colors.green.withValues(alpha: 0.12)
-                              : Colors.orange.withValues(alpha: 0.12),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                          backgroundColor:
+                              (pedido.transferenciaComprobanteUrl ?? '')
+                                  .isNotEmpty
+                              ? Colors.green.withValues(alpha: 0.14)
+                              : Colors.orange.withValues(alpha: 0.14),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 0,
+                          ),
                         ),
                       ],
                     ),
-                    if ((pedido.transferenciaComprobanteUrl ?? '').isNotEmpty && pedido.pagoId != null)
+                    const SizedBox(height: 8),
+                    if ((pedido.transferenciaComprobanteUrl ?? '').isNotEmpty &&
+                        pedido.pagoId != null)
                       TextButton.icon(
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => PantallaVerComprobante(pagoId: pedido.pagoId!),
+                              builder: (_) => PantallaVerComprobante(
+                                pagoId: pedido.pagoId!,
+                              ),
                             ),
                           );
                         },
                         icon: const Icon(Icons.receipt_long),
-                        label: const Text('Ver comprobante de transferencia'),
+                        label: const Text('Ver comprobante'),
                       )
                     else
-                      const Text(
+                      Text(
                         'Aún no hay comprobante subido por el cliente.',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
             ],
-
-            // INFORMACIÓN DEL PROVEEDOR
+            const SizedBox(height: 12),
             _buildSeccion(
               icono: Icons.store,
               titulo: 'Proveedor',
               contenido: pedido.proveedor.nombre,
             ),
-            const SizedBox(height: 12),
-
-            // PRODUCTOS
             if (pedido.items?.isNotEmpty ?? false) ...[
+              const SizedBox(height: 12),
               const Text(
-                'Productos:',
+                'Productos',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               const SizedBox(height: 8),
-              ...pedido.items!.map((item) => Padding(
-                    padding: const EdgeInsets.only(left: 8, bottom: 4),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle_outline, size: 14, color: Colors.grey),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${item.cantidad}x ${item.productoNombre}',
-                            style: const TextStyle(fontSize: 13),
-                          ),
+              ...pedido.items!.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 4),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${item.cantidad}x ${item.productoNombre}',
+                          style: const TextStyle(fontSize: 13),
                         ),
-                        Text(
-                          '\$${item.subtotal.toStringAsFixed(2)}',
-                          style: const TextStyle(fontSize: 13, color: Colors.grey),
+                      ),
+                      Text(
+                        '\$${item.subtotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey,
                         ),
-                      ],
-                    ),
-                  )),
-              const SizedBox(height: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
-
-            // TOTALES Y COMISIÓN
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
@@ -1199,7 +1395,10 @@ PreferredSizeWidget _buildAppBar() {
                       const Text('Total del pedido:'),
                       Text(
                         '\$${pedido.total.toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -1208,11 +1407,14 @@ PreferredSizeWidget _buildAppBar() {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Tu comisión:', style: TextStyle(color: _verde)),
+                        const Text(
+                          'Tu comisión:',
+                          style: TextStyle(color: _success),
+                        ),
                         Text(
                           '\$${pedido.comisionRepartidor!.toStringAsFixed(2)}',
                           style: const TextStyle(
-                            color: _verde,
+                            color: _success,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -1224,8 +1426,6 @@ PreferredSizeWidget _buildAppBar() {
               ),
             ),
             const SizedBox(height: 16),
-
-            // BOTONES DE ACCIÓN
             Row(
               children: [
                 Expanded(
@@ -1234,16 +1434,17 @@ PreferredSizeWidget _buildAppBar() {
                     icon: const Icon(Icons.navigation),
                     label: const Text('Navegar'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: _naranja,
-                      side: const BorderSide(color: _naranja),
+                      foregroundColor: _accent,
+                      side: BorderSide(color: _accent.withValues(alpha: 0.4)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Mostrar botón según el estado del pedido
-                Expanded(
-                  child: _buildBotonAccionPedido(pedido),
-                ),
+                Expanded(child: _buildBotonAccionPedido(pedido)),
               ],
             ),
           ],
@@ -1275,10 +1476,7 @@ PreferredSizeWidget _buildAppBar() {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                contenido,
-                style: const TextStyle(fontSize: 15),
-              ),
+              Text(contenido, style: const TextStyle(fontSize: 15)),
             ],
           ),
         ),
@@ -1296,11 +1494,11 @@ PreferredSizeWidget _buildAppBar() {
         texto = 'Asignado';
         break;
       case 'en_camino':
-        color = _naranja;
+        color = _accent;
         texto = 'En Camino';
         break;
       case 'entregado':
-        color = _verde;
+        color = _success;
         texto = 'Entregado';
         break;
       default:
@@ -1330,14 +1528,13 @@ PreferredSizeWidget _buildAppBar() {
     final estadoLower = pedido.estado.toLowerCase();
 
     // Si el pedido está pendiente o asignado, mostrar botón "En Camino"
-    if (estadoLower == 'pendiente_repartidor' || estadoLower == 'asignado_repartidor') {
+    if (estadoLower == 'pendiente_repartidor' ||
+        estadoLower == 'asignado_repartidor') {
       return ElevatedButton.icon(
         onPressed: () => _marcarEnCamino(pedido),
         icon: const Icon(Icons.local_shipping),
         label: const Text('En Camino'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _naranja,
-        ),
+        style: ElevatedButton.styleFrom(backgroundColor: _accent),
       );
     }
 
@@ -1347,9 +1544,7 @@ PreferredSizeWidget _buildAppBar() {
         onPressed: () => _mostrarDialogoMarcarEntregado(pedido),
         icon: const Icon(Icons.check_circle),
         label: const Text('Entregado'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _verde,
-        ),
+        style: ElevatedButton.styleFrom(backgroundColor: _success),
       );
     }
 
@@ -1359,21 +1554,18 @@ PreferredSizeWidget _buildAppBar() {
         padding: const EdgeInsets.symmetric(vertical: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: _verde.withValues(alpha: 0.1),
+          color: _success.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _verde),
+          border: Border.all(color: _success),
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle, color: _verde, size: 20),
+            Icon(Icons.check_circle, color: _success, size: 20),
             SizedBox(width: 8),
             Text(
               'Entregado',
-              style: TextStyle(
-                color: _verde,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: _success, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -1403,7 +1595,7 @@ PreferredSizeWidget _buildAppBar() {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _naranja),
+            style: ElevatedButton.styleFrom(backgroundColor: _accent),
             child: const Text('Confirmar'),
           ),
         ],
@@ -1417,9 +1609,7 @@ PreferredSizeWidget _buildAppBar() {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
       // Marcar como en camino
@@ -1433,25 +1623,27 @@ PreferredSizeWidget _buildAppBar() {
       if (exito) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pedido #${pedido.numeroPedido} marcado como en camino'),
-            backgroundColor: _naranja,
+            content: Text(
+              'Pedido #${pedido.numeroPedido} marcado como en camino',
+            ),
+            backgroundColor: _accent,
           ),
         );
       } else {
         final errorMsg = _controller.error ?? 'Error al marcar como en camino';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: _rojo,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: _rojo),
         );
       }
     }
   }
 
-  Future<void> _mostrarDialogoMarcarEntregado(PedidoDetalladoRepartidor pedido) async {
+  Future<void> _mostrarDialogoMarcarEntregado(
+    PedidoDetalladoRepartidor pedido,
+  ) async {
     final esTransferencia = pedido.metodoPago.toLowerCase() == 'transferencia';
-    final tieneComprobante = (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty;
+    final tieneComprobante =
+        (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty;
 
     final confirmar = await showDialog<bool>(
       context: context,
@@ -1464,7 +1656,9 @@ PreferredSizeWidget _buildAppBar() {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('¿Confirmas que el pedido #${pedido.numeroPedido} fue entregado exitosamente?'),
+              Text(
+                '¿Confirmas que el pedido #${pedido.numeroPedido} fue entregado exitosamente?',
+              ),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1500,7 +1694,10 @@ PreferredSizeWidget _buildAppBar() {
                         Expanded(
                           child: Text(
                             'El cliente aún no ha subido el comprobante de transferencia.',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -1519,7 +1716,7 @@ PreferredSizeWidget _buildAppBar() {
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.check_circle, color: _verde, size: 20),
+                            Icon(Icons.check_circle, color: _success, size: 20),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -1527,7 +1724,7 @@ PreferredSizeWidget _buildAppBar() {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: _verde,
+                                  color: _success,
                                 ),
                               ),
                             ),
@@ -1542,7 +1739,9 @@ PreferredSizeWidget _buildAppBar() {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => PantallaVerComprobante(pagoId: pedido.pagoId!),
+                                builder: (_) => PantallaVerComprobante(
+                                  pagoId: pedido.pagoId!,
+                                ),
                               ),
                             );
                           },
@@ -1565,7 +1764,9 @@ PreferredSizeWidget _buildAppBar() {
               if (esTransferencia && !tieneComprobante) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('No puedes entregar sin comprobante de transferencia del cliente'),
+                    content: Text(
+                      'No puedes entregar sin comprobante de transferencia del cliente',
+                    ),
                     backgroundColor: _rojo,
                   ),
                 );
@@ -1573,7 +1774,7 @@ PreferredSizeWidget _buildAppBar() {
               }
               Navigator.pop(context, true);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: _verde),
+            style: ElevatedButton.styleFrom(backgroundColor: _success),
             child: const Text('Confirmar Entrega'),
           ),
         ],
@@ -1586,9 +1787,7 @@ PreferredSizeWidget _buildAppBar() {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
       final exito = await _controller.marcarPedidoEntregado(
@@ -1602,17 +1801,16 @@ PreferredSizeWidget _buildAppBar() {
       if (exito) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pedido #${pedido.numeroPedido} marcado como entregado'),
-            backgroundColor: _verde,
+            content: Text(
+              'Pedido #${pedido.numeroPedido} marcado como entregado',
+            ),
+            backgroundColor: _success,
           ),
         );
       } else {
         final errorMsg = _controller.error ?? 'Error al marcar como entregado';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: _rojo,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: _rojo),
         );
       }
     }
@@ -1628,9 +1826,7 @@ PreferredSizeWidget _buildAppBar() {
     }
 
     if (_controller.loadingHistorial) {
-      return const Center(
-        child: CircularProgressIndicator(color: _naranja),
-      );
+      return const Center(child: CircularProgressIndicator(color: _accent));
     }
 
     // Mostrar error si hubo problemas al cargar
@@ -1641,7 +1837,11 @@ PreferredSizeWidget _buildAppBar() {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: _rojo.withValues(alpha: 0.5)),
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: _rojo.withValues(alpha: 0.5),
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Error al cargar el historial',
@@ -1658,7 +1858,7 @@ PreferredSizeWidget _buildAppBar() {
                 onPressed: () => _controller.cargarHistorialEntregas(),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reintentar'),
-                style: ElevatedButton.styleFrom(backgroundColor: _naranja),
+                style: ElevatedButton.styleFrom(backgroundColor: _accent),
               ),
             ],
           ),
@@ -1683,11 +1883,16 @@ PreferredSizeWidget _buildAppBar() {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [_naranja.withValues(alpha: 0.1), _verde.withValues(alpha: 0.1)],
+              colors: [
+                _accent.withValues(alpha: 0.1),
+                _success.withValues(alpha: 0.1),
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(16),
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1696,14 +1901,14 @@ PreferredSizeWidget _buildAppBar() {
                 Icons.delivery_dining,
                 'Entregas',
                 '${_controller.totalEntregasHistorial}',
-                _naranja,
+                _accent,
               ),
               Container(width: 1, height: 40, color: Colors.grey[300]),
               _buildEstadisticaHistorial(
                 Icons.payments,
                 'Comisiones',
                 'Bs ${_controller.totalComisionesHistorial.toStringAsFixed(2)}',
-                _verde,
+                _success,
               ),
             ],
           ),
@@ -1711,7 +1916,7 @@ PreferredSizeWidget _buildAppBar() {
         // Lista de entregas
         Expanded(
           child: RefreshIndicator(
-            color: _naranja,
+            color: _accent,
             onRefresh: _controller.recargarHistorial,
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -1759,206 +1964,209 @@ PreferredSizeWidget _buildAppBar() {
   }
 
   Widget _buildCardEntrega(EntregaHistorial entrega) {
-    return Card(
+    return _buildSurfaceCard(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: entrega.tieneComprobante
-            ? () => _mostrarComprobanteCompleto(entrega)
-            : null,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Encabezado con fecha y ID
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _verde.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '#${entrega.id}',
-                          style: const TextStyle(
-                            color: _verde,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: entrega.tieneComprobante
+              ? () => _mostrarComprobanteCompleto(entrega)
+              : null,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _success.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '#${entrega.id}',
+                            style: const TextStyle(
+                              color: _success,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.check_circle, color: _verde, size: 16),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Entregado',
-                        style: TextStyle(
-                          color: _verde,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.check_circle,
+                          color: _success,
+                          size: 16,
                         ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    entrega.fechaFormateada,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              // Datos del cliente
-              Row(
-                children: [
-                  Icon(Icons.person, color: Colors.grey[600], size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      entrega.clienteNombre,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.location_on, color: Colors.grey[600], size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      entrega.clienteDireccion,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Información financiera
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total del pedido',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Entregado',
+                          style: TextStyle(
+                            color: _success,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
+                      ],
+                    ),
+                    Text(
+                      entrega.fechaFormateada,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Icon(Icons.person, color: Colors.grey[600], size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        entrega.clienteNombre,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Tu comisión',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                        ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.grey[600], size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        entrega.clienteDireccion,
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
-                      const SizedBox(height: 2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _verde.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Bs ${entrega.comisionRepartidor.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: _verde,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total del pedido',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
                           ),
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Tu comisión',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _success.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Bs ${entrega.comisionRepartidor.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: _success,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (entrega.tieneComprobante) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.camera_alt, color: _success, size: 16),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Comprobante adjunto',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _success,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 12,
+                        color: Colors.grey[400],
                       ),
                     ],
                   ),
                 ],
-              ),
-              // Comprobante
-              if (entrega.tieneComprobante) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(Icons.camera_alt, color: _verde, size: 16),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Comprobante adjunto',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _verde,
-                        fontWeight: FontWeight.w500,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getColorMetodoPago(
+                      entrega.metodoPago,
+                    ).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _getIconoMetodoPago(entrega.metodoPago),
+                        size: 14,
+                        color: _getColorMetodoPago(entrega.metodoPago),
                       ),
-                    ),
-                    const Spacer(),
-                    Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey[400]),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        _getNombreMetodoPago(entrega.metodoPago),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _getColorMetodoPago(entrega.metodoPago),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
-              // Método de pago
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getColorMetodoPago(entrega.metodoPago).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _getIconoMetodoPago(entrega.metodoPago),
-                      size: 14,
-                      color: _getColorMetodoPago(entrega.metodoPago),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _getNombreMetodoPago(entrega.metodoPago),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: _getColorMetodoPago(entrega.metodoPago),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1968,7 +2176,7 @@ PreferredSizeWidget _buildAppBar() {
   Color _getColorMetodoPago(String metodo) {
     switch (metodo.toLowerCase()) {
       case 'efectivo':
-        return _verde;
+        return _success;
       case 'tarjeta':
         return Colors.blue;
       case 'transferencia':
@@ -2034,8 +2242,8 @@ PreferredSizeWidget _buildAppBar() {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.error_outline, size: 48, color: _rojo),
-                           SizedBox(height: 16),
-                           Text('Error al cargar la imagen'),
+                          SizedBox(height: 16),
+                          Text('Error al cargar la imagen'),
                         ],
                       ),
                     );
@@ -2047,9 +2255,9 @@ PreferredSizeWidget _buildAppBar() {
                       child: CircularProgressIndicator(
                         value: loadingProgress.expectedTotalBytes != null
                             ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
+                                  loadingProgress.expectedTotalBytes!
                             : null,
-                        color: _naranja,
+                        color: _accent,
                       ),
                     );
                   },

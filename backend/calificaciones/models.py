@@ -1,10 +1,13 @@
 # calificaciones/models.py
 
 import logging
+from django.apps import apps
 from django.db import models, transaction
 from django.db.models import Avg, Count, Q
+from django.db.models.signals import post_delete, post_save
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from django.dispatch import receiver
 from django.utils import timezone
 from authentication.models import User
 
@@ -20,6 +23,7 @@ class TipoCalificacion(models.TextChoices):
     CLIENTE_A_REPARTIDOR = 'cliente_a_repartidor', 'Cliente califica a Repartidor'
     REPARTIDOR_A_CLIENTE = 'repartidor_a_cliente', 'Repartidor califica a Cliente'
     CLIENTE_A_PROVEEDOR = 'cliente_a_proveedor', 'Cliente califica a Proveedor'
+    CLIENTE_A_PRODUCTO = 'cliente_a_producto', 'Cliente califica un Producto'
     PROVEEDOR_A_REPARTIDOR = 'proveedor_a_repartidor', 'Proveedor califica a Repartidor'
     REPARTIDOR_A_PROVEEDOR = 'repartidor_a_proveedor', 'Repartidor califica a Proveedor'
 
@@ -460,3 +464,91 @@ class ResumenCalificacion(models.Model):
             return 100.0
         positivas = self.total_5_estrellas + self.total_4_estrellas
         return round((positivas / self.total_calificaciones) * 100, 1)
+
+
+def _recalcular_rating_producto(producto):
+    """
+    Recalcula promedio y total de reseñas del producto.
+    Se ejecuta tras cada cambio en CalificacionProducto.
+    """
+    if producto is None:
+        return
+
+    CalificacionProducto = apps.get_model('calificaciones', 'CalificacionProducto')
+    agregados = CalificacionProducto.objects.filter(producto=producto).aggregate(
+        promedio=Avg('estrellas'),
+        total=Count('id'),
+    )
+
+    promedio_nuevo = round(float(agregados['promedio'] or 0.0), 2)
+    total_nuevo = agregados['total'] or 0
+
+    producto.rating_promedio = promedio_nuevo
+    producto.total_resenas = total_nuevo
+    producto.save(update_fields=['rating_promedio', 'total_resenas'])
+
+
+class CalificacionProducto(models.Model):
+    """Calificación que el cliente deja sobre cada producto entregado."""
+
+    producto = models.ForeignKey(
+        'productos.Producto',
+        on_delete=models.CASCADE,
+        related_name='calificaciones_producto',
+        verbose_name='Producto',
+    )
+    pedido = models.ForeignKey(
+        'pedidos.Pedido',
+        on_delete=models.CASCADE,
+        related_name='calificaciones_producto',
+        verbose_name='Pedido',
+    )
+    item = models.ForeignKey(
+        'pedidos.ItemPedido',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='calificaciones_producto',
+        verbose_name='Item del pedido',
+    )
+    cliente = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='calificaciones_producto',
+        verbose_name='Cliente',
+    )
+    estrellas = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name='Estrellas',
+        help_text='Valor de 1 a 5',
+    )
+    comentario = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Comentario',
+        max_length=500,
+        help_text='Opinión opcional sobre el producto',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'calificaciones_producto'
+        verbose_name = 'Calificación de Producto'
+        verbose_name_plural = 'Calificaciones de Productos'
+        ordering = ['-creado_en']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['producto', 'pedido', 'cliente', 'item'],
+                name='unique_calificacion_producto_por_item'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.cliente.email} → {self.producto.nombre}: {self.estrellas}⭐"
+
+
+@receiver(post_save, sender=CalificacionProducto)
+@receiver(post_delete, sender=CalificacionProducto)
+def _actualizar_rating_producto(sender, instance, **kwargs):
+    _recalcular_rating_producto(instance.producto)

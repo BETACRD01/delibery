@@ -12,6 +12,8 @@ from .models import (
     EstadoRepartidor,
     HistorialUbicacion,
 )
+from pedidos.models import Pedido, TipoPedido
+from usuarios.models import Perfil
 
 User = get_user_model()
 
@@ -110,3 +112,35 @@ class RepartidorAPITest(APITestCase):
         res = self.client.get(self.url_perfil)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data.get("email"), self.user.email)
+
+    def test_pedidos_disponibles_devuelve_pedido_con_coordenadas(self):
+        """Un pedido pendiente sin repartidor, con coords, aparece en la lista de disponibles."""
+        self.client.force_authenticate(self.user)
+
+        cliente_user = User.objects.create_user(
+            email="cliente@app.com",
+            username="cliente",
+            password="password123",
+        )
+        perfil_cliente, _ = Perfil.objects.get_or_create(user=cliente_user)
+
+        pedido = Pedido.objects.create(
+            cliente=perfil_cliente,
+            tipo=TipoPedido.DIRECTO,
+            descripcion="Encargo de prueba",
+            direccion_entrega="Direccion completa",
+            latitud_destino=-0.96,
+            longitud_destino=-77.81,
+            total=10,
+        )
+
+        url = reverse("repartidores:pedidos_disponibles_mapa")
+        res = self.client.get(
+            url,
+            {"latitud": -0.96, "longitud": -77.81, "radio": 15},
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data.get("total_pedidos"), 1)
+        ids = [p["id"] for p in res.data.get("pedidos", [])]
+        self.assertIn(pedido.id, ids)

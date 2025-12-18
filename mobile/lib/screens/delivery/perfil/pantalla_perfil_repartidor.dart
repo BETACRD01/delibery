@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../services/repartidor_service.dart';
 import '../../../services/repartidor_datos_bancarios_service.dart';
 import '../../../models/repartidor.dart';
@@ -28,18 +29,20 @@ class _PantallaEditarPerfilRepartidorState
   // SERVICE
   // ============================================
   final RepartidorService _service = RepartidorService();
-  final RepartidorDatosBancariosService _datosService = RepartidorDatosBancariosService();
+  final RepartidorDatosBancariosService _datosService =
+      RepartidorDatosBancariosService();
 
   // ============================================
   // ESTADO
   // ============================================
   PerfilRepartidorModel? _perfil;
   DatosBancarios? _datosBancarios;
+  EstadisticasRepartidorModel? _estadisticas;
   bool _loading = true;
   bool _loadingBancarios = true;
   bool _guardando = false;
   // Esta variable ahora se usará en _guardarCambios para controlar el spinner del avatar
-  bool _subiendoFoto = false; 
+  bool _subiendoFoto = false;
   String? _error;
   String? _vehiculoSeleccionado;
 
@@ -47,6 +50,8 @@ class _PantallaEditarPerfilRepartidorState
   // CONTROLLERS
   // ============================================
   late TextEditingController _telefonoController;
+  String? _telefonoCompleto;
+  String? _fotoUrlCaido;
 
   // Datos del User
   late TextEditingController _emailController;
@@ -69,6 +74,8 @@ class _PantallaEditarPerfilRepartidorState
   static const Color _naranjaOscuro = Color(0xFFE56F00);
   static const Color _verde = Color(0xFF4CAF50);
   static const Color _azul = Color(0xFF0CB7F2); // secundario corporativo
+  static const Color _surfaceBg = Color(0xFFF4F6FA);
+  static const Color _cardBorderColor = Color(0xFFE3E7EF);
   static const Color _rojo = Color(0xFFF44336);
 
   // ============================================
@@ -124,13 +131,26 @@ class _PantallaEditarPerfilRepartidorState
       _perfil = await _service.obtenerMiRepartidor(forzarRecarga: true);
 
       // Llenar controllers con datos actuales
-      _telefonoController.text = _perfil?.telefono ?? '';
+      _telefonoController.text = _formatearTelefonoParaMostrar(_perfil?.telefono);
+      _telefonoCompleto = _perfil?.telefono;
+      _fotoUrlCaido = null;
       _emailController.text = _perfil?.email ?? '';
       _nombreController.text = _perfil?.firstName ?? '';
       _apellidoController.text = _perfil?.lastName ?? '';
       _vehiculoSeleccionado = _perfil?.vehiculo;
 
       developer.log('Perfil cargado', name: 'EditarPerfilRepartidor');
+      try {
+        _estadisticas = await _service.obtenerEstadisticas(forzarRecarga: true);
+      } catch (e, stackTrace) {
+        developer.log(
+          'Error obteniendo estadísticas',
+          name: 'EditarPerfilRepartidor',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        _estadisticas = null;
+      }
 
       await _cargarDatosBancarios();
 
@@ -240,8 +260,9 @@ class _PantallaEditarPerfilRepartidorState
       return;
     }
 
-    final ImageSource source =
-        opcion == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final ImageSource source = opcion == 'camera'
+        ? ImageSource.camera
+        : ImageSource.gallery;
 
     try {
       final XFile? image = await picker.pickImage(
@@ -274,24 +295,12 @@ class _PantallaEditarPerfilRepartidorState
   // ============================================
 
   bool _validarFormulario() {
-    // Validar teléfono
-    final telefono = _telefonoController.text.trim();
-    if (telefono.isNotEmpty) {
-      if (!telefono.startsWith('09') && !telefono.startsWith('+')) {
-        _mostrarError('El teléfono debe comenzar con 09 o +593');
-        return false;
-      }
-      if (telefono.startsWith('09') && telefono.length != 10) {
-        _mostrarError('El teléfono debe tener 10 dígitos');
-        return false;
-      }
-    }
-
     // Validar email
     final email = _emailController.text.trim();
     if (email.isNotEmpty) {
-      final emailRegex =
-          RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+      final emailRegex = RegExp(
+        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+      );
       if (!emailRegex.hasMatch(email)) {
         _mostrarError('El email no es válido');
         return false;
@@ -340,10 +349,13 @@ class _PantallaEditarPerfilRepartidorState
       developer.log('Guardando cambios...', name: 'EditarPerfilRepartidor');
 
       // Detectar cambios en datos del repartidor
-      final telefonoNuevo = _telefonoController.text.trim();
+      final telefonoNuevo = _normalizarTelefono(
+        (_telefonoCompleto?.isNotEmpty == true ? _telefonoCompleto! : _telefonoController.text),
+      );
 
       final vehiculoNuevo = _vehiculoSeleccionado ?? '';
-      final hayCambiosPerfil = telefonoNuevo != (_perfil?.telefono ?? '') ||
+      final hayCambiosPerfil =
+          telefonoNuevo != (_perfil?.telefono ?? '') ||
           vehiculoNuevo != (_perfil?.vehiculo ?? '') ||
           _fotoSeleccionada != null;
 
@@ -352,7 +364,8 @@ class _PantallaEditarPerfilRepartidorState
       final nombreNuevo = _nombreController.text.trim();
       final apellidoNuevo = _apellidoController.text.trim();
 
-      final hayCambiosContacto = emailNuevo != (_perfil?.email ?? '') ||
+      final hayCambiosContacto =
+          emailNuevo != (_perfil?.email ?? '') ||
           nombreNuevo != (_perfil?.firstName ?? '') ||
           apellidoNuevo != (_perfil?.lastName ?? '');
 
@@ -379,7 +392,10 @@ class _PantallaEditarPerfilRepartidorState
 
       //  Actualizar datos del usuario (si hay cambios)
       if (hayCambiosContacto) {
-        developer.log('Actualizando contacto...', name: 'EditarPerfilRepartidor');
+        developer.log(
+          'Actualizando contacto...',
+          name: 'EditarPerfilRepartidor',
+        );
 
         _perfil = await _service.actualizarMiContacto(
           email: emailNuevo.isNotEmpty ? emailNuevo : null,
@@ -390,6 +406,7 @@ class _PantallaEditarPerfilRepartidorState
 
       // Limpiar foto seleccionada
       _fotoSeleccionada = null;
+      _telefonoCompleto = telefonoNuevo;
 
       developer.log('Cambios guardados', name: 'EditarPerfilRepartidor');
 
@@ -490,6 +507,36 @@ class _PantallaEditarPerfilRepartidorState
     );
   }
 
+  Widget _buildAvatarPlaceholder() {
+    return Container(
+      width: 140,
+      height: 140,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+      ),
+      child: const Icon(Icons.person, size: 60, color: _naranja),
+    );
+  }
+
+  String _formatearTelefonoParaMostrar(String? telefono) {
+    if (telefono == null || telefono.isEmpty) return '';
+    if (telefono.startsWith('+593')) {
+      final resto = telefono.substring(4);
+      return '0$resto';
+    }
+    return telefono;
+  }
+
+  String _obtenerCodigoPaisInicial(String numero) {
+    final valor = numero.trim();
+    if (valor.startsWith('+593')) return 'EC';
+    if (valor.startsWith('+1')) return 'US';
+    if (valor.startsWith('+52')) return 'MX';
+    if (valor.startsWith('+57')) return 'CO';
+    return 'EC';
+  }
+
   // ============================================
   // BUILD
   // ============================================
@@ -497,6 +544,7 @@ class _PantallaEditarPerfilRepartidorState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _surfaceBg,
       appBar: _buildAppBar(),
       body: _loading ? _buildCargando() : _buildContenido(),
     );
@@ -504,21 +552,27 @@ class _PantallaEditarPerfilRepartidorState
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black,
+      centerTitle: true,
+      elevation: 0,
       title: const Text(
         'Editar Perfil',
-        style: TextStyle(fontWeight: FontWeight.bold),
+        style: TextStyle(fontWeight: FontWeight.w600),
       ),
-      elevation: 0,
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [_naranja, _naranjaOscuro],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(6),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 96, vertical: 8),
+          height: 4,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: const LinearGradient(
+              colors: [_naranja, _naranjaOscuro],
+            ),
           ),
         ),
       ),
-      // Sin botón en AppBar - los botones están abajo
     );
   }
 
@@ -527,12 +581,9 @@ class _PantallaEditarPerfilRepartidorState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-         const CircularProgressIndicator(color: _naranja),
+          const CircularProgressIndicator(color: _naranja),
           const SizedBox(height: 16),
-          Text(
-            'Cargando perfil...',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
+          Text('Cargando perfil...', style: TextStyle(color: Colors.grey[600])),
         ],
       ),
     );
@@ -542,14 +593,19 @@ class _PantallaEditarPerfilRepartidorState
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 48),
         child: Column(
           children: [
             _buildFotoPerfil(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            if (_estadisticas != null) ...[
+              _buildResumenCalificaciones(),
+              const SizedBox(height: 20),
+            ],
             _buildSeccionDatosRepartidor(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             _buildSeccionDatosContacto(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             _buildSeccionDatosBancarios(),
             const SizedBox(height: 24),
             _buildBotones(),
@@ -565,23 +621,59 @@ class _PantallaEditarPerfilRepartidorState
   // ============================================
 
   Widget _buildFotoPerfil() {
-    // Determinar qué imagen mostrar
-    ImageProvider? imageProvider;
-
+    Widget avatarContent;
     if (_fotoSeleccionada != null) {
-      imageProvider = FileImage(_fotoSeleccionada!);
-    } else if (_perfil?.fotoPerfil != null) {
-      imageProvider = NetworkImage(_perfil!.fotoPerfil!);
+      avatarContent = ClipOval(
+        child: Image.file(
+          _fotoSeleccionada!,
+          width: 140,
+          height: 140,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else if (_perfil?.fotoPerfil != null &&
+        _fotoUrlCaido != _perfil!.fotoPerfil) {
+      avatarContent = ClipOval(
+        child: Image.network(
+          _perfil!.fotoPerfil!,
+          width: 140,
+          height: 140,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              width: 140,
+              height: 140,
+              color: Colors.white,
+              child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            if (!mounted) return _buildAvatarPlaceholder();
+            setState(() => _fotoUrlCaido = _perfil!.fotoPerfil);
+            return _buildAvatarPlaceholder();
+          },
+        ),
+      );
+    } else {
+      avatarContent = _buildAvatarPlaceholder();
     }
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 28),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_naranja.withValues(alpha: 0.1), Colors.white],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: GestureDetector(
         onTap: _subiendoFoto ? null : _seleccionarFoto,
@@ -602,10 +694,7 @@ class _PantallaEditarPerfilRepartidorState
               child: CircleAvatar(
                 radius: 70,
                 backgroundColor: Colors.white,
-                backgroundImage: imageProvider,
-                child: imageProvider == null
-                    ? const Icon(Icons.person, size: 60, color: _naranja)
-                    : null,
+                child: avatarContent,
               ),
             ),
             Positioned(
@@ -649,15 +738,91 @@ class _PantallaEditarPerfilRepartidorState
                     color: _verde,
                   ),
                   padding: const EdgeInsets.all(4),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 16),
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildResumenCalificaciones() {
+    if (_estadisticas == null) return const SizedBox.shrink();
+    final stats = _estadisticas!;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.star, color: Color(0xFFFF9800)),
+              const SizedBox(width: 10),
+              Text(
+                stats.calificacionPromedio.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Text('⭐',
+                  style: TextStyle(color: Color(0xFFFF9800), fontSize: 18)),
+              const Spacer(),
+              Text(
+                '${stats.totalCalificaciones} reseñas',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${stats.porcentaje5Estrellas.toStringAsFixed(1)}% de 5 estrellas',
+            style: const TextStyle(color: Colors.green, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _buildDesgloseChip('⭐⭐⭐⭐⭐', stats.calificaciones5Estrellas),
+              _buildDesgloseChip('⭐⭐⭐⭐', stats.calificaciones4Estrellas),
+              _buildDesgloseChip('⭐⭐⭐', stats.calificaciones3Estrellas),
+              _buildDesgloseChip('⭐⭐', stats.calificaciones2Estrellas),
+              _buildDesgloseChip('⭐', stats.calificaciones1Estrella),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesgloseChip(String label, int value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Text(
+        '$label $value',
+        style: const TextStyle(fontSize: 12),
       ),
     );
   }
@@ -667,80 +832,64 @@ class _PantallaEditarPerfilRepartidorState
   // ============================================
 
   Widget _buildSeccionDatosRepartidor() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return _buildSectionCard(
+      icon: Icons.badge,
+      title: 'Datos del repartidor',
+      iconColor: _naranja,
+      children: [
+        IntlPhoneField(
+          controller: _telefonoController,
+          initialCountryCode: _obtenerCodigoPaisInicial(
+            _telefonoCompleto ?? _telefonoController.text,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(Icons.badge, color: _naranja),
-                 SizedBox(width: 8),
-                Text(
-                  'Datos del Repartidor',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+          decoration: InputDecoration(
+            labelText: 'Teléfono',
+            hintText: '0987654321',
+            prefixIcon: const Icon(Icons.phone, color: _naranja),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            counterText: '',
+          ),
+          onChanged: (phone) => _telefonoCompleto = phone.completeNumber,
+          autovalidateMode: AutovalidateMode.disabled,
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          initialValue: _vehiculoSeleccionado,
+          decoration: InputDecoration(
+            labelText: 'Vehículo',
+            prefixIcon: const Icon(
+              Icons.directions_bike,
+              color: _naranja,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Teléfono
-                TextField(
-                  controller: _telefonoController,
-                  keyboardType: TextInputType.phone,
-                  maxLength: 13,
-                  decoration: InputDecoration(
-                    labelText: 'Teléfono',
-                    hintText: '0987654321',
-                    prefixIcon:const Icon(Icons.phone, color: _naranja),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    counterText: '',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _vehiculoSeleccionado,
-                  decoration: InputDecoration(
-                    labelText: 'Vehículo',
-                    prefixIcon: const Icon(Icons.directions_bike, color: _naranja),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'motocicleta', child: Text('Motocicleta')),
-                    DropdownMenuItem(value: 'bicicleta', child: Text('Bicicleta')),
-                    DropdownMenuItem(value: 'automovil', child: Text('Automóvil')),
-                    DropdownMenuItem(value: 'camioneta', child: Text('Camioneta')),
-                    DropdownMenuItem(value: 'otro', child: Text('Otro')),
-                  ],
-                  onChanged: (val) => setState(() => _vehiculoSeleccionado = val),
-                ),
-              ],
+          items: const [
+            DropdownMenuItem(
+              value: 'motocicleta',
+              child: Text('Motocicleta'),
             ),
-          ),
-        ],
-      ),
+            DropdownMenuItem(
+              value: 'bicicleta',
+              child: Text('Bicicleta'),
+            ),
+            DropdownMenuItem(
+              value: 'automovil',
+              child: Text('Automóvil'),
+            ),
+            DropdownMenuItem(
+              value: 'camioneta',
+              child: Text('Camioneta'),
+            ),
+            DropdownMenuItem(value: 'otro', child: Text('Otro')),
+          ],
+          onChanged: (val) =>
+              setState(() => _vehiculoSeleccionado = val),
+        ),
+      ],
     );
   }
 
@@ -749,91 +898,50 @@ class _PantallaEditarPerfilRepartidorState
   // ============================================
 
   Widget _buildSeccionDatosContacto() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-         const Padding(
-            padding:EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(Icons.person, color: _azul),
-                 SizedBox(width: 8),
-                Text(
-                  'Datos de Contacto',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+    return _buildSectionCard(
+      icon: Icons.person,
+      title: 'Datos de Contacto',
+      iconColor: _azul,
+      children: [
+        TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            labelText: 'Email',
+            hintText: 'correo@ejemplo.com',
+            prefixIcon: const Icon(Icons.email, color: _azul),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Email
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'correo@ejemplo.com',
-                    prefixIcon:const Icon(Icons.email, color: _azul),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Nombre
-                TextField(
-                  controller: _nombreController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    labelText: 'Nombre',
-                    hintText: 'Juan',
-                    prefixIcon: const Icon(Icons.person_outline, color: _azul),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Apellido
-                TextField(
-                  controller: _apellidoController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    labelText: 'Apellido',
-                    hintText: 'Pérez',
-                    prefixIcon:const Icon(Icons.person_outline, color: _azul),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _nombreController,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: 'Nombre',
+            hintText: 'Juan',
+            prefixIcon: const Icon(Icons.person_outline, color: _azul),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _apellidoController,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: 'Apellido',
+            hintText: 'Pérez',
+            prefixIcon: const Icon(Icons.person_outline, color: _azul),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -843,82 +951,110 @@ class _PantallaEditarPerfilRepartidorState
 
   Widget _buildSeccionDatosBancarios() {
     final tieneDatos = _datosBancarios?.estanCompletos ?? false;
-    final numeroCuenta = _mascarNumeroCuenta(_datosBancarios?.bancoNumeroCuenta);
+    final numeroCuenta = _mascarNumeroCuenta(
+      _datosBancarios?.bancoNumeroCuenta,
+    );
 
+    return _buildSectionCard(
+      icon: Icons.account_balance,
+      title: 'Cuenta bancaria',
+      iconColor: _azul,
+      children: [
+        if (_loadingBancarios)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        Text(
+          tieneDatos
+              ? '${_datosBancarios?.bancoNombre ?? ''} · ${_datosBancarios?.tipoCuentaDisplay ?? _datosBancarios?.bancoTipoCuenta ?? ''}\nCuenta $numeroCuenta'
+              : 'Agrega tus datos bancarios para recibir pagos por transferencia.',
+          style: TextStyle(color: Colors.grey[700]),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _abrirPantallaBancaria,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _azul,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: const Icon(Icons.edit),
+            label: Text(
+              tieneDatos
+                  ? 'Editar cuenta bancaria'
+                  : 'Agregar cuenta bancaria',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionCard({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+    Color iconColor = _azul,
+  }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: _cardBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: _cardBorderColor.withValues(alpha: 0.4),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Row(
               children: [
-                Icon(Icons.account_balance, color: _azul),
-                SizedBox(width: 8),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: iconColor),
+                ),
+                const SizedBox(width: 12),
                 Text(
-                  'Cuenta bancaria',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  title.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: _cardBorderColor),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_loadingBancarios)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                Text(
-                  tieneDatos
-                      ? '${_datosBancarios?.bancoNombre ?? ''} · ${_datosBancarios?.tipoCuentaDisplay ?? _datosBancarios?.bancoTipoCuenta ?? ''}\nCuenta $numeroCuenta'
-                      : 'Agrega tus datos bancarios para recibir pagos por transferencia.',
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _abrirPantallaBancaria,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _azul,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.edit),
-                    label: Text(
-                      tieneDatos ? 'Editar cuenta bancaria' : 'Agregar cuenta bancaria',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
+              children: children,
             ),
           ),
         ],
@@ -946,19 +1082,32 @@ class _PantallaEditarPerfilRepartidorState
   // ============================================
 
   Widget _buildBotones() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _cardBorderColor),
+              boxShadow: [
+                BoxShadow(
+                  color: _cardBorderColor.withValues(alpha: 0.4),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
       child: Row(
         children: [
           Expanded(
             child: OutlinedButton(
               onPressed: _guardando ? null : () => Navigator.of(context).pop(),
               style: OutlinedButton.styleFrom(
-                foregroundColor: _rojo,
-                side: const BorderSide(color: _rojo, width: 2),
+                foregroundColor: _naranja,
+                side: BorderSide(color: _naranja.withValues(alpha: 0.7), width: 2),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: const Text(
@@ -969,32 +1118,43 @@ class _PantallaEditarPerfilRepartidorState
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: FilledButton(
-              onPressed: _guardando ? null : _guardarCambios,
-              style: FilledButton.styleFrom(
-                backgroundColor: _verde,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _guardando ? null : _guardarCambios,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _verde,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-              ),
-              child: _guardando
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                child: _guardando
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Guardar Cambios',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    )
-                  : const Text(
-                      'Guardar Cambios',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _normalizarTelefono(String telefono) {
+    final valor = telefono.trim();
+    if (valor.isEmpty) return '';
+    if (valor.startsWith('+5930')) {
+      return '+593${valor.substring(5)}';
+    }
+    return valor;
   }
 }

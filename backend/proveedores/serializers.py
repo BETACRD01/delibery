@@ -12,7 +12,8 @@ Nuevos Serializers para edición de Proveedores y Repartidores
 """
 
 from rest_framework import serializers
-from authentication.models import User
+from django.core.exceptions import ValidationError as DjangoValidationError
+from authentication.models import User, validar_celular
 from proveedores.models import Proveedor
 from repartidores.models import Repartidor
 from productos.models import Producto, Categoria
@@ -404,36 +405,20 @@ class ValidadorContacto:
     @staticmethod
     def validar_telefono(telefono):
         """
-        Valida formato de teléfono ecuatoriano
-        Formato: 09XXXXXXXXX (10 dígitos comenzando con 09)
-        
-        Args:
-            telefono (str): Teléfono a validar
-            
-        Raises:
-            ValidationError: Si el formato es inválido
+        Valida el teléfono usando el validador central del usuario.
+        Permite 09XXXXXXXX o +código país + número.
         """
         if not telefono:
             return True
-        
-        # Convertir a string y remover espacios
-        telefono = str(telefono).strip()
-        
-        if not telefono.startswith('09'):
-            raise serializers.ValidationError(
-                'El teléfono debe comenzar con 09'
-            )
-        
-        if len(telefono) != 10:
-            raise serializers.ValidationError(
-                'El teléfono debe tener exactamente 10 dígitos'
-            )
-        
-        if not telefono.isdigit():
-            raise serializers.ValidationError(
-                'El teléfono solo debe contener números'
-            )
-        
+
+        try:
+            validar_celular(telefono)
+        except DjangoValidationError as exc:
+            mensaje = exc.message if hasattr(exc, 'message') and exc.message else None
+            if not mensaje and exc.messages:
+                mensaje = exc.messages[0]
+            raise serializers.ValidationError(mensaje or 'Teléfono inválido')
+
         return True
 
 

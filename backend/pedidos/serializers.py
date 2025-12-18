@@ -1,5 +1,6 @@
 # pedidos/serializers.py (VERSIÓN FINAL OPTIMIZADA CON INTEGRACIÓN LOGÍSTICA)
 
+from django.apps import apps
 from rest_framework import serializers
 from django.utils import timezone
 from django.db import transaction
@@ -63,14 +64,18 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
     """Serializer para items individuales del pedido"""
     producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
     producto_imagen = serializers.SerializerMethodField()
+    calificacion_producto = serializers.SerializerMethodField()
+    puede_calificar_producto = serializers.SerializerMethodField()
 
     class Meta:
         model = ItemPedido
         fields = [
             'id',
-            'producto', # ID del producto (Foreign Key)
+            'producto',  # ID del producto (Foreign Key)
             'producto_nombre',
             'producto_imagen',
+            'calificacion_producto',
+            'puede_calificar_producto',
             'cantidad',
             'precio_unitario',
             'subtotal',
@@ -91,13 +96,59 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
                 return None
         return None
 
+    def get_calificacion_producto(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+
+        CalificacionProducto = apps.get_model('calificaciones', 'CalificacionProducto')
+        calificacion = CalificacionProducto.objects.filter(
+            pedido=obj.pedido,
+            item=obj,
+            cliente=request.user,
+        ).first()
+
+        if not calificacion:
+            return None
+
+        return {
+            'estrellas': calificacion.estrellas,
+            'comentario': calificacion.comentario,
+            'fecha': calificacion.creado_en.isoformat(),
+        }
+
+    def get_puede_calificar_producto(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+
+        user = request.user
+        if obj.pedido.estado != EstadoPedido.ENTREGADO:
+            return False
+
+        cliente_user_id = getattr(obj.pedido.cliente, 'user_id', None)
+        if cliente_user_id != user.id:
+            return False
+
+        CalificacionProducto = apps.get_model('calificaciones', 'CalificacionProducto')
+        existe = CalificacionProducto.objects.filter(
+            pedido=obj.pedido,
+            item=obj,
+            cliente=user,
+        ).exists()
+
+        return not existe
+
     def validate_cantidad(self, value):
-        if value <= 0: raise serializers.ValidationError("Cantidad debe ser mayor a 0")
-        if value > 100: raise serializers.ValidationError("Máximo 100 unidades por item")
+        if value <= 0:
+            raise serializers.ValidationError("Cantidad debe ser mayor a 0")
+        if value > 100:
+            raise serializers.ValidationError("Máximo 100 unidades por item")
         return value
 
     def validate_precio_unitario(self, value):
-        if value < 0: raise serializers.ValidationError("Precio no puede ser negativo")
+        if value < 0:
+            raise serializers.ValidationError("Precio no puede ser negativo")
         return value
 
 
@@ -443,16 +494,22 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
     def get_repartidor(self, obj):
         if not obj.repartidor:
             return None
-        telefono = getattr(obj.repartidor.user, 'celular', None)
-        return {
-            'id': obj.repartidor.id,
-            'nombre': obj.repartidor.user.get_full_name(),
-            'telefono': telefono,
-            'ubicacion_actual': {  # Útil para tracking
+        from repartidores.serializers import RepartidorPublicoSerializer
+
+        serializer = RepartidorPublicoSerializer(
+            obj.repartidor,
+            context=self.context,
+        )
+
+        repartidor_data = dict(serializer.data)
+        repartidor_data.update({
+            'telefono': getattr(obj.repartidor.user, 'celular', None),
+            'ubicacion_actual': {
                 'lat': obj.repartidor.latitud,
                 'lng': obj.repartidor.longitud
             }
-        }
+        })
+        return repartidor_data
 
     def get_datos_envio(self, obj):
         """Retorna el objeto de logística si existe"""

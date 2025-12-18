@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../providers/proveedor_carrito.dart';
 import '../../../services/envio_service.dart';
@@ -34,7 +36,10 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
     if (valor == null) return null;
     return double.tryParse(valor.toString());
   }
+
   bool _mostrarInstrucciones = false;
+  String? _errorDireccionManual;
+  static const _googlePlacesApiKey = "AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA";
 
   // Direcciones guardadas
   List<DireccionModel> _direccionesGuardadas = [];
@@ -43,7 +48,6 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
   @override
   void initState() {
     super.initState();
-    // Cargar carrito al entrar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProveedorCarrito>().cargarCarrito();
       _cargarDireccionesGuardadas();
@@ -62,21 +66,21 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
       final direcciones = await _usuarioService.listarDirecciones();
       setState(() {
         _direccionesGuardadas = direcciones;
-        // Seleccionar la dirección predeterminada si existe
         _direccionSeleccionada = direcciones.firstWhere(
           (d) => d.esPredeterminada,
-          orElse: () => direcciones.isNotEmpty ? direcciones.first : throw Exception(),
+          orElse: () =>
+              direcciones.isNotEmpty ? direcciones.first : throw Exception(),
         );
 
         if (_direccionSeleccionada != null) {
           _direccionController.text = _direccionSeleccionada!.direccionCompleta;
           _destLat = _direccionSeleccionada!.latitud;
           _destLng = _direccionSeleccionada!.longitud;
-
-          // Cargar las indicaciones guardadas de la dirección predeterminada
-          _mostrarInstrucciones = _direccionSeleccionada!.indicaciones?.isNotEmpty == true;
+          _mostrarInstrucciones =
+              _direccionSeleccionada!.indicaciones?.isNotEmpty == true;
           if (_mostrarInstrucciones) {
-            _instruccionesController.text = _direccionSeleccionada!.indicaciones!;
+            _instruccionesController.text =
+                _direccionSeleccionada!.indicaciones!;
           } else {
             _instruccionesController.clear();
           }
@@ -85,6 +89,327 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
     } catch (e) {
       debugPrint('Error cargando direcciones: $e');
     }
+  }
+
+  void _aplicarDireccionGuardada(
+    DireccionModel direccion,
+    void Function(void Function()) safeSetModalState,
+    ProveedorCarrito carritoProvider,
+  ) {
+    safeSetModalState(() {
+      _direccionSeleccionada = direccion;
+      _direccionController.text = direccion.direccionCompleta;
+      _destLat = direccion.latitud;
+      _destLng = direccion.longitud;
+      _errorDireccionManual = null;
+      _errorEnvio = null;
+      _infoEnvio = null;
+      _mostrarInstrucciones = direccion.indicaciones?.isNotEmpty == true;
+      if (_mostrarInstrucciones) {
+        _instruccionesController.text = direccion.indicaciones!;
+      } else {
+        _instruccionesController.clear();
+      }
+    });
+
+    _cotizarEnvioConDestino(
+      direccion.latitud,
+      direccion.longitud,
+      safeSetModalState,
+      carritoProvider,
+    );
+  }
+
+  Future<void> _handlePredictionSelection(
+    Prediction prediction,
+    void Function(void Function()) safeSetModalState,
+    ProveedorCarrito carritoProvider,
+  ) async {
+    final descripcion = prediction.description;
+    if (descripcion == null || descripcion.isEmpty) return;
+
+    safeSetModalState(() {
+      _direccionSeleccionada = null;
+      _errorDireccionManual = null;
+      _direccionController.text = descripcion;
+      _direccionController.selection = TextSelection.fromPosition(
+        TextPosition(offset: descripcion.length),
+      );
+    });
+
+    try {
+      final ubicaciones = await locationFromAddress(descripcion);
+      if (ubicaciones.isNotEmpty) {
+        await _cotizarEnvioConDestino(
+          ubicaciones.first.latitude,
+          ubicaciones.first.longitude,
+          safeSetModalState,
+          carritoProvider,
+        );
+      }
+    } catch (e) {
+      safeSetModalState(() {
+        _errorDireccionManual = 'No se pudo ubicar la dirección seleccionada.';
+      });
+    }
+  }
+
+  Widget _buildCampoDireccionConAutocompletado(
+    void Function(void Function()) safeSetModalState,
+    ProveedorCarrito carritoProvider,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GooglePlaceAutoCompleteTextField(
+          textEditingController: _direccionController,
+          googleAPIKey: _googlePlacesApiKey,
+          debounceTime: 300,
+          countries: const ["ec"],
+          isLatLngRequired: true,
+          inputDecoration: InputDecoration(
+            hintText: 'Ej. Av. Amazonas y 10 de Agosto',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(color: JPColors.primary, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            suffixIcon: _direccionController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    onPressed: () {
+                      safeSetModalState(() {
+                        _direccionController.clear();
+                        _destLat = null;
+                        _destLng = null;
+                      });
+                    },
+                  )
+                : null,
+          ),
+          textStyle: const TextStyle(fontSize: 14),
+          itemBuilder: (context, index, Prediction prediction) {
+            return ListTile(
+              dense: true,
+              leading: const Icon(
+                Icons.place,
+                color: JPColors.primary,
+                size: 18,
+              ),
+              title: Text(
+                prediction.description ?? "",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          },
+          seperatedBuilder: const Divider(height: 1),
+          itemClick: (Prediction prediction) {
+            _direccionController.text = prediction.description ?? '';
+            _direccionController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _direccionController.text.length),
+            );
+            safeSetModalState(() {
+              _direccionSeleccionada = null;
+            });
+          },
+          getPlaceDetailWithLatLng: (Prediction prediction) async {
+            await _handlePredictionSelection(
+              prediction,
+              safeSetModalState,
+              carritoProvider,
+            );
+          },
+          isCrossBtnShown: false,
+          containerHorizontalPadding: 0,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _mostrarSelectorDireccionesGuardadas(
+    void Function(void Function()) safeSetModalState,
+    ProveedorCarrito carritoProvider,
+  ) async {
+    if (_direccionesGuardadas.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aún no tienes direcciones guardadas'),
+          backgroundColor: JPColors.warning,
+        ),
+      );
+      return;
+    }
+
+    DireccionModel? seleccionTemporal = _direccionSeleccionada;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Indicador de arrastre
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Título
+                  const Text(
+                    'Mis direcciones guardadas',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: JPColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Lista de direcciones
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.5,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _direccionesGuardadas.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final direccion = _direccionesGuardadas[index];
+                        final estaSeleccionada =
+                            seleccionTemporal?.id == direccion.id;
+
+                        return CheckboxListTile(
+                          value: estaSeleccionada,
+                          activeColor: JPColors.primary,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
+                          title: Text(
+                            direccion.direccionCompleta,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (direccion.etiqueta.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.label_outline,
+                                      size: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      direccion.etiqueta,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              if (direccion.esPredeterminada) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: JPColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Predeterminada',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: JPColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          onChanged: (_) {
+                            setSheetState(() {
+                              seleccionTemporal = direccion;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Botones
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancelar'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: seleccionTemporal == null
+                            ? null
+                            : () {
+                                Navigator.pop(context);
+                                _aplicarDireccionGuardada(
+                                  seleccionTemporal!,
+                                  safeSetModalState,
+                                  carritoProvider,
+                                );
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: JPColors.primary,
+                        ),
+                        child: const Text(
+                          'Seleccionar',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -124,7 +449,7 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
         Consumer<ProveedorCarrito>(
           builder: (context, carritoProvider, _) {
             if (carritoProvider.estaVacio) return const SizedBox.shrink();
-            
+
             return IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: () => _mostrarDialogoLimpiar(carritoProvider),
@@ -139,10 +464,7 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
   Widget _buildCarritoContent(ProveedorCarrito carritoProvider) {
     return Column(
       children: [
-        // Header con cantidad
         _buildHeader(carritoProvider),
-        
-        // Lista de items
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -182,10 +504,7 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
           const Spacer(),
           Text(
             '${carritoProvider.cantidadTotal} items',
-            style: const TextStyle(
-              fontSize: 14,
-              color: JPColors.textSecondary,
-            ),
+            style: const TextStyle(fontSize: 14, color: JPColors.textSecondary),
           ),
         ],
       ),
@@ -209,16 +528,12 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Subtotal
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Subtotal:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: JPColors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 16, color: JPColors.textSecondary),
                 ),
                 Text(
                   carritoProvider.totalFormateado,
@@ -231,13 +546,11 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
               ],
             ),
             const SizedBox(height: 16),
-            
-            // Botón de checkout
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: carritoProvider.loading 
-                    ? null 
+                onPressed: carritoProvider.loading
+                    ? null
                     : () => _mostrarCheckout(carritoProvider),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: JPColors.primary,
@@ -263,9 +576,7 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
+    return const Center(child: CircularProgressIndicator());
   }
 
   Widget _buildEmptyState() {
@@ -320,15 +631,14 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
             onPressed: () async {
               Navigator.pop(context);
               final success = await carritoProvider.limpiarCarrito();
-              // Verifica explícitamente si 'context' sigue montado
               if (success && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                  content: Text('Carrito limpiado'),
-                  backgroundColor: JPColors.success,
-              ),
-            );
-          }
+                    content: Text('Carrito limpiado'),
+                    backgroundColor: JPColors.success,
+                  ),
+                );
+              }
             },
             child: const Text(
               'Limpiar',
@@ -346,12 +656,10 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
     _errorEnvio = null;
     _infoEnvio = null;
 
-    // Cargar direcciones si no están cargadas
     if (_direccionesGuardadas.isEmpty) {
       await _cargarDireccionesGuardadas();
     }
 
-    // Cotizar automáticamente con la dirección por defecto si no hay cotización previa
     if (_cotizacionEnvio == null && _destLat != null && _destLng != null) {
       await _cotizarEnvioConDestino(
         _destLat!,
@@ -379,12 +687,19 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                 setModalState(fn);
               } catch (_) {}
             }
+
             final envio = _cotizacionEnvio != null
-                ? double.tryParse(_cotizacionEnvio!['total_envio'].toString()) ?? 0.0
+                ? double.tryParse(
+                        _cotizacionEnvio!['total_envio'].toString(),
+                      ) ??
+                      0.0
                 : 0.0;
             final subtotal = carritoProvider.total;
             final recargoMulti = _cotizacionEnvio != null
-                ? double.tryParse(_cotizacionEnvio!['recargo_multi_proveedor'].toString()) ?? 0.0
+                ? double.tryParse(
+                        _cotizacionEnvio!['recargo_multi_proveedor'].toString(),
+                      ) ??
+                      0.0
                 : 0.0;
             final recargoNocturno = _recargoNocturno ?? 0.0;
             final total = subtotal + envio + recargoMulti + recargoNocturno;
@@ -413,7 +728,10 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                     ),
                     const Text(
                       'Resumen de compra',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -445,7 +763,8 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                             height: 160,
                             child: ListView.separated(
                               itemCount: carritoProvider.items.length,
-                              separatorBuilder: (_, __) => const Divider(height: 12),
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 12),
                               itemBuilder: (context, index) {
                                 final item = carritoProvider.items[index];
                                 return Row(
@@ -463,12 +782,16 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                                     ),
                                     Text(
                                       'x${item.cantidad}',
-                                      style: const TextStyle(color: JPColors.textSecondary),
+                                      style: const TextStyle(
+                                        color: JPColors.textSecondary,
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
                                       '\$${item.subtotal.toStringAsFixed(2)}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 );
@@ -479,7 +802,7 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // SELECTOR DE DIRECCIONES GUARDADAS
+                    // SECCIÓN DE DIRECCIÓN MEJORADA
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
@@ -507,106 +830,75 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                                   color: JPColors.textPrimary,
                                 ),
                               ),
-                              TextButton.icon(
-                                onPressed: () {
-                                  // Cerrar modal y mostrar mensaje
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Ir a Ajustes > Direcciones para administrar'),
+                              OutlinedButton.icon(
+                                onPressed: () =>
+                                    _mostrarSelectorDireccionesGuardadas(
+                                      safeSetModalState,
+                                      carritoProvider,
                                     ),
-                                  );
-                                },
-                                icon: const Icon(Icons.settings, size: 18),
-                                label: const Text('Administrar'),
+                                icon: const Icon(
+                                  Icons.bookmark_border,
+                                  size: 16,
+                                ),
+                                label: const Text('Elegir dirección'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  side: const BorderSide(
+                                    color: JPColors.primary,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          if (_direccionesGuardadas.isNotEmpty)
-                            DropdownButton<DireccionModel>(
-                              value: _direccionSeleccionada,
-                              isExpanded: true,
-                              icon: const Icon(Icons.arrow_drop_down),
-                              underline: Container(
-                                height: 1,
-                                color: Colors.grey[300],
+                          const SizedBox(height: 12),
+                          _buildCampoDireccionConAutocompletado(
+                            safeSetModalState,
+                            carritoProvider,
+                          ),
+                          if (_errorDireccionManual != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _errorDireccionManual!,
+                                style: const TextStyle(
+                                  color: JPColors.error,
+                                  fontSize: 12,
+                                ),
                               ),
-                              items: _direccionesGuardadas.map((direccion) {
-                                return DropdownMenuItem(
-                                  value: direccion,
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.location_on, color: JPColors.primary, size: 20),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              direccion.etiqueta,
-                                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                                            ),
-                                            Text(
-                                              direccion.direccion,
-                                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (DireccionModel? nuevaDireccion) {
-                                if (nuevaDireccion != null) {
-                                  safeSetModalState(() {
-                                    _direccionSeleccionada = nuevaDireccion;
-                                    _direccionController.text = nuevaDireccion.direccionCompleta;
-                                    _destLat = nuevaDireccion.latitud;
-                                    _destLng = nuevaDireccion.longitud;
-
-                                    // Cargar las indicaciones guardadas de esta dirección
-                                    _mostrarInstrucciones = nuevaDireccion.indicaciones?.isNotEmpty == true;
-                                    if (_mostrarInstrucciones) {
-                                      _instruccionesController.text = nuevaDireccion.indicaciones!;
-                                    } else {
-                                      _instruccionesController.clear();
-                                    }
-                                  });
-
-                                  // Cotizar envío automáticamente
-                                  _cotizarEnvioConDestino(
-                                    nuevaDireccion.latitud,
-                                    nuevaDireccion.longitud,
-                                    safeSetModalState,
-                                    carritoProvider,
-                                  );
-                                }
-                              },
-                            )
-                          else
-                            const Text(
-                              'No tienes direcciones guardadas. Agrega una en Ajustes > Direcciones.',
-                              style: TextStyle(color: JPColors.textSecondary, fontSize: 13),
                             ),
                           if (_errorEnvio != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
                                 _errorEnvio!,
-                                style: const TextStyle(color: JPColors.error, fontSize: 12),
+                                style: const TextStyle(
+                                  color: JPColors.error,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                           if (_infoEnvio != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                _infoEnvio!,
-                                style: const TextStyle(color: JPColors.success, fontSize: 12),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_outline,
+                                    size: 14,
+                                    color: JPColors.success,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _infoEnvio!,
+                                    style: const TextStyle(
+                                      color: JPColors.success,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                         ],
@@ -614,7 +906,6 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                     ),
                     const SizedBox(height: 12),
                     if (_mostrarInstrucciones) ...[
-                      // INSTRUCCIONES DE ENTREGA (solo si vienen desde la dirección)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
@@ -644,7 +935,10 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                               controller: _instruccionesController,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                               ),
                               minLines: 1,
                               maxLines: 3,
@@ -712,12 +1006,21 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                       ),
                       child: Column(
                         children: [
-                          _ResumenRow(label: 'Subtotal productos', value: subtotal),
+                          _ResumenRow(
+                            label: 'Subtotal productos',
+                            value: subtotal,
+                          ),
                           _ResumenRow(label: 'Envío', value: envio),
                           if (recargoNocturno > 0)
-                            _ResumenRow(label: 'Recargo nocturno', value: recargoNocturno),
+                            _ResumenRow(
+                              label: 'Recargo nocturno',
+                              value: recargoNocturno,
+                            ),
                           if (recargoMulti > 0)
-                            _ResumenRow(label: 'Recargo multi-proveedor', value: recargoMulti),
+                            _ResumenRow(
+                              label: 'Recargo multi-proveedor',
+                              value: recargoMulti,
+                            ),
                           const Divider(),
                           _ResumenRow(
                             label: 'Total a pagar',
@@ -739,7 +1042,10 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('Confirmar pedido'),
+                        child: const Text(
+                          'Confirmar pedido',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
                   ],
@@ -751,12 +1057,9 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
       },
     ).whenComplete(() => sheetMounted = false);
 
-
     if (!mounted) return;
     if (resultado == true) {
-      // Validar que haya coordenadas (el requisito principal)
       if (_destLat == null || _destLng == null) {
-        // Mensaje diferente dependiendo de si hay direcciones guardadas o no
         final mensaje = _direccionesGuardadas.isEmpty
             ? 'No se encontró ninguna dirección guardada. Agrega una dirección en Ajustes para continuar.'
             : 'Debes seleccionar una ubicación en el mapa o elegir una dirección guardada.';
@@ -770,10 +1073,8 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
         return;
       }
 
-      // Obtener dirección: usar la del controlador o generar una con las coordenadas
       String direccion = _direccionController.text.trim();
       if (direccion.isEmpty) {
-        // Construir una dirección legible usando geocoding (sin mostrar lat/lng)
         direccion = await _obtenerDireccionLegible(_destLat!, _destLng!);
         _direccionController.text = direccion;
       }
@@ -814,8 +1115,10 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
         .toSet()
         .length;
 
-    final origenLat = carritoProvider.items.first.producto?.proveedorLatitud ?? latDestino;
-    final origenLng = carritoProvider.items.first.producto?.proveedorLongitud ?? lngDestino;
+    final origenLat =
+        carritoProvider.items.first.producto?.proveedorLatitud ?? latDestino;
+    final origenLng =
+        carritoProvider.items.first.producto?.proveedorLongitud ?? lngDestino;
 
     final resp = await EnvioService().cotizarEnvio(
       latOrigen: origenLat,
@@ -845,12 +1148,9 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
         ];
         if (partes.isNotEmpty) return partes.join(', ');
       }
-    } catch (_) {
-      // Ignorar y usar fallback
-    }
+    } catch (_) {}
     return 'Ubicación aproximada';
   }
-
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -922,12 +1222,9 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Si es una promoción, mostrar card expandible
     if (widget.item.esPromocion) {
       return _buildPromocionCard();
     }
-
-    // Si es un producto normal, mostrar card estándar
     return _buildProductoCard();
   }
 
@@ -940,7 +1237,10 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: JPColors.primary.withValues(alpha: 0.3), width: 2),
+        border: Border.all(
+          color: JPColors.primary.withValues(alpha: 0.3),
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
             color: JPColors.primary.withValues(alpha: 0.08),
@@ -951,7 +1251,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
       ),
       child: Column(
         children: [
-          // Header de la promoción
           Stack(
             children: [
               InkWell(
@@ -961,18 +1260,17 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      // Imagen de la promoción
                       _buildPromocionImage(promocion),
                       const SizedBox(width: 16),
-
-                      // Información
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Badge de promoción
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: JPColors.primary,
                                 borderRadius: BorderRadius.circular(6),
@@ -980,7 +1278,11 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.local_offer, size: 12, color: Colors.white),
+                                  const Icon(
+                                    Icons.local_offer,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     promocion.descuento,
@@ -1026,8 +1328,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                               ],
                             ),
                             const SizedBox(height: 12),
-
-                            // Controles de cantidad y subtotal
                             Row(
                               children: [
                                 _buildQuantityControls(),
@@ -1045,8 +1345,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                           ],
                         ),
                       ),
-
-                      // Icono expandir/contraer
                       Icon(
                         _isExpanded ? Icons.expand_less : Icons.expand_more,
                         color: JPColors.primary,
@@ -1056,8 +1354,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                   ),
                 ),
               ),
-
-              // Botón de eliminar promoción completa
               Positioned(
                 top: 8,
                 right: 8,
@@ -1074,8 +1370,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
               ),
             ],
           ),
-
-          // Lista expandible de productos incluidos
           if (_isExpanded && productosIncluidos.isNotEmpty)
             Container(
               decoration: const BoxDecoration(
@@ -1090,7 +1384,10 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
                     child: Text(
                       'Productos incluidos:',
                       style: TextStyle(
@@ -1122,14 +1419,14 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
       ),
       child: Row(
         children: [
-          // Imagen pequeña
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: Container(
               width: 40,
               height: 40,
               color: Colors.grey[100],
-              child: producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
+              child:
+                  producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: producto.imagenUrl!,
                       fit: BoxFit.cover,
@@ -1153,8 +1450,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Nombre y precio
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1172,25 +1467,17 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                 const SizedBox(height: 2),
                 Text(
                   '\$${producto.precio.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
-
-          // Botón para eliminar producto individual
           IconButton(
             icon: const Icon(Icons.remove_circle_outline, size: 18),
             onPressed: () => _mostrarDialogoEliminarProducto(producto),
             color: Colors.red[400],
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(
-              minWidth: 28,
-              minHeight: 28,
-            ),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
         ],
       ),
@@ -1213,7 +1500,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // Aquí se eliminaría el producto específico de la promoción
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('${producto.nombre} eliminado'),
@@ -1295,11 +1581,8 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Imagen
                 _buildImage(),
                 const SizedBox(width: 16),
-
-                // Información
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1338,8 +1621,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                         ],
                       ),
                       const SizedBox(height: 12),
-
-                      // Controles de cantidad
                       Row(
                         children: [
                           _buildQuantityControls(),
@@ -1360,8 +1641,6 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
               ],
             ),
           ),
-
-          // Botón de eliminar
           Positioned(
             top: 8,
             right: 8,
@@ -1370,10 +1649,7 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
               onPressed: widget.onRemove,
               color: Colors.grey[400],
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 32,
-                minHeight: 32,
-              ),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
           ),
         ],
@@ -1388,7 +1664,9 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
         width: 80,
         height: 80,
         color: JPColors.background,
-        child: widget.item.producto!.imagenUrl != null && widget.item.producto!.imagenUrl!.isNotEmpty
+        child:
+            widget.item.producto!.imagenUrl != null &&
+                widget.item.producto!.imagenUrl!.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: widget.item.producto!.imagenUrl!,
                 width: 80,
@@ -1437,9 +1715,15 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
         CircleAvatar(
           radius: 12,
           backgroundColor: Colors.grey[200],
-          backgroundImage: (logo != null && logo.isNotEmpty) ? NetworkImage(logo) : null,
+          backgroundImage: (logo != null && logo.isNotEmpty)
+              ? NetworkImage(logo)
+              : null,
           child: (logo == null || logo.isEmpty)
-              ? const Icon(Icons.storefront_outlined, size: 14, color: Colors.grey)
+              ? const Icon(
+                  Icons.storefront_outlined,
+                  size: 14,
+                  color: Colors.grey,
+                )
               : null,
         ),
         if (nombre != null && nombre.isNotEmpty) ...[
@@ -1481,7 +1765,9 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                 child: Icon(
                   Icons.remove,
                   size: 18,
-                  color: widget.item.cantidad > 1 ? JPColors.primary : Colors.grey[400],
+                  color: widget.item.cantidad > 1
+                      ? JPColors.primary
+                      : Colors.grey[400],
                 ),
               ),
             ),
@@ -1504,11 +1790,7 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 padding: const EdgeInsets.all(8),
-                child: const Icon(
-                  Icons.add,
-                  size: 18,
-                  color: JPColors.primary,
-                ),
+                child: const Icon(Icons.add, size: 18, color: JPColors.primary),
               ),
             ),
           ),

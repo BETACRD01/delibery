@@ -2,9 +2,9 @@
 
 import 'dart:io';
 import 'dart:developer' as developer;
-import 'subapis/http_client.dart';
-import '../config/api_config.dart';
-import 'helpers/api_exception.dart';
+import '../subapis/http_client.dart';
+import '../../config/api_config.dart';
+import '../helpers/api_exception.dart';
 
 class UsuariosApi {
   // ---------------------------------------------------------------------------
@@ -40,20 +40,26 @@ class UsuariosApi {
   // Notificaciones
   static String get _fcmToken => ApiConfig.usuariosFCMToken;
   static String get _eliminarFcmToken => ApiConfig.usuariosEliminarFCMToken;
-  static String get _estadoNotificaciones => ApiConfig.usuariosEstadoNotificaciones;
+  static String get _estadoNotificaciones =>
+      ApiConfig.usuariosEstadoNotificaciones;
+  static String get _preferenciasNotificaciones =>
+      ApiConfig.actualizarPreferencias;
 
   // Direcciones
   static String get _direcciones => ApiConfig.usuariosDirecciones;
   static String _direccion(String id) => ApiConfig.usuariosDireccion(id);
-  static String get _direccionPredeterminada => ApiConfig.usuariosDireccionPredeterminada;
+  static String get _direccionPredeterminada =>
+      ApiConfig.usuariosDireccionPredeterminada;
 
   // Metodos de Pago
   static String get _metodosPago => ApiConfig.usuariosMetodosPago;
   static String _metodoPago(String id) => ApiConfig.usuariosMetodoPago(id);
-  static String get _metodoPagoPredeterminado => ApiConfig.usuariosMetodoPagoPredeterminado;
+  static String get _metodoPagoPredeterminado =>
+      ApiConfig.usuariosMetodoPagoPredeterminado;
 
   // Ubicacion
-  static String get _ubicacionActualizar => ApiConfig.usuariosUbicacionActualizar;
+  static String get _ubicacionActualizar =>
+      ApiConfig.usuariosUbicacionActualizar;
   static String get _ubicacionMia => ApiConfig.usuariosUbicacionMia;
 
   // ---------------------------------------------------------------------------
@@ -81,7 +87,9 @@ class UsuariosApi {
     }
   }
 
-  Future<Map<String, dynamic>> actualizarPerfil(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> actualizarPerfil(
+    Map<String, dynamic> data,
+  ) async {
     _log('PATCH: Actualizar perfil - Campos: ${data.keys.join(", ")}');
     try {
       final response = await _client.patch(_actualizarPerfil, data);
@@ -106,12 +114,9 @@ class UsuariosApi {
     _log('POST: Subir foto de perfil');
     try {
       // No se requieren campos adicionales, solo el archivo
-      final response = await _client.multipart(
-        'POST',
-        _fotoPerfil,
-        {}, 
-        {'foto_perfil': imagen},
-      );
+      final response = await _client.multipart('POST', _fotoPerfil, {}, {
+        'foto_perfil': imagen,
+      });
       _log('Foto subida correctamente');
       return response;
     } catch (e, stackTrace) {
@@ -163,7 +168,39 @@ class UsuariosApi {
     try {
       return await _client.get(_estadoNotificaciones);
     } catch (e, stackTrace) {
-      _log('Error obteniendo estado notificaciones', error: e, stackTrace: stackTrace);
+      _log(
+        'Error obteniendo estado notificaciones',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerPreferenciasNotificaciones() async {
+    try {
+      return await _client.get(_preferenciasNotificaciones);
+    } catch (e, stackTrace) {
+      _log(
+        'Error obteniendo preferencias de notificaciones',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> actualizarPreferenciasNotificaciones(
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      return await _client.patch(_preferenciasNotificaciones, data);
+    } catch (e, stackTrace) {
+      _log(
+        'Error actualizando preferencias de notificaciones',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -211,7 +248,10 @@ class UsuariosApi {
     }
   }
 
-  Future<Map<String, dynamic>> actualizarDireccion(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> actualizarDireccion(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     _log('PATCH: Actualizar direccion $id');
     try {
       return await _client.patch(_direccion(id), data);
@@ -235,7 +275,11 @@ class UsuariosApi {
     try {
       return await _client.get(_direccionPredeterminada);
     } catch (e, stackTrace) {
-      _log('Error obteniendo direccion default', error: e, stackTrace: stackTrace);
+      _log(
+        'Error obteniendo direccion default',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -263,7 +307,9 @@ class UsuariosApi {
     }
   }
 
-  Future<Map<String, dynamic>> crearMetodoPago(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> crearMetodoPago(
+    Map<String, dynamic> data,
+  ) async {
     // Metodo simple sin archivos
     _log('POST: Crear metodo pago (Simple)');
     try {
@@ -274,7 +320,10 @@ class UsuariosApi {
     }
   }
 
-  Future<Map<String, dynamic>> actualizarMetodoPago(String id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> actualizarMetodoPago(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     _log('PATCH: Actualizar metodo pago (Simple) $id');
     try {
       return await _client.patch(_metodoPago(id), data);
@@ -363,9 +412,18 @@ class UsuariosApi {
         files['comprobante_pago'] = comprobanteImagen;
       }
 
-      return await _client.multipart('PATCH', _metodoPago(metodoId), fields, files);
+      return await _client.multipart(
+        'PATCH',
+        _metodoPago(metodoId),
+        fields,
+        files,
+      );
     } catch (e, stackTrace) {
-      _log('Error actualizando pago multipart', error: e, stackTrace: stackTrace);
+      _log(
+        'Error actualizando pago multipart',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -374,7 +432,10 @@ class UsuariosApi {
   // 6. UBICACION
   // ---------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>> actualizarUbicacion(double lat, double lon) async {
+  Future<Map<String, dynamic>> actualizarUbicacion(
+    double lat,
+    double lon,
+  ) async {
     // No logueamos esto siempre para no saturar la consola si es en tiempo real
     try {
       final data = {'latitud': lat.toString(), 'longitud': lon.toString()};

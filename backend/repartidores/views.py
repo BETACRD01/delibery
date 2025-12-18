@@ -219,6 +219,11 @@ def actualizar_mi_perfil(request):
             {"error": "No tienes perfil de repartidor asociado."},
             status=status.HTTP_404_NOT_FOUND
         )
+    except ValidationError as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     except Exception as e:
         logger.error(f"Error al actualizar perfil: {e}", exc_info=True)
         return Response(
@@ -934,6 +939,11 @@ def calificar_cliente(request, pedido_id):
             {"error": "No tienes perfil de repartidor asociado."},
             status=status.HTTP_404_NOT_FOUND
         )
+    except ValidationError as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     except LookupError:
         logger.error("Modelo 'Pedido' no encontrado en la app 'pedidos'")
         return Response(
@@ -1115,9 +1125,14 @@ def obtener_pedidos_disponibles_mapa(request):
         from pedidos.serializers import PedidoRepartidorResumidoSerializer
 
         # Filtrar pedidos PENDIENTES (sin repartidor asignado)
+        estados_disponibles = [
+            'pendiente_repartidor',
+            'asignado_repartidor',
+            'aceptado_repartidor',  # por si un pedido quedó en este estado sin repartidor
+        ]
         pedidos_query = Pedido.objects.filter(
             repartidor__isnull=True,
-            estado='pendiente_repartidor'
+            estado__in=estados_disponibles
         ).select_related('cliente__user', 'proveedor')
 
         def _filtrar_por_radio(radio, pedidos):
@@ -1126,7 +1141,12 @@ def obtener_pedidos_disponibles_mapa(request):
                 lat_destino = getattr(pedido, 'latitud_destino', None)
                 lon_destino = getattr(pedido, 'longitud_destino', None)
 
-                if not lat_destino or not lon_destino:
+                # Si no hay coords, incluir igual (sin distancia)
+                if lat_destino is None or lon_destino is None:
+                    pedido_data = PedidoRepartidorResumidoSerializer(pedido).data
+                    pedido_data['distancia_km'] = None
+                    pedido_data['tiempo_estimado_min'] = None
+                    resultados.append(pedido_data)
                     continue
 
                 distancia = calcular_distancia_haversine(
@@ -1136,10 +1156,17 @@ def obtener_pedidos_disponibles_mapa(request):
                     lon_destino
                 )
 
-                if distancia and distancia <= radio:
-                    # Usar el serializer RESUMIDO (sin datos sensibles)
+                if distancia is None:
+                    # Coordenadas inválidas: incluir sin distancia
                     pedido_data = PedidoRepartidorResumidoSerializer(pedido).data
-                    # Añadir información de distancia calculada
+                    pedido_data['distancia_km'] = None
+                    pedido_data['tiempo_estimado_min'] = None
+                    resultados.append(pedido_data)
+                    continue
+
+                # Incluir si está dentro del radio
+                if distancia <= radio:
+                    pedido_data = PedidoRepartidorResumidoSerializer(pedido).data
                     pedido_data['distancia_km'] = round(distancia, 2)
                     pedido_data['tiempo_estimado_min'] = max(int(distancia / 0.5), 5)
                     resultados.append(pedido_data)
@@ -1153,7 +1180,7 @@ def obtener_pedidos_disponibles_mapa(request):
             radio_usado = 200.0
             pedidos_cercanos = _filtrar_por_radio(radio_usado, pedidos_query)
 
-        pedidos_cercanos.sort(key=lambda x: x['distancia_km'])
+        pedidos_cercanos.sort(key=lambda x: x['distancia_km'] if x.get('distancia_km') is not None else 999999)
 
         logger.info(
             f"Repartidor {repartidor.id} consultó mapa: "
@@ -1347,18 +1374,20 @@ def aceptar_pedido(request, pedido_id):
 
         Pedido = apps.get_model('pedidos', 'Pedido')
 
-        pedido = get_object_or_404(Pedido, pk=pedido_id)
-
-        if pedido.repartidor is not None:
-            return Response(
-                {"error": "Este pedido ya fue asignado a otro repartidor."},
-                status=status.HTTP_400_BAD_REQUEST
+        with transaction.atomic():
+            # Usar _base_manager para evitar joins del manager custom y poder bloquear la fila
+            pedido = get_object_or_404(
+                Pedido._base_manager.select_for_update(),
+                pk=pedido_id
             )
 
-        with transaction.atomic():
-            pedido.repartidor = repartidor
-            pedido.save()
+            if pedido.repartidor is not None:
+                return Response(
+                    {"error": "Este pedido ya fue asignado a otro repartidor."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
+            pedido.aceptar_por_repartidor(repartidor)
             repartidor.marcar_ocupado()
 
         logger.info(f"Repartidor {repartidor.id} aceptó pedido {pedido_id}")
@@ -1433,6 +1462,11 @@ def aceptar_pedido(request, pedido_id):
         return Response(
             {"error": "No tienes perfil de repartidor asociado."},
             status=status.HTTP_404_NOT_FOUND
+        )
+    except ValidationError as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
         )
     except LookupError:
         logger.error("Modelo 'Pedido' no encontrado")

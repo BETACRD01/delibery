@@ -1,11 +1,13 @@
 // lib/services/auth_service.dart
-
+import 'dart:developer' as developer;
 import '../apis/subapis/http_client.dart';
 import '../config/api_config.dart';
 import '../apis/helpers/api_exception.dart';
-import 'dart:developer' as developer;
 
-// Modelo simplificado para representar informacion basica del usuario
+// ============================================================================
+// USER INFO MODEL
+// ============================================================================
+
 class UserInfo {
   final String email;
   final List<String> roles;
@@ -13,171 +15,106 @@ class UserInfo {
 
   UserInfo({required this.email, required this.roles, this.userId});
 
-  bool tieneRol(String rol) {
-    return roles.any((r) => r.toUpperCase() == rol.toUpperCase());
-  }
-
+  bool tieneRol(String rol) =>
+      roles.any((r) => r.toUpperCase() == rol.toUpperCase());
   bool get esProveedor => tieneRol('PROVEEDOR');
   bool get esRepartidor => tieneRol('REPARTIDOR');
   bool get esAdmin => tieneRol('ADMINISTRADOR');
   bool get esAnonimo => email.toLowerCase().contains('anonymous');
 
   @override
-  String toString() => 'UserInfo(email: $email, roles: $roles, userId: $userId)';
+  String toString() =>
+      'UserInfo(email: $email, roles: $roles, userId: $userId)';
 }
 
+// ============================================================================
+// AUTH SERVICE
+// ============================================================================
+
 class AuthService {
-  // ---------------------------------------------------------------------------
-  // SINGLETON
-  // ---------------------------------------------------------------------------
-  
-  static final AuthService _instance = AuthService._internal();
+  AuthService._();
+  static final AuthService _instance = AuthService._();
   factory AuthService() => _instance;
-  AuthService._internal();
 
   final _client = ApiClient();
+  static const _tokenDuration = Duration(hours: 24);
 
-  void _log(String message, {Object? error, StackTrace? stackTrace}) {
-    developer.log(message, name: 'AuthService', error: error, stackTrace: stackTrace);
-  }
+  void _log(String msg, {Object? error, StackTrace? stack}) =>
+      developer.log(msg, name: 'AuthService', error: error, stackTrace: stack);
 
-  // ---------------------------------------------------------------------------
-  // REGISTRO
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
+  // Registro
+  // --------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
-    _log('Iniciando registro para: ${data['email']}');
+    _log('Registro: ${data['email']}');
 
-    _normalizarDatosRegistro(data);
-    _logDatosRegistro(data);
-    _validarCamposRequeridos(data);
-    _validarCoincidenciaPasswords(data);
+    _normalizeData(data);
+    _validateRequired(data);
+    _validatePasswords(data);
 
     try {
       final response = await _client.postPublic(ApiConfig.registro, data);
-
-      if (response.containsKey('tokens')) {
-        final tokens = response['tokens'];
-        final usuario = response['usuario'] as Map<String, dynamic>?;
-
-        String? rol = tokens['rol'] as String?;
-        if (rol == null && usuario != null) {
-          rol = _determinarRolDesdeUsuario(usuario);
-        }
-
-        final int? userId = tokens['user_id'] as int?;
-
-        await _client.saveTokens(
-          tokens['access'],
-          tokens['refresh'],
-          role: rol,
-          userId: userId,
-          tokenLifetime: const Duration(hours: 24),
-        );
-
-        _log('Registro exitoso - Rol: $rol - ID: $userId');
-      }
+      await _handleAuthResponse(response);
       return response;
     } on ApiException {
       rethrow;
-    } catch (e, stackTrace) {
-      _log('Error inesperado en registro', error: e, stackTrace: stackTrace);
+    } catch (e, stack) {
+      _log('Error en registro', error: e, stack: stack);
       throw ApiException(
         statusCode: 0,
-        message: 'Error al registrar usuario',
-        errors: {'error': e.toString()},
-        stackTrace: stackTrace,
+        message: 'Error al registrar',
+        errors: {'error': '$e'},
       );
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // LOGIN
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
+  // Login
+  // --------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>> login({required String email, required String password}) async {
-    _log('Login para: $email');
+  Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  }) async {
+    _log('Login: $email');
 
     try {
       final response = await _client.postPublic(ApiConfig.login, {
         'identificador': email,
         'password': password,
       });
-
-      if (response.containsKey('tokens')) {
-        final tokens = response['tokens'];
-        final usuario = response['usuario'] as Map<String, dynamic>?;
-
-        String? rol = tokens['rol'] as String?;
-        if (rol == null && usuario != null) {
-          rol = _determinarRolDesdeUsuario(usuario);
-        }
-
-        final int? userId = tokens['user_id'] as int?;
-
-        await _client.saveTokens(
-          tokens['access'],
-          tokens['refresh'],
-          role: rol,
-          userId: userId,
-          tokenLifetime: const Duration(hours: 24),
-        );
-
-        _log('Login exitoso - Rol: $rol - ID: $userId');
-      }
-
+      await _handleAuthResponse(response);
       return response;
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
-        _log('Credenciales invalidas');
         throw ApiException.loginFallido(
-          mensaje: 'Email o contraseña incorrectos',
+          mensaje: 'Email o contrasena incorrectos',
           errors: e.errors,
         );
       }
       rethrow;
-    } catch (e, stackTrace) {
-      _log('Error inesperado en login', error: e, stackTrace: stackTrace);
+    } catch (e, stack) {
+      _log('Error en login', error: e, stack: stack);
       throw ApiException(
         statusCode: 0,
         message: 'Error de conexion',
-        errors: {'error': e.toString()},
-        stackTrace: stackTrace,
+        errors: {'error': '$e'},
         contexto: 'login',
       );
     }
   }
 
-  Future<Map<String, dynamic>> loginWithGoogle({required String accessToken}) async {
-    _log('Login con Google');
+  Future<Map<String, dynamic>> loginWithGoogle({
+    required String accessToken,
+  }) async {
+    _log('Login Google');
 
     try {
       final response = await _client.postPublic(ApiConfig.googleLogin, {
         'access_token': accessToken,
       });
-
-      if (response.containsKey('tokens')) {
-        final tokens = response['tokens'];
-        final usuario = response['usuario'] as Map<String, dynamic>?;
-
-        String? rol = tokens['rol'] as String?;
-        if (rol == null && usuario != null) {
-          rol = _determinarRolDesdeUsuario(usuario);
-        }
-
-        final int? userId = tokens['user_id'] as int?;
-
-        await _client.saveTokens(
-          tokens['access'],
-          tokens['refresh'],
-          role: rol,
-          userId: userId,
-          tokenLifetime: const Duration(hours: 24),
-        );
-
-        _log('Login Google exitoso - Rol: $rol');
-      }
-
+      await _handleAuthResponse(response);
       return response;
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
@@ -187,13 +124,12 @@ class AuthService {
         );
       }
       rethrow;
-    } catch (e, stackTrace) {
-      _log('Error inesperado en login Google', error: e, stackTrace: stackTrace);
+    } catch (e, stack) {
+      _log('Error en login Google', error: e, stack: stack);
       throw ApiException(
         statusCode: 0,
         message: 'Error al conectar con Google',
-        errors: {'error': e.toString()},
-        stackTrace: stackTrace,
+        errors: {'error': '$e'},
         contexto: 'login',
       );
     }
@@ -203,67 +139,57 @@ class AuthService {
     try {
       _log('Cerrando sesion...');
       if (_client.refreshToken != null) {
-        await _client.post(ApiConfig.logout, {'refresh_token': _client.refreshToken});
+        await _client.post(ApiConfig.logout, {
+          'refresh_token': _client.refreshToken,
+        });
       }
-      _log('Logout exitoso');
     } catch (e) {
-      _log('Advertencia en logout servidor: $e');
+      _log('Advertencia logout: $e');
     } finally {
       await _client.clearTokens();
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // PERFIL Y RECUPERACION
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
+  // Perfil y Recuperacion
+  // --------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>> getPerfil() async {
-    return await _client.get(ApiConfig.perfil);
-  }
-
-  Future<Map<String, dynamic>> actualizarPerfil(Map<String, dynamic> data) async {
-    return await _client.put(ApiConfig.actualizarPerfil, data);
-  }
-
-  Future<Map<String, dynamic>> getInfoRol() async {
-    return await _client.get(ApiConfig.infoRol);
-  }
+  Future<Map<String, dynamic>> getPerfil() => _client.get(ApiConfig.perfil);
+  Future<Map<String, dynamic>> actualizarPerfil(Map<String, dynamic> data) =>
+      _client.put(ApiConfig.actualizarPerfil, data);
+  Future<Map<String, dynamic>> getInfoRol() => _client.get(ApiConfig.infoRol);
 
   Future<bool> verificarToken() async {
     try {
       await _client.get(ApiConfig.verificarToken);
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
 
-  Future<Map<String, dynamic>> solicitarRecuperacion({required String email}) async {
-    return await _client.postPublic(ApiConfig.solicitarCodigoRecuperacion, {'email': email});
-  }
+  Future<Map<String, dynamic>> solicitarRecuperacion({required String email}) =>
+      _client.postPublic(ApiConfig.solicitarCodigoRecuperacion, {
+        'email': email,
+      });
 
-  Future<Map<String, dynamic>> verificarCodigo({required String email, required String codigo}) async {
-    return await _client.postPublic(ApiConfig.verificarCodigoRecuperacion, {
-      'email': email,
-      'codigo': codigo,
-    });
-  }
+  Future<Map<String, dynamic>> verificarCodigo({
+    required String email,
+    required String codigo,
+  }) => _client.postPublic(ApiConfig.verificarCodigoRecuperacion, {
+    'email': email,
+    'codigo': codigo,
+  });
 
   Future<Map<String, dynamic>> resetPassword({
     required String email,
     required String codigo,
     required String nuevaPassword,
-  }) async {
-    return await _client.postPublic(ApiConfig.resetPasswordConCodigo, {
-      'email': email,
-      'codigo': codigo,
-      'nueva_password': nuevaPassword,
-    });
-  }
-
-  // ---------------------------------------------------------------------------
-  // ROLES Y ESTADO (Getters directos)
-  // ---------------------------------------------------------------------------
+  }) => _client.postPublic(ApiConfig.resetPasswordConCodigo, {
+    'email': email,
+    'codigo': codigo,
+    'nueva_password': nuevaPassword,
+  });
 
   Future<void> cambiarPassword({
     required String passwordActual,
@@ -272,33 +198,35 @@ class AuthService {
     await _client.post(ApiConfig.cambiarPassword, {
       'password_actual': passwordActual,
       'password_nueva': nuevaPassword,
-      'password_nueva2': nuevaPassword, // Confirmación automática
+      'password_nueva2': nuevaPassword,
     });
   }
+
+  // --------------------------------------------------------------------------
+  // Roles y Estado
+  // --------------------------------------------------------------------------
 
   String? getRolCacheado() => _client.userRole;
   int? getUserIdCacheado() => _client.userId;
 
-  bool esRepartidor() => _client.userRole?.toUpperCase() == ApiConfig.rolRepartidor;
+  bool esRepartidor() =>
+      _client.userRole?.toUpperCase() == ApiConfig.rolRepartidor;
   bool esUsuario() => _client.userRole?.toUpperCase() == ApiConfig.rolUsuario;
-  bool esProveedor() => _client.userRole?.toUpperCase() == ApiConfig.rolProveedor;
-  bool esAdministrador() => _client.userRole?.toUpperCase() == ApiConfig.rolAdministrador;
+  bool esProveedor() =>
+      _client.userRole?.toUpperCase() == ApiConfig.rolProveedor;
+  bool esAdministrador() =>
+      _client.userRole?.toUpperCase() == ApiConfig.rolAdministrador;
+  bool tieneRol(String rol) =>
+      _client.userRole?.toUpperCase() == rol.toUpperCase();
 
-  bool tieneRol(String rol) => _client.userRole?.toUpperCase() == rol.toUpperCase();
-
-  // ---------------------------------------------------------------------------
-  // GESTION ROLES MULTIPLES
-  // ---------------------------------------------------------------------------
-
-  Future<Map<String, dynamic>> obtenerRolesDisponibles() async {
-    return await _client.get(ApiConfig.usuariosMisRoles);
-  }
+  Future<Map<String, dynamic>> obtenerRolesDisponibles() =>
+      _client.get(ApiConfig.usuariosMisRoles);
 
   Future<Map<String, dynamic>> cambiarRolActivo(String nuevoRol) async {
-    _log('Cambiando rol activo a: $nuevoRol');
-    // ✅ CORRECCIÓN: Clave 'nuevo_rol' para coincidir con Django views.py
+    _log('Cambiando rol a: $nuevoRol');
+
     final response = await _client.post(ApiConfig.usuariosCambiarRolActivo, {
-      'nuevo_rol': nuevoRol.toUpperCase(), 
+      'nuevo_rol': nuevoRol.toUpperCase(),
     });
 
     if (response.containsKey('tokens')) {
@@ -308,140 +236,175 @@ class AuthService {
         tokens['refresh'],
         role: tokens['rol'] as String?,
         userId: _client.userId,
-        tokenLifetime: const Duration(hours: 24),
+        lifetime: _tokenDuration,
       );
-      _log('Rol cambiado exitosamente');
+      _log('Rol cambiado');
     }
 
     return response;
   }
 
-  // ---------------------------------------------------------------------------
-  // UTILIDADES PUBLICAS
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
+  // Utilidades Publicas
+  // --------------------------------------------------------------------------
 
   UserInfo? get user {
-    if (!_client.isAuthenticated) return null;
+    if (!_client.isAuthenticated) {
+      return null;
+    }
     final rol = getRolCacheado();
-    final userId = getUserIdCacheado();
-    if (rol == null) return null;
-
+    if (rol == null) {
+      return null;
+    }
     return UserInfo(
       email: 'usuario@deliber.com',
       roles: [rol],
-      userId: userId,
+      userId: getUserIdCacheado(),
+    );
+  }
+
+  bool get isAuthenticated => _client.isAuthenticated;
+  Future<bool> hasStoredTokens() => _client.hasStoredTokens();
+
+  Future<void> loadTokens() async {
+    await _client.loadTokens();
+    _log(
+      'Tokens cargados${_client.userRole != null ? " - Rol: ${_client.userRole}" : ""}',
     );
   }
 
   void imprimirEstadoAuth() {
     _log('--- Estado Auth ---');
     _log('Autenticado: ${_client.isAuthenticated}');
-    _log('Rol Cacheado: ${_client.userRole ?? "N/A"}');
+    _log('Rol: ${_client.userRole ?? "N/A"}');
     _log('User ID: ${_client.userId ?? "N/A"}');
-    
     if (_client.tokenExpiry != null) {
-      final remaining = _client.tokenExpiry!.difference(DateTime.now());
-      _log('Token expira en: ${remaining.inMinutes} min');
+      _log(
+        'Expira en: ${_client.tokenExpiry!.difference(DateTime.now()).inMinutes} min',
+      );
     }
   }
 
   static String formatearTiempoEspera(int segundos) {
-    final duracion = Duration(seconds: segundos);
-    final minutos = duracion.inMinutes;
-    final segundosRestantes = duracion.inSeconds % 60;
-    return minutos > 0 ? '$minutos m $segundosRestantes s' : '$segundosRestantes s';
+    final min = segundos ~/ 60;
+    final sec = segundos % 60;
+    return min > 0 ? '$min m $sec s' : '$sec s';
   }
 
-  Future<bool> hasStoredTokens() async {
-    return await _client.hasStoredTokens();
-  }
+  // --------------------------------------------------------------------------
+  // Helpers Privados
+  // --------------------------------------------------------------------------
 
-  Future<void> loadTokens() async {
-    await _client.loadTokens();
-    if (_client.userRole == null) {
-      _log('Tokens cargados sin rol');
-    } else {
-      _log('Tokens cargados con rol: ${_client.userRole}');
+  Future<void> _handleAuthResponse(Map<String, dynamic> response) async {
+    if (!response.containsKey('tokens')) {
+      return;
     }
+
+    final tokens = response['tokens'];
+    final usuario = response['usuario'] as Map<String, dynamic>?;
+
+    String? rol = tokens['rol'] as String?;
+    if (rol == null && usuario != null) {
+      rol = _determinarRol(usuario);
+    }
+
+    await _client.saveTokens(
+      tokens['access'],
+      tokens['refresh'],
+      role: rol,
+      userId: tokens['user_id'] as int?,
+      lifetime: _tokenDuration,
+    );
+
+    _log('Auth exitoso - Rol: $rol');
   }
 
-  bool get isAuthenticated => _client.isAuthenticated;
+  String _determinarRol(Map<String, dynamic> usuario) {
+    final rolActivo = usuario['rol_activo'] as String?;
+    if (rolActivo?.isNotEmpty == true) {
+      return _mapRol(rolActivo!);
+    }
 
-  // ---------------------------------------------------------------------------
-  // HELPERS PRIVADOS
-  // ---------------------------------------------------------------------------
+    final tipo = usuario['tipo_usuario'] as String?;
+    if (tipo?.isNotEmpty == true) {
+      return _mapRol(tipo!);
+    }
 
-  String _determinarRolDesdeUsuario(Map<String, dynamic> usuario) {
-    if (usuario['is_superuser'] == true) return 'ADMINISTRADOR';
-    if (usuario['is_staff'] == true) return 'STAFF';
+    final roles = usuario['roles_aprobados'];
+    if (roles is List) {
+      for (final r in ['admin', 'repartidor', 'proveedor', 'cliente']) {
+        if (roles.any((x) => x.toString().toLowerCase() == r)) {
+          return _mapRol(r);
+        }
+      }
+    }
+
+    if (usuario['is_superuser'] == true) {
+      return 'ADMINISTRADOR';
+    }
+
     return 'USUARIO';
   }
 
-  void _normalizarDatosRegistro(Map<String, dynamic> data) {
+  String _mapRol(String raw) => switch (raw.toLowerCase()) {
+    'cliente' || 'usuario' => 'USUARIO',
+    'proveedor' => 'PROVEEDOR',
+    'repartidor' => 'REPARTIDOR',
+    'admin' || 'administrador' => 'ADMINISTRADOR',
+    _ => 'USUARIO',
+  };
+
+  void _normalizeData(Map<String, dynamic> data) {
     if (data.containsKey('email')) {
       data['email'] = data['email'].toString().trim().toLowerCase();
     }
 
-    const textFields = ['first_name', 'last_name', 'username', 'celular', 'password', 'password2'];
-    for (final field in textFields) {
+    for (final field in [
+      'first_name',
+      'last_name',
+      'username',
+      'celular',
+      'password',
+      'password2',
+    ]) {
       if (data[field] != null) {
         data[field] = data[field].toString().trim();
       }
     }
 
-    if (!data.containsKey('terminos_aceptados')) {
-      data['terminos_aceptados'] = true;
-    }
+    data['terminos_aceptados'] ??= true;
   }
 
-  void _logDatosRegistro(Map<String, dynamic> data) {
-    _log('Datos normalizados:');
-    data.forEach((key, value) {
-      if (key != 'password' && key != 'password2') {
-        _log('  $key: "$value"');
-      } else {
-        _log('  $key: [OCULTO]');
-      }
-    });
-  }
-
-  void _validarCamposRequeridos(Map<String, dynamic> data) {
+  void _validateRequired(Map<String, dynamic> data) {
     final required = {
       'first_name': 'Nombre',
       'last_name': 'Apellido',
       'email': 'Email',
       'celular': 'Celular',
-      'password': 'Contraseña',
-      'password2': 'Confirmar contraseña',
+      'password': 'Contrasena',
+      'password2': 'Confirmar contrasena',
     };
 
-    final missing = <String>[];
-    required.forEach((key, label) {
-      if (!data.containsKey(key) || data[key] == null || data[key].toString().isEmpty) {
-        missing.add('$label es requerido');
-      }
-    });
+    final missing = required.entries
+        .where((e) => data[e.key] == null || data[e.key].toString().isEmpty)
+        .map((e) => '${e.value} es requerido')
+        .toList();
 
     if (missing.isNotEmpty) {
       throw ApiException(
         statusCode: 400,
-        message: 'Faltan campos obligatorios:\n${missing.join("\n")}',
-        errors: {'campos_faltantes': missing},
-        stackTrace: StackTrace.current,
+        message: 'Campos faltantes:\n${missing.join("\n")}',
+        errors: {'campos': missing},
       );
     }
   }
 
-  void _validarCoincidenciaPasswords(Map<String, dynamic> data) {
-    final p1 = data['password'] ?? '';
-    final p2 = data['password2'] ?? '';
-
-    if (p1 != p2) {
+  void _validatePasswords(Map<String, dynamic> data) {
+    if (data['password'] != data['password2']) {
       throw ApiException(
         statusCode: 400,
-        message: 'Las contraseñas no coinciden',
-        errors: {'password2': 'No coincide con la contraseña'},
-        stackTrace: StackTrace.current,
+        message: 'Las contrasenas no coinciden',
+        errors: {'password2': 'No coincide'},
       );
     }
   }

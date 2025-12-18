@@ -1,6 +1,7 @@
 # calificaciones/services.py
 
 import logging
+from django.apps import apps
 from django.db import transaction
 from django.db.models import Avg
 from django.core.exceptions import ValidationError
@@ -66,6 +67,42 @@ class CalificacionService:
 
         logger.info(
             f"⭐ Calificación creada: {calificador.email} → {calificado.email} "
+            f"({estrellas}⭐) - Pedido #{pedido.id}"
+        )
+
+        return calificacion
+
+    @staticmethod
+    @transaction.atomic
+    def crear_calificacion_producto(pedido, cliente, producto, estrellas, comentario=None, item=None):
+        """
+        Crea una calificación rápida para un producto dentro de un pedido.
+        """
+        CalificacionProducto = apps.get_model('calificaciones', 'CalificacionProducto')
+
+        if pedido.estado != 'entregado':
+            raise ValidationError("Solo puedes calificar productos de pedidos entregados.")
+
+        if not pedido.cliente or pedido.cliente.user_id != cliente.id:
+            raise ValidationError("Solo el cliente del pedido puede calificar el producto.")
+
+        if not pedido.items.filter(producto_id=producto.id).exists():
+            raise ValidationError("El producto no forma parte del pedido.")
+
+        if item and item.pedido_id != pedido.id:
+            raise ValidationError("El item seleccionado no pertenece a este pedido.")
+
+        calificacion = CalificacionProducto.objects.create(
+            producto=producto,
+            pedido=pedido,
+            cliente=cliente,
+            item=item,
+            estrellas=estrellas,
+            comentario=comentario or '',
+        )
+
+        logger.info(
+            f"⭐ Calificación de producto creada: {cliente.email} → {producto.nombre} "
             f"({estrellas}⭐) - Pedido #{pedido.id}"
         )
 

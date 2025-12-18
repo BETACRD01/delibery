@@ -208,4 +208,28 @@ class PedidoService {
       throw Exception('No se pudo enviar la calificación: $e');
     }
   }
+
+  Future<void> calificarProducto({
+    required int pedidoId,
+    required int productoId,
+    int? itemId,
+    required int estrellas,
+    String? comentario,
+  }) async {
+    try {
+      await _client.post(
+        ApiConfig.calificacionesRapida,
+        {
+          'pedido_id': pedidoId,
+          'tipo': 'cliente_a_producto',
+          'producto_id': productoId,
+          if (itemId != null) 'item_id': itemId,
+          'estrellas': estrellas,
+          if (comentario != null && comentario.isNotEmpty) 'comentario': comentario,
+        },
+      );
+    } catch (e) {
+      throw Exception('No se pudo enviar la calificación: $e');
+    }
+  }
 }

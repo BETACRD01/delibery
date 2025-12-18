@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.core.validators import RegexValidator
 from django.utils import timezone
 from django.conf import settings
+from django.db.models import Count, Q, F
 from math import radians, cos, sin, sqrt, atan2
 from decimal import Decimal
 
@@ -15,7 +16,8 @@ from .models import (
     EstadoRepartidor,
     TipoVehiculo,
 )
-from authentication.models import User
+from django.core.exceptions import ValidationError as DjangoValidationError
+from authentication.models import User, validar_celular
 
 
 # ==========================================================
@@ -366,12 +368,17 @@ class RepartidorPublicoSerializer(serializers.ModelSerializer):
     tipo_vehiculo_activo = serializers.SerializerMethodField()
     placa_vehiculo_activa = serializers.SerializerMethodField()
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
+    total_calificaciones = serializers.SerializerMethodField()
+    desglose_calificaciones = serializers.SerializerMethodField()
+    porcentaje_5_estrellas = serializers.SerializerMethodField()
 
     class Meta:
         model = Repartidor
         fields = [
             'id', 'nombre', 'foto_perfil',
             'calificacion_promedio', 'entregas_completadas',
+            'total_calificaciones', 'desglose_calificaciones',
+            'porcentaje_5_estrellas',
             'estado', 'estado_display',
             'latitud', 'longitud', 'ultima_localizacion',
             'tipo_vehiculo_activo', 'placa_vehiculo_activa'
@@ -391,6 +398,42 @@ class RepartidorPublicoSerializer(serializers.ModelSerializer):
         """Retorna la placa del vehículo activo."""
         vehiculo = obj.vehiculos.filter(activo=True).first()
         return vehiculo.placa if vehiculo else None
+
+    def _obtener_estadisticas(self, obj):
+        if not hasattr(self, '_estadisticas_cache'):
+            self._estadisticas_cache = {}
+        if obj.pk not in self._estadisticas_cache:
+            self._estadisticas_cache[obj.pk] = obj.calificaciones.aggregate(
+                total=Count('id'),
+                cinco=Count('id', filter=Q(puntuacion=5)),
+                cuatro=Count('id', filter=Q(puntuacion=4)),
+                tres=Count('id', filter=Q(puntuacion=3)),
+                dos=Count('id', filter=Q(puntuacion=2)),
+                uno=Count('id', filter=Q(puntuacion=1)),
+            )
+        return self._estadisticas_cache[obj.pk]
+
+    def get_total_calificaciones(self, obj):
+        stats = self._obtener_estadisticas(obj)
+        return stats.get('total') or 0
+
+    def get_desglose_calificaciones(self, obj):
+        stats = self._obtener_estadisticas(obj)
+        return {
+            '5_estrellas': stats.get('cinco') or 0,
+            '4_estrellas': stats.get('cuatro') or 0,
+            '3_estrellas': stats.get('tres') or 0,
+            '2_estrellas': stats.get('dos') or 0,
+            '1_estrella': stats.get('uno') or 0,
+        }
+
+    def get_porcentaje_5_estrellas(self, obj):
+        stats = self._obtener_estadisticas(obj)
+        total = stats.get('total') or 0
+        if total == 0:
+            return 0.0
+        cinco = stats.get('cinco') or 0
+        return round((cinco / total) * 100, 1)
 
 
 # ==========================================================
@@ -569,35 +612,15 @@ class ValidadorContacto:
         """Valida formato de teléfono ecuatoriano"""
         if not telefono:
             return True
-        
-        telefono = str(telefono).strip()
-        
-        # Permitir formato internacional o local
-        if telefono.startswith('+'):
-            # Formato internacional: +593987654321
-            if len(telefono) < 10 or len(telefono) > 15:
-                raise serializers.ValidationError(
-                    'Teléfono internacional debe tener entre 10 y 15 dígitos'
-                )
-        else:
-            # Formato local: 0987654321
-            if not telefono.startswith('09'):
-                raise serializers.ValidationError(
-                    'El teléfono debe comenzar con 09 o +593'
-                )
-            
-            if len(telefono) != 10:
-                raise serializers.ValidationError(
-                    'El teléfono debe tener exactamente 10 dígitos'
-                )
-        
-        # Validar que solo contenga números (excepto el +)
-        digitos = telefono.replace('+', '')
-        if not digitos.isdigit():
-            raise serializers.ValidationError(
-                'El teléfono solo debe contener números'
-            )
-        
+
+        try:
+            validar_celular(telefono)
+        except DjangoValidationError as exc:
+            mensaje = exc.message if hasattr(exc, 'message') and exc.message else None
+            if not mensaje and exc.messages:
+                mensaje = exc.messages[0]
+            raise serializers.ValidationError(mensaje or 'Teléfono inválido')
+
         return True
 
 

@@ -1,5 +1,6 @@
 # calificaciones/serializers.py
 
+from django.apps import apps
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Calificacion, ResumenCalificacion, TipoCalificacion
@@ -314,29 +315,65 @@ class CalificacionRapidaSerializer(serializers.Serializer):
     Serializer simplificado para calificación rápida (solo estrellas).
     Útil para el flujo de entrega en la app móvil.
     """
-    
+
     pedido_id = serializers.IntegerField()
     tipo = serializers.ChoiceField(choices=TipoCalificacion.choices)
     estrellas = serializers.IntegerField(min_value=1, max_value=5)
+    producto_id = serializers.IntegerField(required=False)
+    item_id = serializers.IntegerField(required=False)
+    comentario = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+    def validate(self, data):
+        if data.get('tipo') == TipoCalificacion.CLIENTE_A_PRODUCTO and not data.get('producto_id'):
+            raise serializers.ValidationError({
+                'producto_id': 'Se requiere el producto para calificar por separado.'
+            })
+        return data
 
     def validate_pedido_id(self, value):
         from pedidos.models import Pedido
-        
+
         try:
             self._pedido = Pedido.objects.get(id=value)
         except Pedido.DoesNotExist:
             raise serializers.ValidationError("Pedido no encontrado.")
-        
+
         return value
 
     def create(self, validated_data):
         user = self.context['request'].user
         pedido = self._pedido
         tipo = validated_data['tipo']
-        
+
+        if tipo == TipoCalificacion.CLIENTE_A_PRODUCTO:
+            Producto = apps.get_model('productos', 'Producto')
+            ItemPedido = apps.get_model('pedidos', 'ItemPedido')
+
+            try:
+                producto = Producto.objects.get(id=validated_data['producto_id'])
+            except Producto.DoesNotExist:
+                raise serializers.ValidationError({'producto_id': 'Producto no encontrado.'})
+
+            item = None
+            item_id = validated_data.get('item_id')
+            if item_id:
+                try:
+                    item = ItemPedido.objects.get(id=item_id, pedido=pedido)
+                except ItemPedido.DoesNotExist:
+                    raise serializers.ValidationError({'item_id': 'Item inválido para este pedido.'})
+
+            return CalificacionService.crear_calificacion_producto(
+                pedido=pedido,
+                cliente=user,
+                producto=producto,
+                estrellas=validated_data['estrellas'],
+                comentario=validated_data.get('comentario'),
+                item=item,
+            )
+
         # Obtener calificado (simplificado)
         calificado = None
-        
+
         if tipo == TipoCalificacion.CLIENTE_A_REPARTIDOR and pedido.repartidor:
             calificado = pedido.repartidor.user
         elif tipo == TipoCalificacion.CLIENTE_A_PROVEEDOR and pedido.proveedor:
@@ -361,7 +398,8 @@ class CalificacionRapidaSerializer(serializers.Serializer):
                 calificador=user,
                 calificado=calificado,
                 tipo=tipo,
-                estrellas=validated_data['estrellas']
+                estrellas=validated_data['estrellas'],
+                comentario=validated_data.get('comentario'),
             )
         except ValidationError as e:
             # Normalizar errores de modelo a respuesta DRF

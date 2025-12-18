@@ -1,32 +1,50 @@
 // lib/config/network_initializer.dart
-
 import 'package:flutter/material.dart';
 import 'api_config.dart';
 
+// ============================================================================
+// NETWORK INITIALIZER
+// ============================================================================
+
 class NetworkInitializer {
-  
-  /// Inicializar la deteccion de red al arrancar la app
+  NetworkInitializer._();
+
   static Future<void> initialize() async {
-    debugPrint('Inicializando deteccion de red...');
-    await ApiConfig.detectServerIp();
+    debugPrint('Inicializando detección de red...');
+    await ApiConfig.initialize();
   }
 
-  /// Widget para mostrar informacion de red actual
+  // --------------------------------------------------------------------------
+  // Getters
+  // --------------------------------------------------------------------------
+
+  static String? get currentNetwork => ApiConfig.currentNetwork;
+  static String? get serverIp => ApiConfig.currentServerIp;
+  static String get baseUrl => ApiConfig.baseUrl;
+  static bool get isConnected => ApiConfig.currentServerIp != null;
+
+  // --------------------------------------------------------------------------
+  // Widget Info
+  // --------------------------------------------------------------------------
+
   static Widget buildNetworkInfo() {
-    final network = ApiConfig.currentNetwork ?? 'No detectada';
-    final serverIp = ApiConfig.currentServerIp ?? 'N/A';
-    final isConnected = ApiConfig.currentServerIp != null;
+    final network = currentNetwork ?? 'No detectada';
+    final ip = serverIp ?? 'N/A';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInfoRow('Red Actual', network, _getNetworkIcon(network)),
-        _buildInfoRow('IP Servidor', serverIp, Icons.dns),
-        _buildInfoRow(
-          'Estado',
-          isConnected ? 'Conectado' : 'Desconectado',
-          isConnected ? Icons.check_circle : Icons.error,
-          colorOverride: isConnected ? Colors.green : Colors.red,
+        _InfoRow(
+          label: 'Red Actual',
+          value: network,
+          icon: _getNetworkIcon(network),
+        ),
+        _InfoRow(label: 'IP Servidor', value: ip, icon: Icons.dns),
+        _InfoRow(
+          label: 'Estado',
+          value: isConnected ? 'Conectado' : 'Desconectado',
+          icon: isConnected ? Icons.check_circle : Icons.error,
+          color: isConnected ? Colors.green : Colors.red,
         ),
       ],
     );
@@ -38,13 +56,32 @@ class NetworkInitializer {
     if (network.contains('DESCONOCIDA')) return Icons.help_outline;
     return Icons.public;
   }
+}
 
-  static Widget _buildInfoRow(String label, String value, IconData icon, {Color? colorOverride}) {
+// ============================================================================
+// WIDGETS PRIVADOS
+// ============================================================================
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color? color;
+
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: colorOverride ?? Colors.blue),
+          Icon(icon, size: 20, color: color ?? Colors.blue),
           const SizedBox(width: 8),
           Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
           Expanded(
@@ -54,14 +91,12 @@ class NetworkInitializer {
       ),
     );
   }
-
-  // Getters para acceso rapido
-  static String? get currentNetwork => ApiConfig.currentNetwork;
-  static String? get serverIp => ApiConfig.currentServerIp;
-  static String get baseUrl => ApiConfig.baseUrl;
 }
 
-/// Boton para refrescar la red manualmente
+// ============================================================================
+// REFRESH BUTTON
+// ============================================================================
+
 class NetworkRefreshButton extends StatefulWidget {
   final VoidCallback? onNetworkChanged;
 
@@ -72,46 +107,46 @@ class NetworkRefreshButton extends StatefulWidget {
 }
 
 class _NetworkRefreshButtonState extends State<NetworkRefreshButton> {
-  bool _isRefreshing = false;
+  bool _refreshing = false;
 
   Future<void> _refresh() async {
-    setState(() => _isRefreshing = true);
+    setState(() => _refreshing = true);
 
     try {
-      await ApiConfig.refreshNetworkDetection();
+      await ApiConfig.refreshNetwork();
       widget.onNetworkChanged?.call();
-
       if (mounted) {
-        final network = ApiConfig.currentNetwork ?? 'Desconocida';
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Red actualizada: $network'),
-            duration: const Duration(seconds: 2),
-            backgroundColor: Colors.green,
-          ),
+        _showSnackBar(
+          'Red actualizada: ${ApiConfig.currentNetwork ?? "Desconocida"}',
+          Colors.green,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al actualizar: $e'),
-            duration: const Duration(seconds: 3),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showSnackBar('Error al actualizar: $e', Colors.red);
       }
     } finally {
-      if (mounted) setState(() => _isRefreshing = false);
+      if (mounted) {
+        setState(() => _refreshing = false);
+      }
     }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      onPressed: _isRefreshing ? null : _refresh,
-      icon: _isRefreshing
+      onPressed: _refreshing ? null : _refresh,
+      icon: _refreshing
           ? const SizedBox(
               width: 20,
               height: 20,

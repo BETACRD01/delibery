@@ -2,9 +2,9 @@
 
 import 'dart:io';
 import 'dart:developer' as developer;
-import '../apis/usuarios_api.dart';
-import '../apis/rifas_api.dart';
-import '../apis/rifas_usuarios_api.dart';
+import '../apis/user/usuarios_api.dart';
+import '../apis/user/rifas_api.dart';
+import '../apis/user/rifas_usuarios_api.dart';
 import '../models/usuario.dart';
 import '../apis/helpers/api_exception.dart';
 
@@ -14,7 +14,7 @@ class UsuarioService {
   // ---------------------------------------------------------------------------
   // SINGLETON
   // ---------------------------------------------------------------------------
-  
+
   static final UsuarioService _instance = UsuarioService._internal();
   factory UsuarioService() => _instance;
   UsuarioService._internal();
@@ -26,13 +26,14 @@ class UsuarioService {
   // ---------------------------------------------------------------------------
   // ESTADO / CACHE
   // ---------------------------------------------------------------------------
-  
+
   PerfilModel? _perfilCache;
   List<DireccionModel>? _direccionesCache;
   List<MetodoPagoModel>? _metodosPagoCache;
   EstadisticasModel? _estadisticasCache;
   Map<String, dynamic>? _rifasCache;
   Map<String, dynamic>? _rifaActivaCache;
+  Map<String, bool>? _preferenciasNotificacionesCache;
 
   void _log(String message, {Object? error, StackTrace? stackTrace}) {
     developer.log(
@@ -63,7 +64,11 @@ class UsuarioService {
     } on ApiException {
       rethrow;
     } catch (e, stackTrace) {
-      _log('Error inesperado obteniendo perfil', error: e, stackTrace: stackTrace);
+      _log(
+        'Error inesperado obteniendo perfil',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw ApiException(
         statusCode: 0,
         message: 'Error al obtener perfil',
@@ -112,7 +117,9 @@ class UsuarioService {
     }
   }
 
-  Future<EstadisticasModel> obtenerEstadisticas({bool forzarRecarga = false}) async {
+  Future<EstadisticasModel> obtenerEstadisticas({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (!forzarRecarga && _estadisticasCache != null) {
         return _estadisticasCache!;
@@ -136,7 +143,71 @@ class UsuarioService {
     }
   }
 
-  Future<Map<String, dynamic>> obtenerRifasParticipaciones({bool forzarRecarga = false}) async {
+  Map<String, bool> _normalizarPreferencias(Map<String, dynamic> data) {
+    return {
+      'notificaciones_push': data['notificaciones_push'] as bool? ?? true,
+      'notificaciones_email': data['notificaciones_email'] as bool? ?? true,
+      'notificaciones_marketing':
+          data['notificaciones_marketing'] as bool? ?? true,
+    };
+  }
+
+  Future<Map<String, bool>> obtenerPreferenciasNotificaciones({
+    bool forzarRecarga = false,
+  }) async {
+    try {
+      if (!forzarRecarga && _preferenciasNotificacionesCache != null) {
+        return _preferenciasNotificacionesCache!;
+      }
+
+      final response = await _api.obtenerPreferenciasNotificaciones();
+      final preferencias = _normalizarPreferencias(response);
+      _preferenciasNotificacionesCache = preferencias;
+      return preferencias;
+    } on ApiException {
+      rethrow;
+    } catch (e, stackTrace) {
+      _log(
+        'Error obteniendo preferencias de notificaciones',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ApiException(
+        statusCode: 0,
+        message: 'Error al obtener preferencias',
+        errors: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<Map<String, bool>> actualizarPreferenciasNotificaciones(
+    Map<String, bool> data,
+  ) async {
+    try {
+      final response = await _api.actualizarPreferenciasNotificaciones(data);
+      final payload = response['preferencias'] ?? response;
+      final preferencias = _normalizarPreferencias(
+        payload as Map<String, dynamic>,
+      );
+      _preferenciasNotificacionesCache = preferencias;
+      return preferencias;
+    } on ApiException {
+      rethrow;
+    } catch (e, stackTrace) {
+      _log('Error actualizando preferencias', error: e, stackTrace: stackTrace);
+      throw ApiException(
+        statusCode: 0,
+        message: 'Error al actualizar preferencias',
+        errors: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerRifasParticipaciones({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (!forzarRecarga && _rifasCache != null) return _rifasCache!;
 
@@ -146,7 +217,11 @@ class UsuarioService {
     } on ApiException {
       rethrow;
     } catch (e, stackTrace) {
-      _log('Error obteniendo participaciones de rifas', error: e, stackTrace: stackTrace);
+      _log(
+        'Error obteniendo participaciones de rifas',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw ApiException(
         statusCode: 0,
         message: 'Error al obtener rifas',
@@ -156,7 +231,9 @@ class UsuarioService {
     }
   }
 
-  Future<Map<String, dynamic>?> obtenerRifaActiva({bool forzarRecarga = false}) async {
+  Future<Map<String, dynamic>?> obtenerRifaActiva({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (!forzarRecarga && _rifaActivaCache != null) return _rifaActivaCache;
       final data = await _rifasUsuariosApi.obtenerRifaActiva();
@@ -181,7 +258,9 @@ class UsuarioService {
   // GESTION DE DIRECCIONES
   // ---------------------------------------------------------------------------
 
-  Future<List<DireccionModel>> listarDirecciones({bool forzarRecarga = false}) async {
+  Future<List<DireccionModel>> listarDirecciones({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (forzarRecarga) {
         _direccionesCache = null;
@@ -194,7 +273,7 @@ class UsuarioService {
 
       _log('Obteniendo direcciones desde API...');
       final response = await _api.listarDirecciones();
-      
+
       // Soporte para diferentes estructuras de respuesta (paginacion o lista directa)
       final direccionesData = response['direcciones'] ?? response['results'];
 
@@ -258,19 +337,26 @@ class UsuarioService {
       return DireccionModel.fromJson(data);
     } on ApiException catch (e) {
       _direccionesCache = null;
-      
+
       // Deteccion de duplicados para auto-correccion
-      final esDuplicada = e.errors.toString().contains('Ya tienes una dirección');
-      
+      final esDuplicada = e.errors.toString().contains(
+        'Ya tienes una dirección',
+      );
+
       if (esDuplicada) {
-        _log('Direccion duplicada detectada, intentando actualizar existente...');
+        _log(
+          'Direccion duplicada detectada, intentando actualizar existente...',
+        );
         final lista = await listarDirecciones(forzarRecarga: true);
-        
+
         try {
           final existente = lista.firstWhere(
             (d) => d.etiqueta == direccion.etiqueta,
           );
-          return await actualizarDireccion(existente.id, direccion.toCreateJson());
+          return await actualizarDireccion(
+            existente.id,
+            direccion.toCreateJson(),
+          );
         } catch (_) {
           // Si no se encuentra, relanzar error original
           rethrow;
@@ -306,7 +392,10 @@ class UsuarioService {
     }
   }
 
-  Future<DireccionModel> actualizarDireccion(String id, Map<String, dynamic> data) async {
+  Future<DireccionModel> actualizarDireccion(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       _direccionesCache = null;
       final response = await _api.actualizarDireccion(id, data);
@@ -355,7 +444,11 @@ class UsuarioService {
       if (e.statusCode == 404) return null;
       rethrow;
     } catch (e, stackTrace) {
-      _log('Error obteniendo direccion default', error: e, stackTrace: stackTrace);
+      _log(
+        'Error obteniendo direccion default',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw ApiException(
         statusCode: 0,
         message: 'Error al obtener direccion predeterminada',
@@ -369,7 +462,9 @@ class UsuarioService {
   // GESTION DE METODOS DE PAGO
   // ---------------------------------------------------------------------------
 
-  Future<List<MetodoPagoModel>> listarMetodosPago({bool forzarRecarga = false}) async {
+  Future<List<MetodoPagoModel>> listarMetodosPago({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (!forzarRecarga && _metodosPagoCache != null) {
         return _metodosPagoCache!;
@@ -377,7 +472,7 @@ class UsuarioService {
 
       final response = await _api.listarMetodosPago();
       final metodosData = response['metodos_pago'] as List;
-      
+
       final metodos = metodosData
           .map((json) => MetodoPagoModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -463,11 +558,14 @@ class UsuarioService {
       final metodoData = response['metodo_pago'] as Map<String, dynamic>;
       _metodosPagoCache = null;
       return MetodoPagoModel.fromJson(metodoData);
-
     } on ApiException {
       rethrow;
     } catch (e, stackTrace) {
-      _log('Error creando metodo con comprobante', error: e, stackTrace: stackTrace);
+      _log(
+        'Error creando metodo con comprobante',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw ApiException(
         statusCode: 0,
         message: 'Error al crear metodo de pago',
@@ -477,7 +575,10 @@ class UsuarioService {
     }
   }
 
-  Future<MetodoPagoModel> actualizarMetodoPago(String id, Map<String, dynamic> data) async {
+  Future<MetodoPagoModel> actualizarMetodoPago(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       final response = await _api.actualizarMetodoPago(id, data);
       final metodoData = response['metodo_pago'] as Map<String, dynamic>;
@@ -486,7 +587,11 @@ class UsuarioService {
     } on ApiException {
       rethrow;
     } catch (e, stackTrace) {
-      _log('Error actualizando metodo de pago', error: e, stackTrace: stackTrace);
+      _log(
+        'Error actualizando metodo de pago',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw ApiException(
         statusCode: 0,
         message: 'Error al actualizar metodo de pago',

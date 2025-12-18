@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../../config/api_config.dart';
@@ -33,6 +34,8 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
   late TextEditingController _emailController;
   late TextEditingController _nombreCompletoController;
   late TextEditingController _telefonoController;
+  String? _telefonoCompleto;
+  String? _logoUrlCaido;
 
   String? _tipoProveedorSeleccionado;
   File? _logoSeleccionado;
@@ -81,7 +84,9 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
     _tipoProveedorSeleccionado = controller.proveedor?.tipoProveedor;
     _emailController = TextEditingController(text: controller.email);
     _nombreCompletoController = TextEditingController(text: controller.nombreCompleto);
-    _telefonoController = TextEditingController(text: controller.telefono);
+    _telefonoController =
+        TextEditingController(text: _formatearTelefonoParaMostrar(controller.telefono));
+    _telefonoCompleto = controller.telefono;
   }
 
   String _formatearHora(String? hora) {
@@ -137,6 +142,11 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
 
     try {
       final controller = context.read<SupplierController>();
+      final telefonoFinal = _normalizarTelefono(
+        _telefonoCompleto?.isNotEmpty == true
+            ? _telefonoCompleto!
+            : _telefonoController.text,
+      );
 
       // Datos del negocio
       final datosPerfil = <String, dynamic>{
@@ -146,7 +156,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         'descripcion': _descripcionController.text.trim(),
         'direccion': _direccionController.text.trim(),
         'ciudad': _ciudadController.text.trim(),
-        'telefono': _telefonoController.text.trim(),
+        'telefono': telefonoFinal.isNotEmpty ? telefonoFinal : null,
         if (_horarioAperturaController.text.isNotEmpty)
           'horario_apertura': _horarioAperturaController.text.trim(),
         if (_horarioCierreController.text.isNotEmpty)
@@ -190,6 +200,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         _editando = false;
         _logoSeleccionado = null;
         _guardando = false;
+        _telefonoCompleto = telefonoFinal;
       });
 
       _mostrarSnackBar('Cambios guardados');
@@ -206,6 +217,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
       _editando = false;
       _logoSeleccionado = null;
       _error = null;
+      _telefonoCompleto = _telefonoController.text.trim();
     });
     _inicializarFormulario();
   }
@@ -254,7 +266,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
                 _buildSeccion('Contacto', [
                   _buildCampo('Email', _emailController, Icons.email_outlined),
                   _buildCampo('Nombre completo', _nombreCompletoController, Icons.person_outline),
-                  _buildCampo('Teléfono', _telefonoController, Icons.phone_outlined),
+                  _buildCampoTelefono(),
                 ]),
                 const SizedBox(height: 16),
                 _buildSeccion('Negocio', [
@@ -304,15 +316,43 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
   }
 
   Widget _buildHeaderLogo(SupplierController controller) {
-    ImageProvider? logoImage;
-    
+    Widget? imagen;
+
     if (_logoSeleccionado != null) {
-      logoImage = FileImage(_logoSeleccionado!);
+      imagen = ClipOval(
+        child: Image.file(
+          _logoSeleccionado!,
+          width: 100,
+          height: 100,
+          fit: BoxFit.cover,
+        ),
+      );
     } else if (controller.logo != null && controller.logo!.isNotEmpty) {
-      final url = controller.logo!.startsWith('http') 
-          ? controller.logo! 
+      final url = controller.logo!.startsWith('http')
+          ? controller.logo!
           : '${ApiConfig.baseUrl}${controller.logo}';
-      logoImage = NetworkImage(url);
+      if (_logoUrlCaido == url) {
+        imagen = _buildLogoPlaceholder();
+      } else {
+        imagen = ClipOval(
+          child: Image.network(
+            url,
+            width: 100,
+            height: 100,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              if (!mounted) return _buildLogoPlaceholder();
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                setState(() => _logoUrlCaido = url);
+              });
+              return _buildLogoPlaceholder();
+            },
+          ),
+        );
+      }
+    } else {
+      imagen = _buildLogoPlaceholder();
     }
 
     return GestureDetector(
@@ -326,27 +366,22 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
               color: Colors.grey.shade200,
               shape: BoxShape.circle,
               border: Border.all(color: _primario, width: 3),
-              image: logoImage != null
-                  ? DecorationImage(image: logoImage, fit: BoxFit.cover)
-                  : null,
             ),
-            child: logoImage == null
-                ? Icon(Icons.store, size: 40, color: Colors.grey.shade400)
-                : null,
+            child: imagen,
           ),
           if (_editando)
             Positioned(
               bottom: 0,
               right: 0,
-              child: Container(
+            child: Container(
                 padding: const EdgeInsets.all(6),
                 decoration:const BoxDecoration(
                   color: _primario,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
-              ),
+              child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
             ),
+          ),
         ],
       ),
     );
@@ -423,6 +458,27 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         isDense: true,
       ),
     );
+  }
+
+  Widget _buildCampoTelefono() {
+    if (!_editando) {
+      return _buildCampo('Teléfono', _telefonoController, Icons.phone_outlined);
+    }
+
+      return IntlPhoneField(
+        controller: _telefonoController,
+        initialCountryCode: _obtenerCodigoPaisInicial(_telefonoController.text),
+        decoration: InputDecoration(
+          labelText: 'Teléfono',
+          prefixIcon: const Icon(Icons.phone_outlined),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          isDense: true,
+          counterText: '',
+        ),
+        autovalidateMode: AutovalidateMode.disabled,
+        onChanged: (phone) => _telefonoCompleto = phone.completeNumber,
+      );
   }
 
   Widget _buildCampoHora(String label, TextEditingController controller) {
@@ -550,5 +606,38 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         ),
       ],
     );
+  }
+
+  String _obtenerCodigoPaisInicial(String numero) {
+    final valor = numero.trim();
+    if (valor.startsWith('+593')) return 'EC';
+    if (valor.startsWith('+1')) return 'US';
+    if (valor.startsWith('+52')) return 'MX';
+    if (valor.startsWith('+57')) return 'CO';
+    return 'EC';
+  }
+
+  Widget _buildLogoPlaceholder() {
+    return Center(
+      child: Icon(Icons.store, size: 40, color: Colors.grey.shade400),
+    );
+  }
+
+  String _normalizarTelefono(String telefono) {
+    final valor = telefono.trim();
+    if (valor.isEmpty) return '';
+    if (valor.startsWith('+5930')) {
+      return '+593${valor.substring(5)}';
+    }
+    return valor;
+  }
+
+  String _formatearTelefonoParaMostrar(String? telefono) {
+    if (telefono == null || telefono.isEmpty) return '';
+    if (telefono.startsWith('+593')) {
+      final resto = telefono.substring(4);
+      return '0$resto';
+    }
+    return telefono;
   }
 }
