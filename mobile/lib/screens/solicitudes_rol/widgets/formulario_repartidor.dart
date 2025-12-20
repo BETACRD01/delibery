@@ -1,13 +1,13 @@
 // lib/screens/user/perfil/solicitudes_rol/widgets/formulario_repartidor.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import '../../../../../theme/jp_theme.dart';
 import '../../../../../services/solicitudes_service.dart';
 import '../../../../../services/auth_service.dart';
 import '../../../../../models/solicitud_cambio_rol.dart';
 
-/// 📝 FORMULARIO PARA SOLICITUD DE REPARTIDOR (VERSIÓN FINAL CLEAN)
+/// 📝 FORMULARIO PARA SOLICITUD DE REPARTIDOR
+/// Diseño: iOS Native Style
 class FormularioRepartidor extends StatefulWidget {
   final VoidCallback onSubmitSuccess;
   final VoidCallback onBack;
@@ -52,38 +52,95 @@ class _FormularioRepartidorState extends State<FormularioRepartidor> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 24),
+    return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
+      child: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: CustomScrollView(
+            slivers: [
+              // Header con ícono
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: _buildHeader(),
+                ),
+              ),
 
-              _buildCardEstadoUsuario(),
-              const SizedBox(height: 32),
+              // Estado del usuario
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildCardEstadoUsuario(),
+                ),
+              ),
 
-              _buildLabel('Cédula de Identidad'),
-              _buildCedulaField(), // Campo limpio
-              const SizedBox(height: 20),
+              // Formulario en grupos estilo iOS
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
 
-              _buildLabel('Tipo de Vehículo'),
-              _buildTipoVehiculoField(),
-              const SizedBox(height: 20),
+                      // Grupo 1: Información Personal
+                      _buildSectionHeader('INFORMACIÓN PERSONAL'),
+                      const SizedBox(height: 8),
+                      _buildGroupedCard([
+                        _buildIOSTextField(
+                          controller: _cedulaController,
+                          placeholder: 'Cédula de Identidad',
+                          prefix: CupertinoIcons.person_crop_square,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(13),
+                          ],
+                        ),
+                      ]),
 
-              _buildLabel('Zona de Cobertura'),
-              _buildZonaCoberturaField(),
-              const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
-              _buildLabel('Motivo de la Solicitud'),
-              _buildMotivoField(),
-              const SizedBox(height: 40),
+                      // Grupo 2: Vehículo y Zona
+                      _buildSectionHeader('DETALLES DE TRABAJO'),
+                      const SizedBox(height: 8),
+                      _buildGroupedCard([
+                        _buildTipoVehiculoField(),
+                        _buildDivider(),
+                        _buildIOSTextField(
+                          controller: _zonaCoberturaController,
+                          placeholder: 'Zona de Cobertura',
+                          prefix: CupertinoIcons.map_pin_ellipse,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                      ]),
 
-              _buildBotones(),
+                      const SizedBox(height: 24),
+
+                      // Grupo 3: Motivo
+                      _buildSectionHeader('MOTIVO DE SOLICITUD'),
+                      const SizedBox(height: 8),
+                      _buildGroupedCard([
+                        _buildIOSTextArea(
+                          controller: _motivoController,
+                          placeholder:
+                              'Cuéntanos por qué quieres ser repartidor...',
+                          maxLines: 5,
+                        ),
+                      ]),
+
+                      const SizedBox(height: 32),
+
+                      // Botones
+                      _buildBotones(),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -92,177 +149,342 @@ class _FormularioRepartidorState extends State<FormularioRepartidor> {
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // 🧩 WIDGETS UI
+  // 🧩 COMPONENTES UI ESTILO iOS
   // ══════════════════════════════════════════════════════════════════════════════
 
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: JPColors.info.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemGreen.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            CupertinoIcons.car_fill,
+            color: CupertinoColors.systemGreen,
+            size: 32,
+          ),
+        ),
+        const SizedBox(width: 16),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ser Repartidor',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                  color: CupertinoColors.label,
+                ),
               ),
-              child: const Icon(Icons.delivery_dining_rounded, color: JPColors.info, size: 28),
-            ),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Ser Repartidor',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: JPColors.textPrimary),
-                  ),
-                  Text(
-                    'Completa tus datos para comenzar',
-                    style: TextStyle(fontSize: 14, color: JPColors.textSecondary),
-                  ),
-                ],
+              SizedBox(height: 2),
+              Text(
+                'Completa tus datos para comenzar',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: CupertinoColors.secondaryLabel,
+                  letterSpacing: -0.2,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
   }
 
   Widget _buildCardEstadoUsuario() {
-    // (Mismo código de estado de usuario que tenías antes)
     final user = _authService.user;
     final esRepartidor = user?.roles.contains('REPARTIDOR') ?? false;
 
-    if (esRepartidor) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: JPColors.success.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: JPColors.success),
-        ),
-        child: const Row(
-          children:[
-            Icon(Icons.check_circle, color: JPColors.success),
-            SizedBox(width: 12),
-            Expanded(child: Text("Ya eres Repartidor", style: TextStyle(fontWeight: FontWeight.bold))),
-          ],
-        ),
-      );
-    }
-    return const SizedBox.shrink(); 
-  }
+    if (!esRepartidor) return const SizedBox.shrink();
 
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: JPColors.textPrimary),
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGreen.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: CupertinoColors.systemGreen.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            CupertinoIcons.check_mark_circled_solid,
+            color: CupertinoColors.systemGreen,
+            size: 24,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Ya eres Repartidor',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: CupertinoColors.systemGreen,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  InputDecoration _cleanInputDecoration(String hint, IconData icon) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: JPColors.textHint, fontSize: 14),
-      prefixIcon: Icon(icon, color: JPColors.textSecondary, size: 20),
-      filled: true,
-      fillColor: const Color(0xFFFAFAFA),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: JPColors.info)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: JPColors.error)),
+  Widget _buildSectionHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: CupertinoColors.secondaryLabel.resolveFrom(context),
+          letterSpacing: -0.08,
+        ),
+      ),
     );
   }
 
-  // 🔹 CAMPO CÉDULA LIMPIO (SIN ICONOS EXTRA)
-  Widget _buildCedulaField() {
-    return TextFormField(
-      controller: _cedulaController,
-      decoration: _cleanInputDecoration('Ej: 1712345678', Icons.badge_outlined),
-      keyboardType: TextInputType.number,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(13),
-      ],
-      validator: (value) => (value == null || value.length < 10) ? 'Ingresa una cédula válida' : null,
+  Widget _buildGroupedCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      margin: const EdgeInsets.only(left: 44),
+      height: 0.5,
+      color: CupertinoColors.separator.resolveFrom(context),
+    );
+  }
+
+  Widget _buildIOSTextField({
+    required TextEditingController controller,
+    required String placeholder,
+    required IconData prefix,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            prefix,
+            size: 22,
+            color: CupertinoColors.systemGrey.resolveFrom(context),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: placeholder,
+              keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
+              textCapitalization: textCapitalization,
+              decoration: null,
+              style: const TextStyle(fontSize: 17, letterSpacing: -0.4),
+              placeholderStyle: TextStyle(
+                color: CupertinoColors.placeholderText.resolveFrom(context),
+                fontSize: 17,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIOSTextArea({
+    required TextEditingController controller,
+    required String placeholder,
+    int maxLines = 3,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: CupertinoTextField(
+        controller: controller,
+        placeholder: placeholder,
+        maxLines: maxLines,
+        decoration: null,
+        style: const TextStyle(fontSize: 17, letterSpacing: -0.4),
+        placeholderStyle: TextStyle(
+          color: CupertinoColors.placeholderText.resolveFrom(context),
+          fontSize: 17,
+        ),
+      ),
     );
   }
 
   Widget _buildTipoVehiculoField() {
-    return DropdownButtonFormField<String>(
-      initialValue: _tipoVehiculo,
-      decoration: _cleanInputDecoration('Selecciona vehículo', Icons.two_wheeler_outlined),
-      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: JPColors.textSecondary),
-      dropdownColor: Colors.white,
-      items: TipoVehiculo.values.map((tipo) {
-        return DropdownMenuItem(
-          value: tipo.value,
-          child: Text(tipo.label, style: const TextStyle(fontSize: 14, color: JPColors.textPrimary)),
-        );
-      }).toList(),
-      onChanged: (value) => setState(() => _tipoVehiculo = value),
-      validator: (value) => value == null ? 'Campo obligatorio' : null,
+    return GestureDetector(
+      onTap: _mostrarSelectorVehiculo,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Row(
+          children: [
+            Icon(
+              CupertinoIcons.car_detailed,
+              size: 22,
+              color: CupertinoColors.systemGrey.resolveFrom(context),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _tipoVehiculo != null
+                    ? TipoVehiculo.values
+                          .firstWhere((t) => t.value == _tipoVehiculo)
+                          .label
+                    : 'Tipo de Vehículo',
+                style: TextStyle(
+                  fontSize: 17,
+                  letterSpacing: -0.4,
+                  color: _tipoVehiculo != null
+                      ? CupertinoColors.label.resolveFrom(context)
+                      : CupertinoColors.placeholderText.resolveFrom(context),
+                ),
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_right,
+              size: 18,
+              color: CupertinoColors.systemGrey3.resolveFrom(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
-
-  Widget _buildZonaCoberturaField() {
-    return TextFormField(
-      controller: _zonaCoberturaController,
-      decoration: _cleanInputDecoration('Ej: Centro, Norte', Icons.map_outlined),
-      textCapitalization: TextCapitalization.words,
-      validator: (value) => (value == null || value.length < 3) ? 'Campo obligatorio' : null,
-    );
-  }
-
-  Widget _buildMotivoField() {
-    return TextFormField(
-      controller: _motivoController,
-      decoration: _cleanInputDecoration('Cuéntanos...', Icons.edit_note_outlined),
-      maxLines: 4,
-      validator: (value) => (value == null || value.length < 10) ? 'Mínimo 10 caracteres' : null,
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // 🔘 BOTÓN DE ENVÍO (AQUÍ OCURRE LA MAGIA)
-  // ══════════════════════════════════════════════════════════════════════════════
 
   Widget _buildBotones() {
     return Column(
       children: [
-        SizedBox(
+        Container(
           width: double.infinity,
           height: 50,
-          child: ElevatedButton(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: !_isLoading
+                ? const LinearGradient(
+                    colors: [CupertinoColors.systemGreen, Color(0xFF34C759)],
+                  )
+                : null,
+            color: _isLoading
+                ? CupertinoColors.systemGrey5.resolveFrom(context)
+                : null,
+          ),
+          child: CupertinoButton(
+            padding: EdgeInsets.zero,
             onPressed: _isLoading ? null : _enviarSolicitud,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: JPColors.info,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
             child: _isLoading
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('ENVIAR SOLICITUD', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                ? const CupertinoActivityIndicator(color: CupertinoColors.white)
+                : const Text(
+                    'Enviar Solicitud',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.white,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
           ),
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: _isLoading ? null : widget.onBack,
-            style: TextButton.styleFrom(foregroundColor: JPColors.textSecondary),
-            child: const Text('Cancelar'),
+        const SizedBox(height: 12),
+        CupertinoButton(
+          onPressed: _isLoading ? null : widget.onBack,
+          child: Text(
+            'Cancelar',
+            style: TextStyle(
+              fontSize: 17,
+              color: _isLoading
+                  ? CupertinoColors.systemGrey
+                  : CupertinoColors.systemBlue,
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // 🎬 ACCIONES
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  void _mostrarSelectorVehiculo() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: 250,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: CupertinoColors.separator.resolveFrom(context),
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar'),
+                  ),
+                  const Text(
+                    'Tipo de Vehículo',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Listo'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 40,
+                onSelectedItemChanged: (index) {
+                  setState(
+                    () => _tipoVehiculo = TipoVehiculo.values[index].value,
+                  );
+                },
+                children: TipoVehiculo.values.map((tipo) {
+                  return Center(
+                    child: Text(
+                      tipo.label,
+                      style: const TextStyle(fontSize: 17),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -273,19 +495,33 @@ class _FormularioRepartidorState extends State<FormularioRepartidor> {
   Future<void> _enviarSolicitud() async {
     // 1. Ocultar teclado
     FocusScope.of(context).unfocus();
-    
-    // 2. Validaciones locales (formato)
-    if (!_formKey.currentState!.validate()) {
-      _mostrarSnack('Revisa los campos', isError: true);
+
+    // 2. Validaciones locales
+    if (_cedulaController.text.length < 10) {
+      _mostrarAlerta('Ingresa una cédula válida', isError: true);
+      return;
+    }
+    if (_tipoVehiculo == null) {
+      _mostrarAlerta('Selecciona un tipo de vehículo', isError: true);
+      return;
+    }
+    if (_zonaCoberturaController.text.length < 3) {
+      _mostrarAlerta('Ingresa la zona de cobertura', isError: true);
+      return;
+    }
+    if (_motivoController.text.length < 10) {
+      _mostrarAlerta(
+        'El motivo debe tener al menos 10 caracteres',
+        isError: true,
+      );
       return;
     }
 
-    // 3. Iniciar carga (Spinner)
+    // 3. Iniciar carga
     setState(() => _isLoading = true);
-    
+
     try {
       // 4. Enviar al Backend
-      // En este momento, mientras carga, el backend revisa si la cédula existe.
       await _solicitudesService.crearSolicitudRepartidor(
         cedulaIdentidad: _cedulaController.text.trim(),
         tipoVehiculo: _tipoVehiculo!,
@@ -296,33 +532,46 @@ class _FormularioRepartidorState extends State<FormularioRepartidor> {
       // 5. Si no hubo error, todo bien
       if (!mounted) return;
       widget.onSubmitSuccess();
-      
     } catch (e) {
       if (!mounted) return;
-      
-      // 6. SI HUBO ERROR (Ej: Cédula duplicada), lo mostramos aquí
+
+      // 6. Manejo de errores (Ej: Cédula duplicada)
       String errorMsg = e.toString();
-      
-      // Limpieza cosmética del mensaje
+
       if (errorMsg.startsWith("Exception: ")) {
-        errorMsg = errorMsg.substring(11); 
+        errorMsg = errorMsg.substring(11);
       }
-      
-      _mostrarSnack(errorMsg, isError: true); // SnackBar Rojo
-      
+
+      _mostrarAlerta(errorMsg, isError: true);
     } finally {
       // 7. Detener carga
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _mostrarSnack(String mensaje, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje, style: const TextStyle(color: Colors.white)),
-        backgroundColor: isError ? JPColors.error : JPColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  void _mostrarAlerta(String mensaje, {bool isError = false}) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: Icon(
+          isError
+              ? CupertinoIcons.exclamationmark_circle
+              : CupertinoIcons.check_mark_circled,
+          color: isError
+              ? CupertinoColors.systemRed
+              : CupertinoColors.systemGreen,
+          size: 48,
+        ),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(mensaje, style: const TextStyle(fontSize: 15)),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
     );
   }

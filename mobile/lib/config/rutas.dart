@@ -33,6 +33,8 @@ import '../screens/admin/screen/pantalla_rifas_admin.dart';
 import '../screens/admin/screen/config/pantalla_cambiar_password.dart';
 import '../screens/admin/screen/config/pantalla_resetear_password_usuario.dart';
 import '../screens/admin/screen/pantalla_config_envios.dart';
+import '../screens/ratings/pantalla_mis_calificaciones.dart';
+import '../screens/ratings/pantalla_calificaciones_entidad.dart';
 
 class Rutas {
   Rutas._();
@@ -69,6 +71,8 @@ class Rutas {
   static const misPedidos = '/mis-pedidos';
   static const pedidoDetalle = '/pedido-detalle';
   static const subirComprobante = '/user/subir-comprobante';
+  static const ratingsMisCalificaciones = '/ratings/mis-calificaciones';
+  static const ratingsEntidad = '/ratings/entidad';
 
   // ============================================================================
   // RUTAS - REPARTIDOR
@@ -135,6 +139,21 @@ class Rutas {
     notificaciones: (_) => const PantallaNotificaciones(),
     carrito: (_) => const PantallaCarrito(),
     misPedidos: (_) => const PantallaMisPedidos(),
+    ratingsMisCalificaciones: (_) => const PantallaMisCalificaciones(),
+    ratingsEntidad: (context) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      final type = args?['type'] as String?;
+      final id = args?['id'] as int?;
+      final nombre = args?['nombre'] as String? ?? 'Calificaciones';
+      if (type == null || id == null) {
+        return const PantallaMisCalificaciones(); // fallback vacío
+      }
+      return PantallaCalificacionesEntidad(
+        entityType: type,
+        entityId: id,
+        entityNombre: nombre,
+      );
+    },
 
     // Repartidor
     repartidorHome: (_) => const PantallaInicioRepartidor(),
@@ -247,6 +266,39 @@ class Rutas {
         MaterialPageRoute(
           builder: (_) => PedidoDetalleScreen(pedidoId: pedidoId),
         ),
+      );
+
+  // Calificaciones
+  static Future<void> irAMisCalificaciones(
+    BuildContext context, {
+    String? entityType,
+    int? entityId,
+  }) =>
+      Navigator.pushNamed(
+        context,
+        ratingsMisCalificaciones,
+        arguments: entityType != null && entityId != null
+            ? {
+                'type': entityType,
+                'id': entityId,
+              }
+            : null,
+      );
+
+  static Future<void> irACalificacionesEntidad(
+    BuildContext context, {
+    required String entityType,
+    required int entityId,
+    required String entityNombre,
+  }) =>
+      Navigator.pushNamed(
+        context,
+        ratingsEntidad,
+        arguments: {
+          'type': entityType,
+          'id': entityId,
+          'nombre': entityNombre,
+        },
       );
 
   // ============================================================================

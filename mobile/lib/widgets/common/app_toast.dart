@@ -97,11 +97,11 @@ class _AppToastState extends State<AppToast>
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Positioned(
-        bottom: 16,
-        left: 16,
-        right: 16,
+    return Positioned(
+      bottom: 16,
+      left: 16,
+      right: 16,
+      child: SafeArea(
         child: ScaleTransition(
           scale: Tween<double>(begin: 0.85, end: 1.0).animate(
             CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),

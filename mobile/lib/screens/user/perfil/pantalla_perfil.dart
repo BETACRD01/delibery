@@ -7,20 +7,23 @@ import '../../../controllers/user/perfil_controller.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/roles_service.dart';
 import '../../../services/role_manager.dart';
+import '../../../services/toast_service.dart';
 import '../../../config/rutas.dart';
 import '../../../switch/roles.dart';
 import '../../../switch/role_router.dart';
 import 'package:provider/provider.dart';
 import 'editar/pantalla_editar_informacion.dart';
 import 'editar/pantalla_editar_foto.dart';
-import 'rifas/pantalla_rifa_activa.dart';
+import '../../raffles/pantalla_rifa_activa.dart';
 import 'configuracion/direcciones/pantalla_lista_direcciones.dart';
 import 'configuracion/notificaciones/pantalla_notificaciones.dart';
 import 'configuracion/idioma/pantalla_idioma.dart';
 import 'configuracion/ayuda/pantalla_ayuda_soporte.dart';
 import 'configuracion/ayuda/pantalla_terminos.dart';
+import 'configuracion/seguridad/dialogo_cambiar_password.dart';
 import '../../solicitudes_rol/pantalla_solicitar_rol.dart';
 import '../../../widgets/role_switcher_ios.dart';
+import '../../../widgets/ratings/rating_summary_card.dart';
 
 class PantallaPerfil extends StatefulWidget {
   const PantallaPerfil({super.key});
@@ -71,6 +74,20 @@ class _PantallaPerfilState extends State<PantallaPerfil>
       if (mounted) _actualizarRolesLocales(rolesResponse);
     } catch (_) {
       if (mounted) setState(() => _rolesCargando = false);
+    }
+  }
+
+  Future<void> _abrirCambiarPassword() async {
+    final resultado = await showDialog<bool>(
+      context: context,
+      builder: (context) => const DialogoCambiarPassword(),
+    );
+
+    if (resultado == true && mounted) {
+      ToastService().showSuccess(
+        context,
+        'Contraseña actualizada exitosamente',
+      );
     }
   }
 
@@ -131,6 +148,10 @@ class _PantallaPerfilState extends State<PantallaPerfil>
                     if (_controller.errorPerfil != null ||
                         _controller.errorEstadisticas != null)
                       _buildWarningBanner(),
+
+                    // Sección de calificaciones
+                    _buildRatingsSection(),
+
                     _buildSettingsSection(),
                   ]),
                 ),
@@ -306,6 +327,28 @@ class _PantallaPerfilState extends State<PantallaPerfil>
     );
   }
 
+  Widget _buildRatingsSection() {
+    final estadisticas = _controller.estadisticas;
+
+    // Si no hay estadísticas o no hay calificaciones, no mostrar nada
+    if (estadisticas == null || estadisticas.totalResenas == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: CompactRatingSummaryCard(
+        averageRating: estadisticas.calificacion,
+        totalReviews: estadisticas.totalResenas,
+        subtitle: 'Calificación promedio de repartidores',
+        // onTap: () {
+        //   // TODO: Navegar a pantalla de todas las reseñas
+        //   // Rutas.irAMisCalificaciones(context);
+        // },
+      ),
+    );
+  }
+
   Widget _buildSettingsSection() {
     return Column(
       children: [
@@ -380,6 +423,20 @@ class _PantallaPerfilState extends State<PantallaPerfil>
             title: 'Solicitar cambio de rol',
             subtitle: 'Solicita ser proveedor o repartidor',
             onTap: () => _navegarA(const PantallaSolicitarRol()),
+          ),
+        ]),
+
+        const SizedBox(height: 24),
+
+        // SEGURIDAD
+        _buildSectionHeader('SEGURIDAD'),
+        _buildSettingsCard([
+          _buildSettingsTile(
+            icon: CupertinoIcons.lock_fill,
+            iconBgColor: const Color(0xFF5AC8FA),
+            title: 'Cambiar contraseña',
+            subtitle: 'Actualiza tu clave de acceso',
+            onTap: _abrirCambiarPassword,
           ),
         ]),
 

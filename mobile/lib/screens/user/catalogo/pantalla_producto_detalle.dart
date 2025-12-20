@@ -11,6 +11,7 @@ import '../../../models/producto_model.dart';
 import '../../../services/productos_service.dart';
 import '../../../services/toast_service.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
+import '../../../widgets/ratings/star_rating_display.dart';
 
 /// Pantalla de detalle completo de un producto
 class PantallaProductoDetalle extends StatefulWidget {
@@ -173,30 +174,12 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
           _buildProveedorBadge(producto),
           const SizedBox(height: 12),
 
-          // Categoría
           // Rating y reseñas
-          Row(
-            children: [
-              ...List.generate(5, (index) {
-                return Icon(
-                  index < producto.rating.floor()
-                      ? Icons.star
-                      : (index < producto.rating
-                            ? Icons.star_half
-                            : Icons.star_border),
-                  color: Colors.amber,
-                  size: 20,
-                );
-              }),
-              const SizedBox(width: 8),
-              Text(
-                producto.ratingFormateado,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
+          StarRatingDisplay(
+            rating: producto.rating,
+            reviewCount: producto.totalResenas,
+            size: 20,
+            showCount: true,
           ),
           const SizedBox(height: 16),
 

@@ -7,6 +7,7 @@ plugins {
 
 android {
     namespace = "com.deliber.app"
+    // Ajustado a 36 para compatibilidad con plugins y dependencias AndroidX
     compileSdk = 36
 
     defaultConfig {
@@ -22,7 +23,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        // Necesario para Firebase Messaging y notificaciones
         isCoreLibraryDesugaringEnabled = true
     }
 
@@ -33,7 +33,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = true // Limpia recursos no usados
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -51,39 +51,37 @@ android {
 }
 
 dependencies {
+    // AndroidX Core
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 
-    // Desugaring para Java 8+ (necesario para notificaciones)
+    // Java 8+ Desugaring
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
 
-    // Firebase
+    // Firebase (Gestionado por BoM)
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
 
-    // Multidex
+    // Multidex para evitar errores de límite de 64k métodos
     implementation("androidx.multidex:multidex:2.0.1")
 
-    // 🎮 Google Play Core (necesario para Flutter)
-    implementation("com.google.android.play:core:1.10.3")
-    implementation("com.google.android.play:core-ktx:1.8.1")
+    // NOTA: Se eliminó 'com.google.android.play:core' para resolver conflictos de duplicidad de clases.
+    // Los plugins de Flutter gestionan sus dependencias de Play Services internamente.
 }
 
-/* Copia automática del APK a la ruta por defecto de Flutter */
+/* Tarea para sincronizar el APK generado con la ruta esperada por Flutter */
 afterEvaluate {
     val assembleDebugTask = tasks.findByName("assembleDebug")
     val assembleReleaseTask = tasks.findByName("assembleRelease")
-    val redirectTask = tasks.findByName("createDebugApkListingFileRedirect")
 
     listOfNotNull(assembleDebugTask, assembleReleaseTask).forEach { assembleTask ->
-        val copyTask = tasks.register<Copy>("forceCopyApkToFlutterDefault_${assembleTask.name}") {
+        tasks.register<Copy>("forceCopyApkToFlutterDefault_${assembleTask.name}") {
             dependsOn(assembleTask)
 
-            // Ruta por defecto de Flutter
             val flutterProjectRoot = file("${rootProject.projectDir.parent}")
             val sourceApkDir = file("$buildDir/outputs/flutter-apk")
             val flutterDefaultDir = file("${flutterProjectRoot}/build/app/outputs/flutter-apk")
@@ -93,24 +91,18 @@ afterEvaluate {
             into(flutterDefaultDir)
 
             doFirst {
-                println("Copiando APK a ruta por defecto de Flutter:")
-                println("Origen: ${sourceApkDir.absolutePath}")
-                println("Destino: ${flutterDefaultDir.absolutePath}")
+                println("Iniciando copia técnica del APK...")
                 flutterDefaultDir.mkdirs()
             }
 
             doLast {
                 val apkFiles = flutterDefaultDir.listFiles { file -> file.extension == "apk" }
-                if (apkFiles.isNullOrEmpty()) {
-                    println("Advertencia: No se encontraron archivos APK en el destino")
-                } else {
-                    println("APK copiado correctamente:")
-                    apkFiles.forEach { println("   • ${it.name} (${it.length() / 1024 / 1024} MB)") }
+                if (!apkFiles.isNullOrEmpty()) {
+                    println("Build exitoso. APK disponible en: ${flutterDefaultDir.absolutePath}")
                 }
             }
+        }.also { copyTask ->
+            assembleTask.finalizedBy(copyTask)
         }
-
-        redirectTask?.mustRunAfter(copyTask)
-        assembleTask.finalizedBy(copyTask)
     }
 }

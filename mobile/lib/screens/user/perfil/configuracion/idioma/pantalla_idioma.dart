@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../../theme/jp_theme.dart';
+import 'dart:ui';
 import '../../../../../providers/locale_provider.dart';
 import '../../../../../l10n/app_localizations.dart';
 
-/// 🌍 PANTALLA DE SELECCIÓN DE IDIOMA
-/// Diseño: Clean UI con selección simple
 class PantallaIdioma extends StatefulWidget {
   const PantallaIdioma({super.key});
 
@@ -13,15 +11,40 @@ class PantallaIdioma extends StatefulWidget {
   State<PantallaIdioma> createState() => _PantallaIdiomaState();
 }
 
-class _PantallaIdiomaState extends State<PantallaIdioma> {
+class _PantallaIdiomaState extends State<PantallaIdioma>
+    with SingleTickerProviderStateMixin {
   late LocaleProvider _localeProvider;
   String _idiomaSeleccionado = 'es';
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   final List<Map<String, String>> _idiomas = [
     {'code': 'es', 'label': 'Español', 'flag': '🇪🇸'},
     {'code': 'en', 'label': 'English', 'flag': '🇺🇸'},
     {'code': 'pt', 'label': 'Português', 'flag': '🇧🇷'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
+    _animationController.forward();
+  }
 
   @override
   void didChangeDependencies() {
@@ -34,76 +57,168 @@ class _PantallaIdiomaState extends State<PantallaIdioma> {
   }
 
   @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: JPColors.background, // Fondo Gris Claro
-      appBar: AppBar(
-        title: Text(
-          AppLocalizations.of(context).languageTitle,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: JPColors.textPrimary,
-        elevation: 0,
-        centerTitle: true,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: Colors.grey[100], height: 1),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppLocalizations.of(context).languageSubtitle,
-              style: const TextStyle(
-                color: JPColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+      backgroundColor: const Color(0xFFF2F2F7),
+      extendBodyBehindAppBar: true,
+      appBar: _buildAppBar(),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 28),
+                  _buildLanguageList(),
+                  const SizedBox(height: 24),
+                  _buildInfoCard(),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            
-            // Lista de idiomas
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                children: _idiomas.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final item = entry.value;
-                  final isSelected = _idiomaSeleccionado == item['code'];
-                  final isLast = index == _idiomas.length - 1;
+          ),
+        ),
+      ),
+    );
+  }
 
-                  return Column(
-                    children: [
-                      _buildLanguageItem(
-                        label: item['label']!,
-                        flag: item['flag']!,
-                        isSelected: isSelected,
-                        onTap: () {
-                          setState(() => _idiomaSeleccionado = item['code']!);
-                          _guardarIdioma(item['code']!);
-                        },
-                      ),
-                      if (!isLast)
-                        Divider(height: 1, indent: 56, color: Colors.grey.shade100),
-                    ],
-                  );
-                }).toList(),
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(
+        AppLocalizations.of(context).languageTitle,
+        style: const TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.4,
+          color: Color(0xFF1C1C1E),
+        ),
+      ),
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      foregroundColor: const Color(0xFF1C1C1E),
+      elevation: 0,
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.95),
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  width: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back_ios_new,
+          size: 20,
+          color: Color(0xFF1C1C1E),
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFF007AFF).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Text('🌍', style: TextStyle(fontSize: 24)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Idioma',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                      color: Color(0xFF1C1C1E),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    AppLocalizations.of(context).languageSubtitle,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Color(0xFF8E8E93),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildLanguageList() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: _idiomas.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          final isSelected = _idiomaSeleccionado == item['code'];
+          final isFirst = index == 0;
+          final isLast = index == _idiomas.length - 1;
+
+          return Column(
+            children: [
+              _buildLanguageItem(
+                label: item['label']!,
+                flag: item['flag']!,
+                code: item['code']!,
+                isSelected: isSelected,
+                isFirst: isFirst,
+                isLast: isLast,
+              ),
+              if (!isLast) _buildDivider(),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -111,31 +226,106 @@ class _PantallaIdiomaState extends State<PantallaIdioma> {
   Widget _buildLanguageItem({
     required String label,
     required String flag,
+    required String code,
     required bool isSelected,
-    required VoidCallback onTap,
+    bool isFirst = false,
+    bool isLast = false,
   }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Row(
-          children: [
-            Text(flag, style: const TextStyle(fontSize: 24)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? JPColors.textPrimary : JPColors.textSecondary,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() => _idiomaSeleccionado = code);
+          _guardarIdioma(code);
+        },
+        borderRadius: BorderRadius.vertical(
+          top: isFirst ? const Radius.circular(16) : Radius.zero,
+          bottom: isLast ? const Radius.circular(16) : Radius.zero,
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F2F7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(flag, style: const TextStyle(fontSize: 32)),
                 ),
               ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: JPColors.primary, size: 24),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    letterSpacing: -0.3,
+                    color: const Color(0xFF1C1C1E),
+                  ),
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF34C759),
+                  size: 28,
+                ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 92),
+      child: Divider(
+        height: 1,
+        thickness: 0.5,
+        color: Colors.black.withValues(alpha: 0.1),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF007AFF).withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: const Color(0xFF007AFF).withValues(alpha: 0.8),
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Los cambios se aplicarán inmediatamente en toda la aplicación.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF1C1C1E),
+                height: 1.4,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -144,11 +334,27 @@ class _PantallaIdiomaState extends State<PantallaIdioma> {
     _localeProvider.setLocale(codigo);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppLocalizations.of(context).languageChanged(codigo)),
-        backgroundColor: JPColors.primary,
-        duration: const Duration(milliseconds: 800),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context).languageChanged(codigo),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF34C759),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: const Duration(milliseconds: 1500),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }

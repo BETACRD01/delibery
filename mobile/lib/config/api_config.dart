@@ -352,6 +352,10 @@ class ApiConfig {
   static String get calificacionesRapida => '$_ratings/rapida/';
   static String calificacionesPendientesPedido(int pedidoId) =>
       '$_ratings/pendientes/$pedidoId/';
+  static String calificacionesEntidad(String type, int id) =>
+      '$_ratings/$type/$id/';
+  static String calificacionesResumen(String type, int id) =>
+      '$_ratings/$type/$id/resumen/';
 
   // ============================================================================
   // ADMIN

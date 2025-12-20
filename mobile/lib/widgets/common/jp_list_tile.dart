@@ -76,6 +76,8 @@ class JPListTile extends StatelessWidget {
                     children: [
                       Text(
                         title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 16,
                           color: JPCupertinoColors.label(context),
@@ -86,6 +88,8 @@ class JPListTile extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           subtitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
                             color: JPCupertinoColors.secondaryLabel(context),

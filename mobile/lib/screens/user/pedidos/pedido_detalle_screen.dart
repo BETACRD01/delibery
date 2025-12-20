@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/pedido_model.dart';
 import '../../../providers/proveedor_pedido.dart';
 import '../../../services/pago_service.dart';
 import 'pantalla_subir_comprobante.dart';
+import '../../../widgets/ratings/dialogo_calificar_repartidor.dart';
+import '../../../widgets/ratings/dialogo_calificar_producto.dart';
 
 class PedidoDetalleScreen extends StatefulWidget {
   final int pedidoId;
@@ -17,9 +20,10 @@ class PedidoDetalleScreen extends StatefulWidget {
 
 class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   bool _isCancelling = false;
-  bool _enviandoCalificacion = false;
+  final bool _enviandoCalificacion = false;
   bool _enviandoCalificacionProveedor = false;
-  bool _enviandoCalificacionProducto = false;
+  // Obsoleto: flujos de calificación migrados a DialogoCalificarProducto
+  // bool _enviandoCalificacionProducto = false;
   final TextEditingController _comentarioCtrl = TextEditingController();
   final TextEditingController _comentarioProveedorCtrl =
       TextEditingController();
@@ -201,7 +205,20 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
           ElevatedButton(
             onPressed: _enviandoCalificacion
                 ? null
-                : () => _mostrarSheetCalificacion(pedido),
+                : () async {
+                    final result = await showCupertinoModalPopup<bool>(
+                      context: context,
+                      builder: (context) => DialogoCalificarRepartidor(
+                        pedidoId: pedido.id,
+                        repartidorNombre: pedido.repartidor?.nombre ?? 'Repartidor',
+                        repartidorFoto: pedido.repartidor?.fotoPerfil,
+                      ),
+                    );
+                    if (result == true && mounted) {
+                      // Recargar el pedido para actualizar la UI
+                      setState(() {});
+                    }
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
@@ -469,7 +486,18 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
 
     return InkWell(
       onTap: puedeCalificar
-          ? () => _mostrarSheetCalificacionProducto(pedido, item)
+          ? () async {
+              final result = await showCupertinoModalPopup<bool>(
+                context: context,
+                builder: (context) => DialogoCalificarProducto(
+                  pedidoId: pedido.id,
+                  items: [item],
+                ),
+              );
+              if (result == true && mounted) {
+                setState(() {});
+              }
+            }
           : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -491,7 +519,18 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
           ],
           if (rating == null && puedeCalificar)
             OutlinedButton(
-              onPressed: () => _mostrarSheetCalificacionProducto(pedido, item),
+              onPressed: () async {
+                final result = await showCupertinoModalPopup<bool>(
+                  context: context,
+                  builder: (context) => DialogoCalificarProducto(
+                    pedidoId: pedido.id,
+                    items: [item],
+                  ),
+                );
+                if (result == true && mounted) {
+                  setState(() {});
+                }
+              },
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -873,133 +912,9 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     }
   }
 
-  Future<void> _mostrarSheetCalificacion(Pedido pedido) async {
-    double rating = 5;
-    _comentarioCtrl.clear();
+  // Obsoleto: reemplazado por DialogoCalificarRepartidor
+  // Future<void> _mostrarSheetCalificacion(Pedido pedido) async {}
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setStateModal) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Califica al repartidor',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (index) {
-                      final isFilled = index < rating;
-                      return IconButton(
-                        iconSize: 34,
-                        onPressed: () =>
-                            setStateModal(() => rating = index + 1.0),
-                        icon: Icon(
-                          isFilled
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          color: Colors.amber,
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _comentarioCtrl,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'Comentario (opcional)',
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _enviandoCalificacion
-                          ? null
-                          : () async {
-                              Navigator.of(ctx).pop();
-                              await _enviarCalificacion(
-                                pedido,
-                                rating.round(),
-                                _comentarioCtrl.text,
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        _enviandoCalificacion ? 'Enviando...' : 'Enviar',
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _enviarCalificacion(
-    Pedido pedido,
-    int rating,
-    String comentario,
-  ) async {
-    setState(() => _enviandoCalificacion = true);
-    final provider = context.read<PedidoProvider>();
-
-    final ok = await provider.calificarRepartidor(
-      pedidoId: pedido.id,
-      estrellas: rating,
-      comentario: comentario,
-    );
-
-    setState(() => _enviandoCalificacion = false);
-
-    if (ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Gracias por tu calificación!'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } else if (provider.error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.error ?? 'Error al calificar'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
-  }
 
   Future<void> _mostrarSheetCalificacionProveedor(Pedido pedido) async {
     double rating = 5;
@@ -1098,147 +1013,12 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     );
   }
 
-  Future<void> _mostrarSheetCalificacionProducto(
-    Pedido pedido,
-    ItemPedido item,
-  ) async {
-    double rating = item.calificacionProductoInfo?.estrellas ?? 5;
-    _comentarioProductoCtrl.text =
-        item.calificacionProductoInfo?.comentario ?? '';
+  // Obsoleto: reemplazado por DialogoCalificarProducto
+  // Future<void> _mostrarSheetCalificacionProducto(
+  //   Pedido pedido,
+  //   ItemPedido item,
+  // ) async {}
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setStateModal) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Califica "${item.productoNombre}"',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (index) {
-                      final isFilled = index < rating;
-                      return IconButton(
-                        iconSize: 34,
-                        onPressed: () =>
-                            setStateModal(() => rating = index + 1.0),
-                        icon: Icon(
-                          isFilled
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          color: Colors.amber,
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _comentarioProductoCtrl,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'Comentario (opcional)',
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _enviandoCalificacionProducto
-                          ? null
-                          : () async {
-                              Navigator.of(ctx).pop();
-                              await _enviarCalificacionProducto(
-                                pedido,
-                                item,
-                                rating.round(),
-                                _comentarioProductoCtrl.text,
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        _enviandoCalificacionProducto
-                            ? 'Enviando...'
-                            : 'Enviar',
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _enviarCalificacionProducto(
-    Pedido pedido,
-    ItemPedido item,
-    int rating,
-    String comentario,
-  ) async {
-    setState(() => _enviandoCalificacionProducto = true);
-    final provider = context.read<PedidoProvider>();
-
-    final ok = await provider.calificarProducto(
-      pedidoId: pedido.id,
-      productoId: item.producto,
-      itemId: item.id,
-      estrellas: rating,
-      comentario: comentario,
-    );
-
-    setState(() => _enviandoCalificacionProducto = false);
-
-    if (ok && mounted) {
-      _comentarioProductoCtrl.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Gracias por tu calificación!'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } else if (provider.error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.error ?? 'Error al calificar producto'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
-  }
 
   Future<void> _enviarCalificacionProveedor(
     Pedido pedido,

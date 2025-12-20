@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../../config/api_config.dart';
 import '../../../controllers/supplier/supplier_controller.dart';
+import '../../../widgets/ratings/rating_summary_card.dart';
 
 /// Panel de perfil del proveedor - Diseño profesional y limpio
 class PerfilProveedorEditable extends StatefulWidget {
@@ -263,6 +264,10 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
               children: [
                 _buildHeaderLogo(controller),
                 const SizedBox(height: 20),
+
+                // Sección de calificaciones
+                _buildSeccionCalificaciones(controller),
+
                 _buildSeccion('Contacto', [
                   _buildCampo('Email', _emailController, Icons.email_outlined),
                   _buildCampo('Nombre completo', _nombreCompletoController, Icons.person_outline),
@@ -383,6 +388,34 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSeccionCalificaciones(SupplierController controller) {
+    // NOTA: El backend debe calcular y proveer valoracionPromedio en el modelo ProveedorModel
+    // Por ahora usamos el valor del controller (que está hardcodeado a 0.0)
+    final valoracion = controller.valoracionPromedio;
+
+    // Si no hay valoración o es 0, no mostrar nada
+    if (valoracion == 0.0) {
+      return const SizedBox.shrink();
+    }
+
+    // TODO: El backend debe proveer estos datos:
+    // - rating_promedio (double): promedio ponderado de productos
+    // - total_calificaciones (int): total de reseñas
+    // - desglose_calificaciones (Map<int, int>): distribución por estrellas
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: CompactRatingSummaryCard(
+        averageRating: valoracion,
+        totalReviews: 0, // TODO: Obtener del backend
+        subtitle: 'Calificación promedio del negocio',
+        // onTap: () {
+        //   // TODO: Navegar a pantalla de todas las reseñas del proveedor
+        // },
       ),
     );
   }

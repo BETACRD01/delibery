@@ -225,13 +225,17 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            estaAbierto ? 'ABIERTO AHORA' : 'CERRADO',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 0.5,
+          Flexible(
+            child: Text(
+              estaAbierto ? 'ABIERTO AHORA' : 'CERRADO',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ],
@@ -270,12 +274,16 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
                     children: [
                       Icon(Icons.verified, size: 16, color: Colors.blue[700]),
                       const SizedBox(width: 4),
-                      Text(
-                        'Verificado',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blue[700],
+                      Flexible(
+                        child: Text(
+                          'Verificado',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[700],
+                          ),
                         ),
                       ),
                     ],

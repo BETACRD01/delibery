@@ -946,11 +946,15 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
               children: [
                 const Icon(Icons.new_releases, color: _accent),
                 const SizedBox(width: 8),
-                Text(
-                  'Nuevo encargo #$pedidoId',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                Flexible(
+                  child: Text(
+                    'Nuevo encargo #$pedidoId',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],

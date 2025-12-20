@@ -698,7 +698,10 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
           context,
           '${promocion.titulo} agregada',
           actionLabel: 'Ver Carrito',
-          onActionTap: () => Rutas.irACarrito(context),
+          onActionTap: () {
+            if (!mounted) return;
+            Rutas.irACarrito(context);
+          },
         );
 
         Future.delayed(const Duration(milliseconds: 500), () {

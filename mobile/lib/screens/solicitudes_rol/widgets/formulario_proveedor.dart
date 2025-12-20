@@ -1,14 +1,14 @@
 // lib/screens/user/perfil/solicitudes_rol/widgets/formulario_proveedor.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/services.dart';
-import '../../../../../theme/jp_theme.dart';
 import '../../../../../services/solicitudes_service.dart';
 import '../../../../../services/auth_service.dart';
 import '../../../../../models/solicitud_cambio_rol.dart';
 
 /// 📝 FORMULARIO PARA SOLICITUD DE PROVEEDOR
-/// Diseño: Clean UI / Minimalista
+/// Diseño: iOS Native Style
 class FormularioProveedor extends StatefulWidget {
   final VoidCallback onSubmitSuccess;
   final VoidCallback onBack;
@@ -57,46 +57,108 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 24),
+    return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
+      child: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: CustomScrollView(
+            slivers: [
+              // Header con ícono
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: _buildHeader(),
+                ),
+              ),
 
-              _buildCardEstadoUsuario(),
-              const SizedBox(height: 32),
+              // Estado del usuario
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildCardEstadoUsuario(),
+                ),
+              ),
 
-              _buildLabel('RUC'),
-              _buildRUCField(),
-              const SizedBox(height: 20),
+              // Formulario en grupos estilo iOS
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
 
-              _buildLabel('Nombre Comercial'),
-              _buildNombreComercialField(),
-              const SizedBox(height: 20),
+                      // Grupo 1: Información Básica
+                      _buildSectionHeader('INFORMACIÓN BÁSICA'),
+                      const SizedBox(height: 8),
+                      _buildGroupedCard([
+                        _buildIOSTextField(
+                          controller: _rucController,
+                          placeholder: 'RUC',
+                          prefix: CupertinoIcons.number,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(13),
+                          ],
+                        ),
+                        _buildDivider(),
+                        _buildIOSTextField(
+                          controller: _nombreComercialController,
+                          placeholder: 'Nombre Comercial',
+                          prefix: CupertinoIcons.building_2_fill,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                        _buildDivider(),
+                        _buildTipoNegocioField(),
+                      ]),
 
-              _buildLabel('Tipo de Negocio'),
-              _buildTipoNegocioField(),
-              const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
-              _buildLabel('Descripción'),
-              _buildDescripcionField(),
-              const SizedBox(height: 20),
+                      // Grupo 2: Descripción
+                      _buildSectionHeader('SOBRE TU NEGOCIO'),
+                      const SizedBox(height: 8),
+                      _buildGroupedCard([
+                        _buildIOSTextArea(
+                          controller: _descripcionController,
+                          placeholder: 'Describe tus productos o servicios...',
+                          maxLines: 4,
+                          maxLength: 500,
+                        ),
+                      ]),
 
-              _buildLabel('Horario de Atención'),
-              _buildHorariosSection(),
-              const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
-              _buildLabel('Motivo de la Solicitud'),
-              _buildMotivoField(),
-              const SizedBox(height: 40),
+                      // Grupo 3: Horarios
+                      _buildSectionHeader('HORARIO DE ATENCIÓN'),
+                      const SizedBox(height: 8),
+                      _buildGroupedCard([_buildHorarioRow()]),
 
-              _buildBotones(),
+                      const SizedBox(height: 24),
+
+                      // Grupo 4: Motivo
+                      _buildSectionHeader('MOTIVO DE SOLICITUD'),
+                      const SizedBox(height: 8),
+                      _buildGroupedCard([
+                        _buildIOSTextArea(
+                          controller: _motivoController,
+                          placeholder: '¿Por qué deseas unirte?',
+                          maxLines: 4,
+                        ),
+                      ]),
+
+                      const SizedBox(height: 32),
+
+                      // Botones
+                      _buildBotones(),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -105,44 +167,50 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // 🧩 SECCIONES UI
+  // 🧩 COMPONENTES UI ESTILO iOS
   // ══════════════════════════════════════════════════════════════════════════════
 
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: JPColors.secondary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemBlue.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            CupertinoIcons.building_2_fill,
+            color: CupertinoColors.systemBlue,
+            size: 32,
+          ),
+        ),
+        const SizedBox(width: 16),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ser Proveedor',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                  color: CupertinoColors.label,
+                ),
               ),
-              child: const Icon(Icons.store_rounded, color: JPColors.secondary, size: 28),
-            ),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Ser Proveedor',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: JPColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    'Registra tu negocio y vende más',
-                    style: TextStyle(fontSize: 14, color: JPColors.textSecondary),
-                  ),
-                ],
+              SizedBox(height: 2),
+              Text(
+                'Registra tu negocio y vende más',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: CupertinoColors.secondaryLabel,
+                  letterSpacing: -0.2,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -152,121 +220,201 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
     final user = _authService.user;
     final esProveedor = user?.roles.contains('PROVEEDOR') ?? false;
 
-    if (esProveedor) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: JPColors.success.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: JPColors.success),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.check_circle, color: JPColors.success),
-            SizedBox(width: 12),
-            Expanded(child: Text('Ya eres Proveedor', style: TextStyle(fontWeight: FontWeight.bold))),
-          ],
-        ),
-      );
-    }
-    return const SizedBox.shrink();
-  }
+    if (!esProveedor) return const SizedBox.shrink();
 
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: JPColors.textPrimary),
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGreen.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: CupertinoColors.systemGreen.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            CupertinoIcons.check_mark_circled_solid,
+            color: CupertinoColors.systemGreen,
+            size: 24,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Ya eres Proveedor',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: CupertinoColors.systemGreen,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  InputDecoration _cleanInputDecoration(String hint, IconData icon) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: JPColors.textHint, fontSize: 14),
-      prefixIcon: Icon(icon, color: JPColors.textSecondary, size: 20),
-      filled: true,
-      fillColor: const Color(0xFFFAFAFA),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: JPColors.secondary)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: JPColors.error)),
+  Widget _buildSectionHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: CupertinoColors.secondaryLabel.resolveFrom(context),
+          letterSpacing: -0.08,
+        ),
+      ),
     );
   }
 
-  Widget _buildRUCField() {
-    return TextFormField(
-      controller: _rucController,
-      decoration: _cleanInputDecoration('Ej: 1712345678001', Icons.badge_outlined),
-      keyboardType: TextInputType.number,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(13),
-      ],
-      validator: (value) => (value == null || value.length != 13) ? 'El RUC debe tener 13 dígitos' : null,
+  Widget _buildGroupedCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(children: children),
     );
   }
 
-  Widget _buildNombreComercialField() {
-    return TextFormField(
-      controller: _nombreComercialController,
-      decoration: _cleanInputDecoration('Ej: Restaurante Sabor Latino', Icons.storefront_outlined),
-      textCapitalization: TextCapitalization.words,
-      validator: (value) => (value == null || value.length < 3) ? 'Nombre demasiado corto' : null,
+  Widget _buildDivider() {
+    return Container(
+      margin: const EdgeInsets.only(left: 44),
+      height: 0.5,
+      color: CupertinoColors.separator.resolveFrom(context),
+    );
+  }
+
+  Widget _buildIOSTextField({
+    required TextEditingController controller,
+    required String placeholder,
+    required IconData prefix,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            prefix,
+            size: 22,
+            color: CupertinoColors.systemGrey.resolveFrom(context),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: placeholder,
+              keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
+              textCapitalization: textCapitalization,
+              decoration: null,
+              style: const TextStyle(fontSize: 17, letterSpacing: -0.4),
+              placeholderStyle: TextStyle(
+                color: CupertinoColors.placeholderText.resolveFrom(context),
+                fontSize: 17,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIOSTextArea({
+    required TextEditingController controller,
+    required String placeholder,
+    int maxLines = 3,
+    int? maxLength,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: CupertinoTextField(
+        controller: controller,
+        placeholder: placeholder,
+        maxLines: maxLines,
+        maxLength: maxLength,
+        decoration: null,
+        style: const TextStyle(fontSize: 17, letterSpacing: -0.4),
+        placeholderStyle: TextStyle(
+          color: CupertinoColors.placeholderText.resolveFrom(context),
+          fontSize: 17,
+        ),
+      ),
     );
   }
 
   Widget _buildTipoNegocioField() {
-    return DropdownButtonFormField<String>(
-      initialValue: _tipoNegocio,
-      decoration: _cleanInputDecoration('Selecciona categoría', Icons.category_outlined),
-      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: JPColors.textSecondary),
-      dropdownColor: Colors.white,
-      items: TipoNegocio.values.map((tipo) {
-        return DropdownMenuItem(
-          value: tipo.value,
-          child: Text(tipo.label, style: const TextStyle(fontSize: 14, color: JPColors.textPrimary)),
-        );
-      }).toList(),
-      onChanged: (value) => setState(() => _tipoNegocio = value),
-      validator: (value) => value == null ? 'Campo obligatorio' : null,
+    return GestureDetector(
+      onTap: _mostrarSelectorTipoNegocio,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Row(
+          children: [
+            Icon(
+              CupertinoIcons.square_grid_2x2,
+              size: 22,
+              color: CupertinoColors.systemGrey.resolveFrom(context),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _tipoNegocio != null
+                    ? TipoNegocio.values
+                          .firstWhere((t) => t.value == _tipoNegocio)
+                          .label
+                    : 'Tipo de Negocio',
+                style: TextStyle(
+                  fontSize: 17,
+                  letterSpacing: -0.4,
+                  color: _tipoNegocio != null
+                      ? CupertinoColors.label.resolveFrom(context)
+                      : CupertinoColors.placeholderText.resolveFrom(context),
+                ),
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_right,
+              size: 18,
+              color: CupertinoColors.systemGrey3.resolveFrom(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildDescripcionField() {
-    return TextFormField(
-      controller: _descripcionController,
-      decoration: _cleanInputDecoration('Describe tus productos o servicios...', Icons.description_outlined),
-      maxLines: 3,
-      maxLength: 500,
-      validator: (value) => (value == null || value.length < 10) ? 'Detalla un poco más' : null,
-    );
-  }
-
-  Widget _buildHorariosSection() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildHorarioButton(
-            label: 'Apertura',
-            icon: Icons.wb_sunny_outlined,
-            time: _horarioApertura,
-            onTap: () => _seleccionarHorario(true),
+  Widget _buildHorarioRow() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildHorarioButton(
+              label: 'Apertura',
+              icon: CupertinoIcons.sunrise,
+              time: _horarioApertura,
+              onTap: () => _seleccionarHorario(true),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildHorarioButton(
-            label: 'Cierre',
-            icon: Icons.nights_stay_outlined,
-            time: _horarioCierre,
-            onTap: () => _seleccionarHorario(false),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildHorarioButton(
+              label: 'Cierre',
+              icon: CupertinoIcons.moon,
+              time: _horarioCierre,
+              onTap: () => _seleccionarHorario(false),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -276,33 +424,44 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
     required TimeOfDay? time,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE0E0E0)),
+          color: CupertinoColors.tertiarySystemFill.resolveFrom(context),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, size: 18, color: JPColors.textSecondary),
-                const SizedBox(width: 8),
-                Text(label, style: const TextStyle(fontSize: 12, color: JPColors.textSecondary)),
+                Icon(
+                  icon,
+                  size: 18,
+                  color: CupertinoColors.systemGrey.resolveFrom(context),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
               time != null ? time.format(context) : '--:--',
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: time != null ? JPColors.textPrimary : JPColors.textHint,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+                color: time != null
+                    ? CupertinoColors.label.resolveFrom(context)
+                    : CupertinoColors.placeholderText.resolveFrom(context),
               ),
             ),
           ],
@@ -311,72 +470,201 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
     );
   }
 
-  Widget _buildMotivoField() {
-    return TextFormField(
-      controller: _motivoController,
-      decoration: _cleanInputDecoration('¿Por qué deseas unirte?', Icons.edit_note_outlined),
-      maxLines: 3,
-      validator: (value) => (value == null || value.length < 10) ? 'Escribe un motivo válido' : null,
-    );
-  }
-
   Widget _buildBotones() {
     return Column(
       children: [
-        SizedBox(
+        Container(
           width: double.infinity,
           height: 50,
-          child: ElevatedButton(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: !_isLoading
+                ? const LinearGradient(
+                    colors: [
+                      CupertinoColors.activeBlue,
+                      CupertinoColors.systemBlue,
+                    ],
+                  )
+                : null,
+            color: _isLoading
+                ? CupertinoColors.systemGrey5.resolveFrom(context)
+                : null,
+          ),
+          child: CupertinoButton(
+            padding: EdgeInsets.zero,
             onPressed: _isLoading ? null : _enviarSolicitud,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: JPColors.secondary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
             child: _isLoading
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('ENVIAR SOLICITUD', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                ? const CupertinoActivityIndicator(color: CupertinoColors.white)
+                : const Text(
+                    'Enviar Solicitud',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.white,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
           ),
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: _isLoading ? null : widget.onBack,
-            style: TextButton.styleFrom(foregroundColor: JPColors.textSecondary),
-            child: const Text('Cancelar'),
+        const SizedBox(height: 12),
+        CupertinoButton(
+          onPressed: _isLoading ? null : widget.onBack,
+          child: Text(
+            'Cancelar',
+            style: TextStyle(
+              fontSize: 17,
+              color: _isLoading
+                  ? CupertinoColors.systemGrey
+                  : CupertinoColors.systemBlue,
+            ),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _seleccionarHorario(bool esApertura) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: esApertura
-          ? (_horarioApertura ?? const TimeOfDay(hour: 8, minute: 0))
-          : (_horarioCierre ?? const TimeOfDay(hour: 18, minute: 0)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: JPColors.secondary),
-          ),
-          child: child!,
-        );
-      },
-    );
+  // ══════════════════════════════════════════════════════════════════════════════
+  // 🎬 ACCIONES
+  // ══════════════════════════════════════════════════════════════════════════════
 
-    if (picked != null) {
-      setState(() {
-        if (esApertura) {
-          _horarioApertura = picked;
-        } else {
-          _horarioCierre = picked;
-        }
-      });
-    }
+  void _mostrarSelectorTipoNegocio() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: 250,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: CupertinoColors.separator.resolveFrom(context),
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar'),
+                  ),
+                  const Text(
+                    'Tipo de Negocio',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Listo'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 40,
+                onSelectedItemChanged: (index) {
+                  setState(
+                    () => _tipoNegocio = TipoNegocio.values[index].value,
+                  );
+                },
+                children: TipoNegocio.values.map((tipo) {
+                  return Center(
+                    child: Text(
+                      tipo.label,
+                      style: const TextStyle(fontSize: 17),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _seleccionarHorario(bool esApertura) async {
+    final initialTime = esApertura
+        ? (_horarioApertura ?? const TimeOfDay(hour: 8, minute: 0))
+        : (_horarioCierre ?? const TimeOfDay(hour: 18, minute: 0));
+
+    await showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: 250,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: CupertinoColors.separator.resolveFrom(context),
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar'),
+                  ),
+                  Text(
+                    esApertura ? 'Hora de Apertura' : 'Hora de Cierre',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 17,
+                    ),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Listo'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.time,
+                initialDateTime: DateTime(
+                  2000,
+                  1,
+                  1,
+                  initialTime.hour,
+                  initialTime.minute,
+                ),
+                onDateTimeChanged: (DateTime newTime) {
+                  setState(() {
+                    final picked = TimeOfDay(
+                      hour: newTime.hour,
+                      minute: newTime.minute,
+                    );
+                    if (esApertura) {
+                      _horarioApertura = picked;
+                    } else {
+                      _horarioCierre = picked;
+                    }
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -389,15 +677,31 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
 
     // Validaciones
     if (user == null || user.email.contains('Anonymous')) {
-      _mostrarSnack('Debes iniciar sesión para continuar', isError: true);
+      _mostrarAlerta('Debes iniciar sesión para continuar', isError: true);
       return;
     }
     if (user.roles.contains('PROVEEDOR')) {
-      _mostrarSnack('Ya eres Proveedor.', isError: true);
+      _mostrarAlerta('Ya eres Proveedor.', isError: true);
       return;
     }
-    if (!_formKey.currentState!.validate()) {
-      _mostrarSnack('Revisa los campos obligatorios', isError: true);
+    if (_rucController.text.length != 13) {
+      _mostrarAlerta('El RUC debe tener 13 dígitos', isError: true);
+      return;
+    }
+    if (_nombreComercialController.text.length < 3) {
+      _mostrarAlerta('Nombre comercial demasiado corto', isError: true);
+      return;
+    }
+    if (_tipoNegocio == null) {
+      _mostrarAlerta('Selecciona un tipo de negocio', isError: true);
+      return;
+    }
+    if (_descripcionController.text.length < 10) {
+      _mostrarAlerta('La descripción debe ser más detallada', isError: true);
+      return;
+    }
+    if (_motivoController.text.length < 10) {
+      _mostrarAlerta('Escribe un motivo válido', isError: true);
       return;
     }
 
@@ -415,32 +719,43 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
 
       if (!mounted) return;
       widget.onSubmitSuccess();
-      
     } catch (e) {
       if (!mounted) return;
-      
-      // ⚠️ AQUÍ MANEJAMOS EL ERROR DE RUC DUPLICADO
-      // Si el Backend responde: "El RUC 123... ya está registrado", aquí lo capturamos.
-      String errorMsg = e.toString();
-      
-      if (errorMsg.startsWith("Exception: ")) {
-        errorMsg = errorMsg.substring(11); 
-      }
-      
-      _mostrarSnack(errorMsg, isError: true);
 
+      String errorMsg = e.toString();
+      if (errorMsg.startsWith("Exception: ")) {
+        errorMsg = errorMsg.substring(11);
+      }
+
+      _mostrarAlerta(errorMsg, isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _mostrarSnack(String mensaje, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje, style: const TextStyle(color: Colors.white)),
-        backgroundColor: isError ? JPColors.error : JPColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  void _mostrarAlerta(String mensaje, {bool isError = false}) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: Icon(
+          isError
+              ? CupertinoIcons.exclamationmark_circle
+              : CupertinoIcons.check_mark_circled,
+          color: isError
+              ? CupertinoColors.systemRed
+              : CupertinoColors.systemGreen,
+          size: 48,
+        ),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(mensaje, style: const TextStyle(fontSize: 15)),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
     );
   }

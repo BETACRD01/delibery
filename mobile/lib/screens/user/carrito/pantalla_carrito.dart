@@ -356,11 +356,15 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                                                 color: JPCupertinoColors.secondaryLabel(context),
                                               ),
                                               const SizedBox(width: 4),
-                                              Text(
-                                                direccion.etiqueta,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: JPCupertinoColors.secondaryLabel(context),
+                                              Flexible(
+                                                child: Text(
+                                                  direccion.etiqueta,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: JPCupertinoColors.secondaryLabel(context),
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -405,11 +409,16 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                       child: CupertinoButton(
                         padding: EdgeInsets.zero,
                         onPressed: () async {
+                          // Cerrar el bottom sheet de direcciones guardadas
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                          // Cerrar el bottom sheet de resumen de compra
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                          // Luego navegar a agregar dirección
                           await _irAAgregarDireccion();
-                          await _cargarDireccionesGuardadas();
-                          setSheetState(() {
-                            seleccionTemporal = _direccionSeleccionada;
-                          });
                         },
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -876,6 +885,8 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                                           ),
                                           Text(
                                             'x${item.cantidad}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: JPCupertinoColors.secondaryLabel(context),
@@ -884,6 +895,8 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                                           const SizedBox(width: 12),
                                           Text(
                                             '\$${item.subtotal.toStringAsFixed(2)}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
