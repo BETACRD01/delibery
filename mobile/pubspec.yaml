@@ -9,7 +9,7 @@ version: 1.0.0+1
 
 # Coincide perfectamente con tu Dart 3.10.0
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.9.0 <4.0.0"
 
 
 ###############################################################################
@@ -29,6 +29,7 @@ dependencies:
   font_awesome_flutter: ^10.7.0
   intl: ^0.20.2
   logger: ^2.0.0
+  shimmer: ^3.0.0
 
   # ---------------------------------------------------------------------------
   # 🧠 STATE MANAGEMENT
@@ -75,6 +76,8 @@ dependencies:
   image: ^4.1.7
   badges: ^3.1.2
   path_provider: ^2.1.5
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.9.0
 
 
 ###############################################################################
@@ -86,6 +89,9 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
+  build_runner: ^2.10.4
+  freezed: ^3.2.3
+  json_serializable: ^6.11.2
 
 # ...
 ###############################################################################

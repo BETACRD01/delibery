@@ -56,10 +56,12 @@ class ProveedorRoles extends ChangeNotifier {
       debugPrint('Cargando roles...');
 
       final response = await _rolesService.obtenerRolesDisponibles();
-      _rolesDisponibles = List<String>.from(
+      final roles = List<String>.from(
         response['roles_disponibles'] ?? [],
-      );
-      _rolActivo = response['rol_activo'] as String?;
+      ).map((r) => r.toUpperCase()).toList();
+
+      _rolesDisponibles = roles.toSet().toList();
+      _rolActivo = (response['rol_activo'] as String?)?.toUpperCase();
 
       debugPrint('Roles: $_rolesDisponibles | Activo: $_rolActivo');
       _error = null;
@@ -90,8 +92,20 @@ class ProveedorRoles extends ChangeNotifier {
     }
 
     if (nuevoRol == _rolActivo) {
-      debugPrint('Rol $nuevoRol ya activo');
-      return false;
+      debugPrint('Rol $nuevoRol ya activo, refrescando sesión');
+      try {
+        _isLoading = true;
+        notifyListeners();
+        await _rolesService.cambiarRolActivo(nuevoRol);
+        _rolActivo = nuevoRol;
+        return true;
+      } catch (e) {
+        debugPrint('Error refrescando rol activo: $e');
+        return false;
+      } finally {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
 
     if (!_rolesDisponibles.contains(nuevoRol)) {

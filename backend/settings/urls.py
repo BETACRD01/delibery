@@ -78,7 +78,8 @@ urlpatterns = [
     path("api/notificaciones/", include(("notificaciones.urls", "notificaciones"), namespace="notificaciones")),
     path("api/chat/", include(("chat.urls", "chat"), namespace="chat")),
     path("api/reportes/", include(("reportes.urls", "reportes"), namespace="reportes")),
-    path("api/envios/", include("envios.url")),
+    path("api/envios/", include("envios.url")),  # Público: cotizar
+    path("api/admin/envios/", include("envios.admin_urls")),  # Solo admin: config/zonas/ciudades
     path("api/health/", health_check, name="api-health-check"),
 
     # Módulos de Integración

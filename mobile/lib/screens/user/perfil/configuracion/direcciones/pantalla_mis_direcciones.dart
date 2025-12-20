@@ -1,21 +1,31 @@
 // lib/screens/user/perfil/configuracion/direcciones/pantalla_mis_direcciones.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart'
+    show
+        Material,
+        Icons,
+        TextFormField,
+        InputDecoration,
+        OutlineInputBorder,
+        ListTile,
+        Divider;
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 import 'package:geocoding/geocoding.dart';
-import '../../../../../theme/jp_theme.dart' hide JPSnackbar;
+import '../../../../../theme/jp_theme.dart';
 import '../../../../../services/usuarios_service.dart';
+import '../../../../../services/toast_service.dart';
 import '../../../../../apis/helpers/api_exception.dart';
 import '../../../../../models/usuario.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import '../../../../../widgets/jp_snackbar.dart';
 
 /// 📍 Pantalla optimizada para gestionar direcciones
 /// ✅ Modo unificado: Crea O Edita según el contexto
 /// ✅ Sin duplicados: Al editar, actualiza la dirección existente
 class PantallaAgregarDireccion extends StatefulWidget {
-  final DireccionModel? direccion; // Si viene null = CREAR, si viene dato = EDITAR
+  final DireccionModel?
+  direccion; // Si viene null = CREAR, si viene dato = EDITAR
 
   const PantallaAgregarDireccion({super.key, this.direccion});
 
@@ -53,10 +63,14 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
     // Inicializar controladores con datos existentes
     _direccionController = TextEditingController(text: dir?.direccion ?? '');
     _pisoController = TextEditingController(text: dir?.pisoApartamento ?? '');
-    _calleSecundariaController = TextEditingController(text: dir?.calleSecundaria ?? '');
+    _calleSecundariaController = TextEditingController(
+      text: dir?.calleSecundaria ?? '',
+    );
     _ciudadController = TextEditingController(text: dir?.ciudad ?? '');
     _telefonoController = TextEditingController();
-    _indicacionesController = TextEditingController(text: dir?.indicaciones ?? '');
+    _indicacionesController = TextEditingController(
+      text: dir?.indicaciones ?? '',
+    );
 
     _setTelefonoInicial(dir?.telefonoContacto);
     _latitud = dir?.latitud;
@@ -107,10 +121,11 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
       final pisoDepto = _pisoController.text.trim();
       final calleSecundaria = _calleSecundariaController.text.trim();
       final ciudad = _ciudadController.text.trim();
-      final telefono = (_telefonoCompleto.isNotEmpty
-              ? _telefonoCompleto
-              : _telefonoController.text)
-          .trim();
+      final telefono =
+          (_telefonoCompleto.isNotEmpty
+                  ? _telefonoCompleto
+                  : _telefonoController.text)
+              .trim();
       final indicaciones = _indicacionesController.text.trim();
       final lat = _latitud ?? 0.0;
       final lon = _longitud ?? 0.0;
@@ -140,7 +155,10 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
         _usuarioService.limpiarCacheDirecciones();
 
         if (!mounted) return;
-        JPSnackbar.success(context, '✓ Dirección actualizada correctamente');
+        ToastService().showSuccess(
+          context,
+          'Dirección actualizada correctamente',
+        );
         Navigator.pop(context, true);
       } else {
         // ✅ MODO CREACIÓN: Intentar crear nueva dirección
@@ -172,28 +190,29 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
           _usuarioService.limpiarCacheDirecciones();
 
           if (!mounted) return;
-          JPSnackbar.success(context, '✓ Dirección creada correctamente');
+          ToastService().showSuccess(context, 'Dirección creada correctamente');
           Navigator.pop(context, true);
         } on ApiException catch (e) {
           // Detectar si es un error de duplicado
           final errorMensaje = e.getUserFriendlyMessage().toLowerCase();
-          final esDuplicado = errorMensaje.contains('ya tienes') ||
-                             errorMensaje.contains('muy cercana') ||
-                             errorMensaje.contains('duplicad');
+          final esDuplicado =
+              errorMensaje.contains('ya tienes') ||
+              errorMensaje.contains('muy cercana') ||
+              errorMensaje.contains('duplicad');
 
           if (esDuplicado && mounted) {
-            JPSnackbar.error(
+            ToastService().showError(
               context,
               'Ya tienes una dirección en esta ubicación. Por favor edita la dirección existente.',
             );
           } else if (mounted) {
-            JPSnackbar.error(context, e.getUserFriendlyMessage());
+            ToastService().showError(context, e.getUserFriendlyMessage());
           }
         }
       }
     } catch (e) {
       if (!mounted) return;
-      JPSnackbar.error(context, 'Error al guardar dirección: $e');
+      ToastService().showError(context, 'Error al guardar dirección: $e');
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -205,111 +224,118 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: JPColors.background,
-      appBar: AppBar(
-        title: Text(_modoEdicion ? 'Editar Dirección' : 'Nueva Dirección'),
-        backgroundColor: JPColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
+    return CupertinoPageScaffold(
+      backgroundColor: JPCupertinoColors.background(context),
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: JPCupertinoColors.surface(context),
+        middle: Text(_modoEdicion ? 'Editar Dirección' : 'Nueva Dirección'),
+        border: Border(
+          bottom: BorderSide(
+            color: JPCupertinoColors.separator(context),
+            width: 0.5,
+          ),
+        ),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            // Dirección con autocompletado
-            _buildCampoDireccionConAutocompletado(),
-            const SizedBox(height: 16),
+      child: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // Dirección con autocompletado
+              _buildCampoDireccionConAutocompletado(),
+              const SizedBox(height: 16),
 
-            // Calle secundaria
-            _buildCampoTexto(
-              controller: _calleSecundariaController,
-              label: 'Calle secundaria',
-              icon: Icons.alt_route_rounded,
-              hint: 'Ej: Esq. con Calle 10',
-              opcional: true,
-            ),
-            const SizedBox(height: 16),
-
-            // Piso/Departamento
-            _buildCampoTexto(
-              controller: _pisoController,
-              label: 'Piso / Departamento',
-              icon: Icons.apartment_rounded,
-              hint: 'Ej: Torre B, depto 302',
-              opcional: true,
-            ),
-            const SizedBox(height: 16),
-
-            // Ciudad
-            _buildCampoTexto(
-              controller: _ciudadController,
-              label: 'Ciudad',
-              icon: Icons.location_city,
-              hint: 'Ciudad / Provincia',
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'La ciudad es requerida';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Indicaciones
-            _buildCampoTexto(
-              controller: _indicacionesController,
-              label: 'Indicaciones de entrega',
-              icon: Icons.notes_rounded,
-              hint: 'Ej: Llamar al llegar, timbre dañado',
-              maxLines: 3,
-              opcional: true,
-            ),
-            const SizedBox(height: 16),
-
-            // Teléfono
-            _buildCampoTelefono(),
-            const SizedBox(height: 32),
-
-            // Botón guardar
-            ElevatedButton(
-              onPressed: _guardando ? null : _guardarDireccion,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: JPColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 54),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
+              // Calle secundaria
+              _buildCampoTexto(
+                controller: _calleSecundariaController,
+                label: 'Calle secundaria',
+                icon: CupertinoIcons.map,
+                hint: 'Ej: Esq. con Calle 10',
+                opcional: true,
               ),
-              child: _guardando
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(_modoEdicion ? Icons.check : Icons.add_location_alt),
-                        const SizedBox(width: 8),
-                        Text(
-                          _modoEdicion ? 'Actualizar dirección' : 'Guardar dirección',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+              const SizedBox(height: 16),
+
+              // Piso/Departamento
+              _buildCampoTexto(
+                controller: _pisoController,
+                label: 'Piso / Departamento',
+                icon: CupertinoIcons.building_2_fill,
+                hint: 'Ej: Torre B, depto 302',
+                opcional: true,
+              ),
+              const SizedBox(height: 16),
+
+              // Ciudad
+              _buildCampoTexto(
+                controller: _ciudadController,
+                label: 'Ciudad',
+                icon: CupertinoIcons.location_solid,
+                hint: 'Ciudad / Provincia',
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'La ciudad es requerida';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Indicaciones
+              _buildCampoTexto(
+                controller: _indicacionesController,
+                label: 'Indicaciones de entrega',
+                icon: CupertinoIcons.text_alignleft,
+                hint: 'Ej: Llamar al llegar, timbre dañado',
+                maxLines: 3,
+                opcional: true,
+              ),
+              const SizedBox(height: 16),
+
+              // Teléfono
+              _buildCampoTelefono(),
+              const SizedBox(height: 32),
+
+              // Botón guardar
+              SizedBox(
+                width: double.infinity,
+                child: CupertinoButton.filled(
+                  onPressed: _guardando ? null : _guardarDireccion,
+                  borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: _guardando
+                      ? const CupertinoActivityIndicator(
+                          color: CupertinoColors.white,
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _modoEdicion
+                                  ? CupertinoIcons.check_mark
+                                  : CupertinoIcons.location_fill,
+                              color: CupertinoColors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _modoEdicion
+                                  ? 'Actualizar dirección'
+                                  : 'Guardar dirección',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: CupertinoColors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-            ),
-            const SizedBox(height: 16),
-          ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -329,7 +355,8 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
         );
       });
 
-      if (prediction.description != null && prediction.description!.isNotEmpty) {
+      if (prediction.description != null &&
+          prediction.description!.isNotEmpty) {
         try {
           final locations = await locationFromAddress(prediction.description!);
           if (locations.isNotEmpty) {
@@ -351,121 +378,183 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.home, color: JPColors.primary, size: 20),
-            SizedBox(width: 8),
+            Icon(
+              CupertinoIcons.home,
+              color: JPCupertinoColors.systemBlue(context),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
             Text(
               'Dirección principal',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: JPCupertinoColors.label(context),
+              ),
             ),
             Text(
               ' *',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: JPColors.error),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: JPCupertinoColors.systemRed(context),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        Stack(
-          children: [
-            GooglePlaceAutoCompleteTextField(
-              textEditingController: _direccionController,
-              googleAPIKey: "AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA",
-              debounceTime: 300,
-              countries: const ["ec"],
-              isLatLngRequired: true,
-              inputDecoration: InputDecoration(
-                hintText: 'Ej: Av. Amazonas y 10 de Agosto',
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                  borderSide: BorderSide(color: JPColors.primary, width: 2),
-                ),
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: JPColors.error),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.all(16),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.map_outlined, color: JPColors.primary),
-                      tooltip: 'Seleccionar en mapa',
-                      onPressed: _mostrarSeleccionMapaPlaceholder,
-                    ),
-                    if (_direccionController.text.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: () {
-                          setState(() {
-                            _direccionController.clear();
-                            _latitud = null;
-                            _longitud = null;
-                          });
-                        },
-                      ),
-                  ],
-                ),
-              ),
-              textStyle: const TextStyle(fontSize: 14),
-              itemBuilder: (context, index, Prediction prediction) {
-                return ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.place, color: JPColors.primary, size: 18),
-                  title: Text(
-                    prediction.description ?? "",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+        Material(
+          color: CupertinoColors.transparent,
+          child: Stack(
+            children: [
+              GooglePlaceAutoCompleteTextField(
+                textEditingController: _direccionController,
+                googleAPIKey: "AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA",
+                debounceTime: 300,
+                countries: const ["ec"],
+                isLatLngRequired: true,
+                inputDecoration: InputDecoration(
+                  hintText: 'Ej: Av. Amazonas y 10 de Agosto',
+                  hintStyle: const TextStyle(
+                    color: CupertinoColors.placeholderText,
+                    fontSize: 14,
                   ),
-                  subtitle: prediction.structuredFormatting != null
-                      ? Text(
-                          prediction.structuredFormatting?.secondaryText ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        )
-                      : null,
-                );
-              },
-              seperatedBuilder: const Divider(height: 1),
-              itemClick: (Prediction prediction) {
-                _direccionController.text = prediction.description ?? '';
-                _direccionController.selection = TextSelection.fromPosition(
-                  TextPosition(offset: _direccionController.text.length),
-                );
-              },
-              getPlaceDetailWithLatLng: (Prediction prediction) {
-                _onPlaceSelected(prediction);
-              },
-              isCrossBtnShown: false,
-              containerHorizontalPadding: 0,
-            ),
-          ],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: JPCupertinoColors.separator(context),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(
+                      color: JPCupertinoColors.systemBlue(context),
+                      width: 2,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: JPCupertinoColors.systemRed(context),
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: JPCupertinoColors.surface(context),
+                  contentPadding: const EdgeInsets.all(16),
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(44, 44),
+                        onPressed: _mostrarSeleccionMapaPlaceholder,
+                        child: Icon(
+                          CupertinoIcons.map,
+                          color: JPCupertinoColors.systemBlue(context),
+                          size: 22,
+                        ),
+                      ),
+                      if (_direccionController.text.isNotEmpty)
+                        CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(44, 44),
+                          onPressed: () {
+                            setState(() {
+                              _direccionController.clear();
+                              _latitud = null;
+                              _longitud = null;
+                            });
+                          },
+                          child: Icon(
+                            CupertinoIcons.clear_circled_solid,
+                            color: JPCupertinoColors.systemGrey(context),
+                            size: 22,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                textStyle: TextStyle(
+                  fontSize: 14,
+                  color: JPCupertinoColors.label(context),
+                ),
+                itemBuilder: (context, index, Prediction prediction) {
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(
+                      Icons.place,
+                      color: JPCupertinoColors.systemBlue(context),
+                      size: 18,
+                    ),
+                    title: Text(
+                      prediction.description ?? "",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: prediction.structuredFormatting != null
+                        ? Text(
+                            prediction.structuredFormatting?.secondaryText ??
+                                '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          )
+                        : null,
+                  );
+                },
+                seperatedBuilder: Divider(
+                  height: 1,
+                  color: JPCupertinoColors.separator(context),
+                ),
+                itemClick: (Prediction prediction) {
+                  _direccionController.text = prediction.description ?? '';
+                  _direccionController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _direccionController.text.length),
+                  );
+                },
+                getPlaceDetailWithLatLng: (Prediction prediction) {
+                  _onPlaceSelected(prediction);
+                },
+                isCrossBtnShown: false,
+                containerHorizontalPadding: 0,
+              ),
+            ],
+          ),
         ),
         if (_latitud != null && _longitud != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Chip(
-              backgroundColor: JPColors.success.withValues(alpha: 0.12),
-              labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-              avatar: const Icon(Icons.check_circle, color: JPColors.success, size: 18),
-              label: const Text(
-                'Ubicación confirmada',
-                style: TextStyle(
-                  color: JPColors.success,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGreen(context)
+                    .withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
               ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    CupertinoIcons.checkmark_circle_fill,
+                    color: JPCupertinoColors.systemGreen(context),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Ubicación confirmada',
+                    style: TextStyle(
+                      color: JPCupertinoColors.systemGreen(context),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
       ],
@@ -474,11 +563,9 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
 
   /// Placeholder temporal para selección en mapa (si no hay integración de mapa)
   void _mostrarSeleccionMapaPlaceholder() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Seleccionar en mapa se habilitará próximamente'),
-        duration: Duration(seconds: 2),
-      ),
+    ToastService().showInfo(
+      context,
+      'Seleccionar en mapa se habilitará próximamente',
     );
   }
 
@@ -497,116 +584,174 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
       children: [
         Row(
           children: [
-            Icon(icon, color: JPColors.primary, size: 20),
+            Icon(icon, color: JPCupertinoColors.systemBlue(context), size: 20),
             const SizedBox(width: 8),
             Text(
               label,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: JPCupertinoColors.label(context),
+              ),
             ),
             if (!opcional)
-              const Text(
+              Text(
                 ' *',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: JPColors.error),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: JPCupertinoColors.systemRed(context),
+                ),
               ),
           ],
         ),
         const SizedBox(height: 10),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+        Material(
+          color: CupertinoColors.transparent,
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            style: TextStyle(
+              color: JPCupertinoColors.label(context),
+              fontSize: 14,
             ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide(color: JPColors.primary, width: 2),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(
+                color: CupertinoColors.placeholderText,
+                fontSize: 14,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: JPCupertinoColors.separator(context),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                borderSide: BorderSide(
+                  color: JPCupertinoColors.systemBlue(context),
+                  width: 2,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: JPCupertinoColors.systemRed(context),
+                ),
+              ),
+              filled: true,
+              fillColor: JPCupertinoColors.surface(context),
+              contentPadding: const EdgeInsets.all(16),
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: JPColors.error),
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.all(16),
+            maxLines: maxLines,
+            validator: validator,
           ),
-          maxLines: maxLines,
-          validator: validator,
         ),
       ],
     );
   }
 
-  /// Estado compacto para ubicación confirmada
-
   Widget _buildCampoTelefono() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.phone_iphone_rounded, color: JPColors.primary, size: 20),
-            SizedBox(width: 8),
+            Icon(
+              CupertinoIcons.phone,
+              color: JPCupertinoColors.systemBlue(context),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
             Text(
               'Teléfono de contacto',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: JPCupertinoColors.label(context),
+              ),
             ),
             Text(
               ' *',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: JPColors.error),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: JPCupertinoColors.systemRed(context),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        IntlPhoneField(
-          controller: _telefonoController,
-          initialCountryCode: 'EC',
-          disableLengthCheck: false,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          decoration: InputDecoration(
-            hintText: 'Número de teléfono',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+        Material(
+          color: CupertinoColors.transparent,
+          child: IntlPhoneField(
+            controller: _telefonoController,
+            initialCountryCode: 'EC',
+            disableLengthCheck: false,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            style: TextStyle(
+              color: JPCupertinoColors.label(context),
+              fontSize: 14,
             ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide(color: JPColors.primary, width: 2),
+            decoration: InputDecoration(
+              hintText: 'Número de teléfono',
+              hintStyle: const TextStyle(
+                color: CupertinoColors.placeholderText,
+                fontSize: 14,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: JPCupertinoColors.separator(context),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                borderSide: BorderSide(
+                  color: JPCupertinoColors.systemBlue(context),
+                  width: 2,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: JPCupertinoColors.systemRed(context),
+                ),
+              ),
+              filled: true,
+              fillColor: JPCupertinoColors.surface(context),
+              contentPadding: const EdgeInsets.all(12),
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: JPColors.error),
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.all(12),
+            onChanged: (phone) {
+              final dial = phone.countryCode;
+              String local = phone.number.replaceAll(RegExp(r'\s'), '');
+              if (local.startsWith('0') && local.length > 1) {
+                local = local.substring(1);
+              }
+              final normalized = local.isNotEmpty
+                  ? '$dial$local'
+                  : phone.completeNumber;
+              setState(() => _telefonoCompleto = normalized);
+            },
+            validator: (phone) {
+              String local = phone?.number.replaceAll(RegExp(r'\s'), '') ?? '';
+              if (local.isEmpty) {
+                return 'Ingresa un número de contacto';
+              }
+              if (local.startsWith('0') && local.length > 1) {
+                local = local.substring(1);
+              }
+              if (local.length < 6) return 'Número demasiado corto';
+              return null;
+            },
           ),
-          onChanged: (phone) {
-            final dial = phone.countryCode;
-            String local = phone.number.replaceAll(RegExp(r'\s'), '');
-            if (local.startsWith('0') && local.length > 1) {
-              local = local.substring(1);
-            }
-            final normalized = local.isNotEmpty ? '$dial$local' : phone.completeNumber;
-            setState(() => _telefonoCompleto = normalized);
-          },
-          validator: (phone) {
-            String local = phone?.number.replaceAll(RegExp(r'\s'), '') ?? '';
-            if (local.isEmpty) {
-              return 'Ingresa un número de contacto';
-            }
-            if (local.startsWith('0') && local.length > 1) {
-              local = local.substring(1);
-            }
-            if (local.length < 6) return 'Número demasiado corto';
-            return null;
-          },
         ),
       ],
     );

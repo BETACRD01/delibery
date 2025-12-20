@@ -82,6 +82,12 @@ class _PantallaAjustesAdminState extends State<PantallaAjustesAdmin> {
                 subtitle: 'Ordenar o ocultar widgets del dashboard',
                 onTap: _mostrarPendiente,
               ),
+              _buildActionTile(
+                icon: Icons.local_shipping,
+                title: 'Configuración de envíos',
+                subtitle: 'Tarifas por zona, hubs y recargo nocturno (solo admin)',
+                onTap: () => Rutas.irA(context, Rutas.adminEnviosConfig),
+              ),
             ],
           ),
           const SizedBox(height: 16),

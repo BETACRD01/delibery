@@ -1,6 +1,6 @@
 // lib/screens/user/pantalla_inicio.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:developer' as developer;
@@ -9,8 +9,11 @@ import 'super/pantalla_super.dart';
 import 'pedidos/pantalla_mis_pedidos.dart';
 import 'perfil/pantalla_perfil.dart';
 import '../../providers/proveedor_pedido.dart';
+import '../../theme/jp_theme.dart';
+import '../../services/toast_service.dart';
+import '../../config/rutas.dart';
 
-/// Pantalla principal que contiene el BottomNavigationBar y gestiona
+/// Pantalla principal que contiene el CupertinoTabBar y gestiona
 /// la navegación entre las 4 pantallas principales de la aplicación
 class PantallaInicio extends StatefulWidget {
   const PantallaInicio({super.key});
@@ -125,7 +128,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
     );
   }
 
-  /// Muestra un SnackBar informando al usuario del cambio de estado
+  /// Muestra un toast iOS informando al usuario del cambio de estado
   void _mostrarNotificacionEstado({
     required String numeroPedido,
     required String nuevoEstado,
@@ -134,61 +137,43 @@ class _PantallaInicioState extends State<PantallaInicio> {
     if (!mounted) return;
 
     String mensaje;
-    IconData icono;
-    Color color;
 
     switch (nuevoEstado.toLowerCase()) {
       case 'asignado':
-        mensaje = '¡Pedido #$numeroPedido aceptado por $repartidorNombre!';
-        icono = Icons.check_circle;
-        color = Colors.green;
+        mensaje = 'Pedido #$numeroPedido aceptado por $repartidorNombre';
         break;
       case 'en_camino':
-        mensaje = '¡Tu pedido #$numeroPedido está en camino!';
-        icono = Icons.local_shipping;
-        color = Colors.blue;
+        mensaje = 'Tu pedido #$numeroPedido está en camino';
         break;
       case 'entregado':
       case 'finalizado':
-        mensaje = '¡Pedido #$numeroPedido entregado con éxito!';
-        icono = Icons.done_all;
-        color = Colors.green;
+        mensaje = 'Pedido #$numeroPedido entregado con éxito';
         break;
       default:
         mensaje = 'Pedido #$numeroPedido actualizado';
-        icono = Icons.info;
-        color = Colors.orange;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icono, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                mensaje,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Ver',
-          textColor: Colors.white,
-          onPressed: () {
-            // Cambiar a la pestaña de pedidos
-            setState(() {
-              _indiceActual = 2; // Índice de PantallaMisPedidos
-            });
-          },
-        ),
-      ),
+    // Usar ToastService con acción para ver pedidos
+    ToastService().showSuccess(
+      context,
+      mensaje,
+      actionLabel: 'Ver',
+      onActionTap: () {
+        // Cambiar a la pestaña de pedidos
+        setState(() {
+          _indiceActual = 2; // Índice de PantallaMisPedidos
+        });
+        _refrescarPedidosSiEsTab(2);
+      },
+      duration: const Duration(seconds: 4),
     );
+  }
+
+  void _refrescarPedidosSiEsTab(int indice) {
+    if (indice == 2) {
+      // Refrescar lista para mostrar pedidos nuevos al entrar
+      context.read<PedidoProvider>().cargarPedidos(refresh: true);
+    }
   }
 
   /// Cambia la pantalla activa cuando el usuario toca un item del navbar
@@ -197,86 +182,60 @@ class _PantallaInicioState extends State<PantallaInicio> {
       setState(() {
         _indiceActual = indice;
       });
+      _refrescarPedidosSiEsTab(indice);
+    } else if (indice == 2) {
+      // Si ya está en pedidos y toca de nuevo, forzar recarga rápida
+      _refrescarPedidosSiEsTab(indice);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // IndexedStack mantiene el estado de los widgets (scroll, datos cargados, etc.)
-      body: IndexedStack(
-        index: _indiceActual, 
-        children: _pantallas
-      ),
-
-      // Barra de navegación inferior
-      bottomNavigationBar: _construirBottomNavBar(context),
-    );
-  }
-
-  /// Construye el BottomNavigationBar con los 4 items principales
-  Widget _construirBottomNavBar(BuildContext context) {
-    final colorPrimario = Theme.of(context).primaryColor;
-
-    return Container(
-      // Sombra superior para separar visualmente el contenido del navbar
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        // Configuración general
+    return CupertinoTabScaffold(
+      tabBar: CupertinoTabBar(
         currentIndex: _indiceActual,
         onTap: _cambiarPantalla,
-        type: BottomNavigationBarType.fixed,
-
-        // Colores
-        selectedItemColor: colorPrimario,
-        unselectedItemColor: Colors.grey.shade400,
-        backgroundColor: Colors.white,
-
-        // Estilo de los labels
-        selectedFontSize: 12,
-        unselectedFontSize: 11,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
-
-        // Elevación
-        elevation: 0, // Usamos la sombra del Container
-
-        // Items de navegación
+        backgroundColor: JPCupertinoColors.surface(context),
+        activeColor: JPCupertinoColors.systemBlue(context),
+        inactiveColor: JPCupertinoColors.systemGrey(context),
+        iconSize: 24.0,
+        border: Border(
+          top: BorderSide(
+            color: JPCupertinoColors.separator(context),
+            width: 0.5,
+          ),
+        ),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            icon: Icon(CupertinoIcons.home),
+            activeIcon: Icon(CupertinoIcons.house_fill),
             label: 'Inicio',
-            tooltip: 'Ir a Inicio',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.local_shipping_outlined),
-            activeIcon: Icon(Icons.local_shipping),
+            icon: Icon(CupertinoIcons.cube_box),
+            activeIcon: Icon(CupertinoIcons.cube_box_fill),
             label: 'Super',
-            tooltip: 'JP Super',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_bag_outlined),
-            activeIcon: Icon(Icons.shopping_bag),
+            icon: Icon(CupertinoIcons.bag),
+            activeIcon: Icon(CupertinoIcons.bag_fill),
             label: 'Pedidos',
-            tooltip: 'Ver mis pedidos',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
+            icon: Icon(CupertinoIcons.person),
+            activeIcon: Icon(CupertinoIcons.person_fill),
             label: 'Perfil',
-            tooltip: 'Ver perfil',
           ),
         ],
       ),
+      tabBuilder: (context, index) {
+        return CupertinoTabView(
+          routes: Rutas.obtenerRutas(),
+          builder: (context) {
+            return _pantallas[index];
+          },
+        );
+      },
     );
   }
 }

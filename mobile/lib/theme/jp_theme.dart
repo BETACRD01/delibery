@@ -1,6 +1,7 @@
 // lib/theme/jp_theme.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -293,6 +294,207 @@ class JPLoading extends StatelessWidget {
         valueColor: AlwaysStoppedAnimation<Color>(JPColors.primary),
         strokeWidth: 2,
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🎨 CONSTANTES iOS
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Constantes de diseño iOS siguiendo Human Interface Guidelines
+class JPConstants {
+  // BORDER RADIUS
+  static const double radiusCard = 14.0;
+  static const double radiusButton = 10.0;
+  static const double radiusBadge = 8.0;
+  static const double radiusIcon = 7.0;
+  static const double radiusLarge = 16.0;
+  static const double radiusSmall = 6.0;
+
+  // SPACING
+  static const double spacingSection = 24.0;
+  static const double spacingItem = 12.0;
+  static const double spacingHorizontal = 16.0;
+  static const double spacingVertical = 20.0;
+  static const double spacingSmall = 8.0;
+  static const double spacingLarge = 32.0;
+
+  // ICON SIZES
+  static const double iconSizeSmall = 16.0;
+  static const double iconSizeMedium = 20.0;
+  static const double iconSizeLarge = 24.0;
+  static const double iconContainerSize = 30.0;
+
+  // SHADOWS
+  static List<BoxShadow> cardShadow(BuildContext context) {
+    // Adaptar la opacidad según el brillo del contexto
+    final brightness = CupertinoTheme.brightnessOf(context);
+    final opacity = brightness == Brightness.dark ? 0.12 : 0.06;
+
+    return [
+      BoxShadow(
+        color: CupertinoColors.systemGrey.resolveFrom(context).withValues(alpha: opacity),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ];
+  }
+
+  static List<BoxShadow> subtleShadow(BuildContext context) {
+    final brightness = CupertinoTheme.brightnessOf(context);
+    final opacity = brightness == Brightness.dark ? 0.08 : 0.04;
+
+    return [
+      BoxShadow(
+        color: CupertinoColors.systemGrey.resolveFrom(context).withValues(alpha: opacity),
+        blurRadius: 8,
+        offset: const Offset(0, 2),
+      ),
+    ];
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🎨 COLORES CUPERTINO ADAPTIVOS
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Helpers de colores Cupertino adaptativos para dark mode
+class JPCupertinoColors {
+  // FONDOS
+  static Color background(BuildContext context) =>
+      CupertinoColors.systemGroupedBackground.resolveFrom(context);
+
+  static Color surface(BuildContext context) =>
+      CupertinoColors.systemBackground.resolveFrom(context);
+
+  static Color secondarySurface(BuildContext context) =>
+      CupertinoColors.secondarySystemBackground.resolveFrom(context);
+
+  static Color tertiarySurface(BuildContext context) =>
+      CupertinoColors.tertiarySystemBackground.resolveFrom(context);
+
+  // TEXTOS
+  static Color label(BuildContext context) =>
+      CupertinoColors.label.resolveFrom(context);
+
+  static Color secondaryLabel(BuildContext context) =>
+      CupertinoColors.secondaryLabel.resolveFrom(context);
+
+  static Color tertiaryLabel(BuildContext context) =>
+      CupertinoColors.tertiaryLabel.resolveFrom(context);
+
+  static Color quaternaryLabel(BuildContext context) =>
+      CupertinoColors.quaternaryLabel.resolveFrom(context);
+
+  static Color placeholder(BuildContext context) =>
+      CupertinoColors.placeholderText.resolveFrom(context);
+
+  // SEPARADORES
+  static Color separator(BuildContext context) =>
+      CupertinoColors.separator.resolveFrom(context);
+
+  static Color opaqueSeparator(BuildContext context) =>
+      CupertinoColors.opaqueSeparator.resolveFrom(context);
+
+  // GRISES DEL SISTEMA
+  static Color systemGrey(BuildContext context) =>
+      CupertinoColors.systemGrey.resolveFrom(context);
+
+  static Color systemGrey2(BuildContext context) =>
+      CupertinoColors.systemGrey2.resolveFrom(context);
+
+  static Color systemGrey3(BuildContext context) =>
+      CupertinoColors.systemGrey3.resolveFrom(context);
+
+  static Color systemGrey4(BuildContext context) =>
+      CupertinoColors.systemGrey4.resolveFrom(context);
+
+  static Color systemGrey5(BuildContext context) =>
+      CupertinoColors.systemGrey5.resolveFrom(context);
+
+  static Color systemGrey6(BuildContext context) =>
+      CupertinoColors.systemGrey6.resolveFrom(context);
+
+  // COLORES DEL SISTEMA
+  static Color systemBlue(BuildContext context) =>
+      CupertinoColors.systemBlue.resolveFrom(context);
+
+  static Color systemGreen(BuildContext context) =>
+      CupertinoColors.systemGreen.resolveFrom(context);
+
+  static Color systemRed(BuildContext context) =>
+      CupertinoColors.systemRed.resolveFrom(context);
+
+  static Color systemOrange(BuildContext context) =>
+      CupertinoColors.systemOrange.resolveFrom(context);
+
+  static Color systemYellow(BuildContext context) =>
+      CupertinoColors.systemYellow.resolveFrom(context);
+
+  static Color systemPink(BuildContext context) =>
+      CupertinoColors.systemPink.resolveFrom(context);
+
+  static Color systemPurple(BuildContext context) =>
+      CupertinoColors.systemPurple.resolveFrom(context);
+
+  static Color systemTeal(BuildContext context) =>
+      CupertinoColors.systemTeal.resolveFrom(context);
+
+  static Color systemIndigo(BuildContext context) =>
+      CupertinoColors.systemIndigo.resolveFrom(context);
+
+  // COLORES DE MARCA (adaptados para dark mode)
+  static Color primary(BuildContext context) {
+    return CupertinoDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: JPColors.primary,
+        darkColor: Color(0xFF64D2FF), // Más claro para dark mode
+      ),
+      context,
+    );
+  }
+
+  static Color secondary(BuildContext context) {
+    return CupertinoDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: JPColors.secondary,
+        darkColor: Color(0xFFFF9933), // Más claro para dark mode
+      ),
+      context,
+    );
+  }
+
+  static Color destructive(BuildContext context) =>
+      CupertinoColors.destructiveRed.resolveFrom(context);
+
+  static Color success(BuildContext context) {
+    return CupertinoDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: JPColors.success,
+        darkColor: Color(0xFF48D77D), // Más claro para dark mode
+      ),
+      context,
+    );
+  }
+
+  static Color warning(BuildContext context) {
+    return CupertinoDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: JPColors.warning,
+        darkColor: Color(0xFFFF8C3A), // Más claro para dark mode
+      ),
+      context,
+    );
+  }
+
+  static Color error(BuildContext context) {
+    return CupertinoDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: JPColors.error,
+        darkColor: Color(0xFFFF6B6B), // Más claro para dark mode
+      ),
+      context,
     );
   }
 }

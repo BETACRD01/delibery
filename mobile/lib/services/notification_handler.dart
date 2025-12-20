@@ -6,6 +6,7 @@ import 'dart:developer' as developer;
 import '../widgets/notificacion_in_app.dart';
 import 'package:provider/provider.dart';
 import '../providers/notificaciones_provider.dart';
+import '../apis/subapis/http_client.dart';
 
 /// Servicio para manejar las notificaciones push y navegar a las pantallas correctas
 class NotificationHandler {
@@ -14,6 +15,7 @@ class NotificationHandler {
   NotificationHandler._internal();
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  final ApiClient _apiClient = ApiClient();
   BuildContext? _context;
 
   /// Inicializa el manejador de notificaciones con el contexto de la app
@@ -41,6 +43,11 @@ class NotificationHandler {
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
+    if (!_coincideRol(message)) {
+      developer.log('Notificación descartada por rol distinto', name: 'NotificationHandler');
+      return;
+    }
+
     developer.log(
       'Notificación recibida en primer plano: ${message.notification?.title}',
       name: 'NotificationHandler',
@@ -64,6 +71,11 @@ class NotificationHandler {
   void _handleNotificationTap(RemoteMessage message) {
     if (_context == null) {
       developer.log('Context no disponible para navegar', name: 'NotificationHandler');
+      return;
+    }
+
+    if (!_coincideRol(message)) {
+      developer.log('Notificación tocada descartada por rol distinto', name: 'NotificationHandler');
       return;
     }
 
@@ -174,5 +186,17 @@ class NotificationHandler {
   /// Actualiza el contexto cuando cambia (útil para navegación global)
   void updateContext(BuildContext context) {
     _context = context;
+  }
+
+  bool _coincideRol(RemoteMessage message) {
+    final targetRole = message.data['target_role']?.toString().toUpperCase();
+    final currentRole = _apiClient.userRole?.toUpperCase();
+
+    if (targetRole == null || targetRole.isEmpty || currentRole == null) {
+      // Sin información de rol, no filtramos.
+      return true;
+    }
+
+    return targetRole == currentRole;
   }
 }

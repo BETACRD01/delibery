@@ -5,7 +5,7 @@ import '../../services/auth_service.dart';
 import '../../config/rutas.dart';
 import '../../config/api_config.dart';
 import '../../apis/helpers/api_exception.dart';
-import '../../apis/helpers/api_validators.dart';
+import '../../services/core/validation/validators.dart';
 import '../../theme/jp_theme.dart'; // Asegúrate de importar tu tema
 
 class PantallaRecuperarPassword extends StatefulWidget {
@@ -256,7 +256,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
       enabled: !_loading && !_bloqueadoTemporalmente,
       validator: (value) {
         if (value == null || value.isEmpty) return 'Ingresa tu correo';
-        if (!ApiValidators.esEmailValido(value)) return 'Correo inválido';
+        if (!Validators.esEmailValido(value)) return 'Correo inválido';
         return null;
       },
       style: const TextStyle(fontSize: 15),

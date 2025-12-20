@@ -1,12 +1,8 @@
 // lib/screens/user/inicio/widgets/inicio/home_app_bar.dart
-
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:badges/badges.dart' as badges;
-import '../../../../../theme/jp_theme.dart';
 
-/// AppBar premium y responsive para Home.
-/// Se controla desde PantallaHome pasando props (sin lógica interna extra).
+/// AppBar estilo iOS para Home.
 class HomeAppBar extends StatelessWidget {
   final VoidCallback? onNotificationTap;
   final VoidCallback? onSearchTap;
@@ -29,67 +25,98 @@ class HomeAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final isCompact = width < 340;
-    final logoSize = isCompact ? 56.0 : 68.0;
-    final titleSize = isCompact ? 18.0 : 20.5;
-    final horizontalPad = isCompact ? 14.0 : 18.0;
-    final toolbarH = isCompact ? 64.0 : 70.0;
-    // Altura del buscador aún más compacta
-    final bottomH = isCompact ? 46.0 : 50.0;
+    final topPadding = MediaQuery.of(context).padding.top;
 
-    return SliverAppBar(
-      pinned: false,
-      floating: false,
-      snap: false,
-      elevation: 0,
-      toolbarHeight: toolbarH,
-      backgroundColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
-      titleSpacing: horizontalPad,
-      centerTitle: false,
-      title: Row(
-        children: [
-          _Logo(
-            size: logoSize,
-            assetPath: logoAssetPath,
-            networkUrl: logoNetworkUrl,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: EdgeInsets.fromLTRB(20, topPadding + 12, 20, 16),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          boxShadow: [
+            BoxShadow(
+              color: CupertinoColors.systemGrey.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header: Logo + Título + Acciones
+            Row(
               children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: titleSize,
-                    fontWeight: FontWeight.w800,
-                    color: JPColors.textPrimary,
-                    letterSpacing: -0.2,
+                // Logo
+                _Logo(
+                  size: 60,
+                  assetPath: logoAssetPath,
+                  networkUrl: logoNetworkUrl,
+                ),
+                const SizedBox(width: 14),
+
+                // Título
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: CupertinoColors.label.resolveFrom(context),
+                      letterSpacing: -0.5,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
+
+                // Notificaciones
+                _ActionButton(
+                  icon: CupertinoIcons.bell_fill,
+                  badge: unreadCount,
+                  onTap: onNotificationTap,
+                ),
+                const SizedBox(width: 8),
+
+                // Logout
+                _ActionButton(
+                  icon: CupertinoIcons.square_arrow_right,
+                  isDestructive: true,
+                  onTap: () => _showLogoutDialog(context),
+                ),
               ],
             ),
+
+            const SizedBox(height: 14),
+
+            // Barra de búsqueda
+            _SearchBar(onTap: onSearchTap),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text('¿Estás seguro de que deseas cerrar sesión?'),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onLogoutTap?.call();
+            },
+            child: const Text('Cerrar sesión'),
           ),
         ],
-      ),
-      actions: [
-        _BellButton(unread: unreadCount, onTap: onNotificationTap),
-        const SizedBox(width: 6),
-        _LogoutButton(onLogout: onLogoutTap),
-        SizedBox(width: horizontalPad - 4),
-      ],
-      bottom: PreferredSize(
-        preferredSize: Size.fromHeight(bottomH),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(horizontalPad, 4, horizontalPad, 6),
-          child: _SearchBar(onTap: onSearchTap, compact: isCompact),
-        ),
       ),
     );
   }
@@ -104,196 +131,172 @@ class _Logo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = BorderRadius.circular(size * 0.28);
-    if (networkUrl != null && networkUrl!.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: border,
-        child: CachedNetworkImage(
-          imageUrl: networkUrl!,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          memCacheWidth: (size * MediaQuery.of(context).devicePixelRatio)
-              .round(),
-          placeholder: (_, __) => _placeholder(),
-          errorWidget: (_, __, ___) => _placeholder(),
-        ),
-      );
-    }
-
-    if (assetPath != null && assetPath!.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: border,
-        child: Image.asset(
-          assetPath!,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _placeholder(),
-        ),
-      );
-    }
-
-    return _placeholder();
-  }
-
-  Widget _placeholder() {
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: JPColors.primary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(size * 0.25),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: CupertinoColors.systemGrey.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: const Icon(
-        Icons.local_shipping_rounded,
-        color: JPColors.primary,
-        size: 24,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: _buildImage(context),
+      ),
+    );
+  }
+
+  Widget _buildImage(BuildContext context) {
+    if (networkUrl != null && networkUrl!.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: networkUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => _placeholder(context),
+        errorWidget: (_, __, ___) => _placeholder(context),
+      );
+    }
+
+    if (assetPath != null && assetPath!.isNotEmpty) {
+      return Image.asset(
+        assetPath!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(context),
+      );
+    }
+
+    return _placeholder(context);
+  }
+
+  Widget _placeholder(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      color: CupertinoColors.systemGrey5.resolveFrom(context),
+      child: Icon(
+        CupertinoIcons.cube_box_fill,
+        color: CupertinoColors.systemGrey.resolveFrom(context),
+        size: size * 0.5,
       ),
     );
   }
 }
 
-class _BellButton extends StatelessWidget {
-  final int unread;
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final int badge;
+  final bool isDestructive;
   final VoidCallback? onTap;
 
-  const _BellButton({required this.unread, this.onTap});
+  const _ActionButton({
+    required this.icon,
+    this.badge = 0,
+    this.isDestructive = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final showBadge = unread > 0;
-    return badges.Badge(
-      showBadge: showBadge,
-      badgeAnimation: const badges.BadgeAnimation.scale(toAnimate: false),
-      badgeStyle: const badges.BadgeStyle(
-        badgeColor: JPColors.primary,
-        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        elevation: 0,
-      ),
-      position: badges.BadgePosition.topEnd(top: -6, end: -2),
-      badgeContent: Text(
-        showBadge ? (unread > 9 ? '9+' : '$unread') : '',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: isDestructive
+              ? CupertinoColors.systemRed.withValues(alpha: 0.1)
+              : CupertinoColors.systemGrey6.resolveFrom(context),
+          borderRadius: BorderRadius.circular(12),
         ),
-      ),
-      child: IconButton(
-        icon: const Icon(
-          Icons.notifications_none_rounded,
-          color: JPColors.textPrimary,
-          size: 26,
-        ),
-        onPressed: onTap,
-        splashRadius: 24,
-      ),
-    );
-  }
-}
-
-class _LogoutButton extends StatelessWidget {
-  final VoidCallback? onLogout;
-
-  const _LogoutButton({this.onLogout});
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.logout_rounded, color: JPColors.error, size: 26),
-      tooltip: 'Cerrar sesión',
-      onPressed: () => _showLogoutDialog(context),
-      splashRadius: 24,
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Cerrar sesión'),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [Text('¿Deseas cerrar sesión?')],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isDestructive
+                  ? CupertinoColors.systemRed
+                  : CupertinoColors.label.resolveFrom(context),
+              size: 22,
             ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: JPColors.error),
-              onPressed: () {
-                Navigator.of(context).pop();
-                onLogout?.call();
-              },
-              child: const Text('Cerrar sesión'),
-            ),
+            if (badge > 0)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemRed,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 18),
+                  child: Text(
+                    badge > 9 ? '9+' : '$badge',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: CupertinoColors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
 class _SearchBar extends StatelessWidget {
   final VoidCallback? onTap;
-  final bool compact;
 
-  const _SearchBar({this.onTap, this.compact = false});
+  const _SearchBar({this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final radius = compact ? 12.0 : 14.0;
-    return Material(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(radius),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: Ink(
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 12 : 14,
-            vertical: compact ? 10 : 12,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(color: Colors.grey.shade300, width: 0.6),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.search_rounded,
-                color: Colors.grey[600],
-                size: compact ? 18 : 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Buscar productos o tiendas',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: compact ? 13 : 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemGrey6.resolveFrom(context),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              CupertinoIcons.search,
+              color: CupertinoColors.placeholderText.resolveFrom(context),
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Buscar productos o tiendas',
+                style: TextStyle(
+                  color: CupertinoColors.placeholderText.resolveFrom(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
-              Icon(
-                Icons.tune_rounded,
-                color: Colors.grey[500],
-                size: compact ? 18 : 20,
-              ),
-            ],
-          ),
+            ),
+            Icon(
+              CupertinoIcons.slider_horizontal_3,
+              color: CupertinoColors.placeholderText.resolveFrom(context),
+              size: 20,
+            ),
+          ],
         ),
       ),
     );

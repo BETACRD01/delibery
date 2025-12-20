@@ -1,5 +1,6 @@
 // lib/controllers/delivery/repartidor_controller.dart
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
@@ -36,6 +37,14 @@ class RepartidorController extends ChangeNotifier {
   bool _loading = true;
   String? _error;
   bool _disposed = false;
+
+  // Smart Polling
+  Timer? _pollingTimer;
+  DateTime? _lastPedidosUpdate;
+  DateTime? _lastPedidosActivosUpdate;
+  static const _pollingInterval = Duration(seconds: 30);
+  static const _minUpdateInterval = Duration(seconds: 15);
+  bool _isPollingActive = false;
 
   // ============================================
   // GETTERS
@@ -770,7 +779,115 @@ class RepartidorController extends ChangeNotifier {
     }
   }
 
+  // ============================================
+  // SMART POLLING (Actualización Inteligente)
+  // ============================================
 
+  /// Inicia el polling inteligente de pedidos
+  /// Solo actualiza cuando es necesario (cada 30s) y si pasó el intervalo mínimo
+  void startSmartPolling() {
+    if (_isPollingActive) {
+      developer.log('Polling ya está activo', name: 'RepartidorController');
+      return;
+    }
+
+    developer.log('Iniciando smart polling', name: 'RepartidorController');
+    _isPollingActive = true;
+
+    // Cancelar timer existente si hay
+    _pollingTimer?.cancel();
+
+    // Crear nuevo timer que se ejecuta cada 30 segundos
+    _pollingTimer = Timer.periodic(_pollingInterval, (_) {
+      if (!_disposed && _isPollingActive) {
+        _actualizacionInteligente();
+      }
+    });
+  }
+
+  /// Detiene el polling inteligente
+  void stopSmartPolling() {
+    if (!_isPollingActive) return;
+
+    developer.log('Deteniendo smart polling', name: 'RepartidorController');
+    _isPollingActive = false;
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  /// Pausa temporalmente el polling (cuando app va a background)
+  void pausePolling() {
+    _pollingTimer?.cancel();
+    developer.log('Polling pausado', name: 'RepartidorController');
+  }
+
+  /// Reanuda el polling (cuando app vuelve a foreground)
+  void resumePolling() {
+    if (_isPollingActive && _pollingTimer == null) {
+      startSmartPolling();
+      developer.log('Polling reanudado', name: 'RepartidorController');
+    }
+  }
+
+  /// Actualización inteligente - solo carga si pasó el intervalo mínimo
+  Future<void> _actualizacionInteligente() async {
+    try {
+      final ahora = DateTime.now();
+
+      // Verificar si debe actualizar pedidos disponibles
+      final debeActualizarPendientes = _lastPedidosUpdate == null ||
+          ahora.difference(_lastPedidosUpdate!) >= _minUpdateInterval;
+
+      // Verificar si debe actualizar pedidos activos
+      final debeActualizarActivos = _lastPedidosActivosUpdate == null ||
+          ahora.difference(_lastPedidosActivosUpdate!) >= _minUpdateInterval;
+
+      // Solo actualizar si pasó el intervalo mínimo
+      if (!debeActualizarPendientes && !debeActualizarActivos) {
+        developer.log(
+          'Skipping update - intervalo mínimo no alcanzado',
+          name: 'RepartidorController',
+        );
+        return;
+      }
+
+      developer.log(
+        'Actualización inteligente - Pendientes: $debeActualizarPendientes, Activos: $debeActualizarActivos',
+        name: 'RepartidorController',
+      );
+
+      // Actualizar pedidos disponibles si corresponde
+      if (debeActualizarPendientes && estaDisponible) {
+        await cargarPedidosDisponibles(forzarRecarga: false);
+        _lastPedidosUpdate = DateTime.now();
+      }
+
+      // Actualizar pedidos activos si corresponde
+      if (debeActualizarActivos) {
+        await cargarPedidosActivos();
+        _lastPedidosActivosUpdate = DateTime.now();
+      }
+    } catch (e) {
+      developer.log(
+        'Error en actualización inteligente: $e',
+        name: 'RepartidorController',
+        error: e,
+      );
+      // No propagar el error - es solo una actualización en background
+    }
+  }
+
+  /// Fuerza una actualización inmediata (sin esperar intervalo)
+  Future<void> forzarActualizacion() async {
+    developer.log('Forzando actualización inmediata', name: 'RepartidorController');
+
+    // Resetear timestamps para permitir actualización
+    _lastPedidosUpdate = null;
+    _lastPedidosActivosUpdate = null;
+
+    // Ejecutar actualización
+    await _actualizacionInteligente();
+  }
 
   // ============================================
   // UTILIDADES UI
@@ -801,6 +918,7 @@ class RepartidorController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    stopSmartPolling(); // Detener polling antes de dispose
     _ubicacionService.dispose();
     _limpiarEstado();
     super.dispose();

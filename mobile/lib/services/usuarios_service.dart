@@ -273,6 +273,7 @@ class UsuarioService {
 
       _log('Obteniendo direcciones desde API...');
       final response = await _api.listarDirecciones();
+      _log('Payload direcciones: $response');
 
       // Soporte para diferentes estructuras de respuesta (paginacion o lista directa)
       final direccionesData = response['direcciones'] ?? response['results'];

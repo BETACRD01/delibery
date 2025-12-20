@@ -11,6 +11,14 @@ from django.conf import settings
 from django.utils import timezone
 from math import radians, cos, sin, asin, sqrt
 
+from .models import (
+    CiudadEnvio,
+    ConfiguracionEnvios,
+    ZonaTarifariaEnvio,
+    DEFAULT_CIUDADES,
+    DEFAULT_ZONAS,
+)
+
 logger = logging.getLogger("envios")
 
 
@@ -22,56 +30,6 @@ class CalculadoraEnvioService:
     3. Aplica recargos (Distancia y Horario Nocturno).
     4. Valida cobertura máxima.
     """
-
-    # --- CONFIGURACIÓN DE HUBS (Puntos Cero) ---
-    CIUDADES = {
-        "BANOS": {
-            "nombre": "Baños de Agua Santa",
-            "lat": -1.3964,
-            "lng": -78.4247,
-            "radio_max_cobertura_km": 15.0,  # Runtún, Río Verde, etc.
-        },
-        "TENA": {
-            "nombre": "Tena",
-            "lat": -0.9938,
-            "lng": -77.8129,
-            "radio_max_cobertura_km": 20.0,  # Puerto Napo, Archidona, etc.
-        },
-    }
-
-    # --- CONFIGURACIÓN DE ZONAS TARIFARIAS ---
-    # Zona Centro: 0-3 km desde el hub
-    # Zona Periférica: 3-8 km desde el hub
-    # Zona Rural: 8+ km desde el hub
-    ZONA_CENTRO_MAX_KM = Decimal("3.0")
-    ZONA_PERIFERICA_MAX_KM = Decimal("8.0")
-
-    # --- TARIFARIO POR ZONA ---
-    TARIFAS_ZONA = {
-        "centro": {
-            "tarifa_base": Decimal("1.50"),
-            "km_incluidos": Decimal("1.5"),
-            "precio_km_extra": Decimal("0.50"),
-            "nombre_display": "Centro (Urbano)",
-        },
-        "periferica": {
-            "tarifa_base": Decimal("2.50"),
-            "km_incluidos": Decimal("2.0"),
-            "precio_km_extra": Decimal("0.70"),
-            "nombre_display": "Periferia Cercana",
-        },
-        "rural": {
-            "tarifa_base": Decimal("4.00"),
-            "km_incluidos": Decimal("3.0"),
-            "precio_km_extra": Decimal("1.00"),
-            "nombre_display": "Fuera de Ciudad / Rural",
-        },
-    }
-
-    # --- CONFIGURACIÓN NOCTURNA ---
-    RECARGO_NOCTURNO = Decimal("1.00")  # Dólar extra en la noche
-    HORA_INICIO_NOCHE = 20  # 8 PM (20:00)
-    HORA_FIN_NOCHE = 6  # 6 AM (06:00)
 
     @classmethod
     def cotizar_envio(cls, lat_destino, lng_destino, tipo_servicio="delivery"):
@@ -87,6 +45,7 @@ class CalculadoraEnvioService:
         lng_origen = hub_origen["lng"]
         ciudad_nombre = hub_origen["nombre"]
         radio_cobertura = hub_origen["radio_max_cobertura_km"]
+        config_envios = cls._obtener_configuracion()
 
         distancia_km = Decimal("0.0")
         tiempo_mins = 0
@@ -138,13 +97,12 @@ class CalculadoraEnvioService:
 
         # 3. Determinar Zona Tarifaria
         distancia_km = distancia_km.quantize(Decimal("0.01"))
-        zona_codigo = cls._determinar_zona(distancia_km)
-        tarifa_zona = cls.TARIFAS_ZONA[zona_codigo]
+        zona_actual = cls._determinar_zona(distancia_km)
 
         # 4. Calcular Costos Base + Distancia (según zona)
-        tarifa_base = tarifa_zona["tarifa_base"]
-        km_incluidos = tarifa_zona["km_incluidos"]
-        precio_km_extra = tarifa_zona["precio_km_extra"]
+        tarifa_base = zona_actual["tarifa_base"]
+        km_incluidos = zona_actual["km_incluidos"]
+        precio_km_extra = zona_actual["precio_km_extra"]
 
         costo_total = tarifa_base
         costo_extra_km = Decimal("0.00")
@@ -155,11 +113,11 @@ class CalculadoraEnvioService:
             costo_total += costo_extra_km
 
         # 5. Aplicar Recargo Nocturno
-        es_noche = cls._es_horario_nocturno()
+        es_noche = cls._es_horario_nocturno(config_envios)
         valor_nocturno = Decimal("0.00")
 
         if es_noche:
-            valor_nocturno = cls.RECARGO_NOCTURNO
+            valor_nocturno = config_envios.recargo_nocturno
             costo_total += valor_nocturno
 
         # 6. PREPARAR RESULTADO CON INFORMACIÓN DE ZONA
@@ -172,8 +130,8 @@ class CalculadoraEnvioService:
             "total_envio": float(round(costo_total, 2)),
             "origen_referencia": f"Centro de {ciudad_nombre}",
             "ciudad_origen": ciudad_nombre,
-            "zona_destino": zona_codigo,
-            "zona_nombre": tarifa_zona["nombre_display"],
+            "zona_destino": zona_actual["codigo"],
+            "zona_nombre": zona_actual["nombre_display"],
             "es_horario_nocturno": es_noche,
             "metodo_calculo": metodo_calculo,
             "usa_google_maps": not usa_fallback,  # True si usó Google Maps correctamente
@@ -206,20 +164,19 @@ class CalculadoraEnvioService:
         """
         Determina si el cliente está más cerca de Baños o de Tena.
         """
-        distancia_banos = cls._calcular_distancia_lineal(
-            cls.CIUDADES["BANOS"]["lat"],
-            cls.CIUDADES["BANOS"]["lng"],
-            lat_dest,
-            lng_dest,
-        )
-        distancia_tena = cls._calcular_distancia_lineal(
-            cls.CIUDADES["TENA"]["lat"], cls.CIUDADES["TENA"]["lng"], lat_dest, lng_dest
-        )
+        ciudades = cls._obtener_ciudades_configuradas()
+        mejor_ciudad = None
+        menor_distancia = float("inf")
 
-        # Retornar la configuración de la ciudad más cercana
-        if distancia_tena < distancia_banos:
-            return cls.CIUDADES["TENA"]
-        return cls.CIUDADES["BANOS"]
+        for ciudad in ciudades:
+            distancia = cls._calcular_distancia_lineal(
+                ciudad["lat"], ciudad["lng"], lat_dest, lng_dest
+            )
+            if distancia < menor_distancia:
+                menor_distancia = distancia
+                mejor_ciudad = ciudad
+
+        return mejor_ciudad or ciudades[0]
 
     @classmethod
     def _determinar_zona(cls, distancia_km):
@@ -230,29 +187,40 @@ class CalculadoraEnvioService:
             distancia_km: Distancia en kilómetros desde el centro de la ciudad
 
         Returns:
-            str: Código de zona ('centro', 'periferica', 'rural')
+            dict: Configuración completa de la zona aplicable
         """
+        zonas = cls._obtener_zonas_configuradas()
         distancia = Decimal(str(distancia_km))
 
-        if distancia <= cls.ZONA_CENTRO_MAX_KM:
-            return "centro"
-        elif distancia <= cls.ZONA_PERIFERICA_MAX_KM:
-            return "periferica"
-        else:
-            return "rural"
+        for zona in zonas:
+            max_distancia = zona["max_distancia_km"]
+            if max_distancia is None or distancia <= max_distancia:
+                return zona
+
+        return zonas[-1] if zonas else {
+            "codigo": "centro",
+            "nombre_display": "Centro (Urbano)",
+            "tarifa_base": Decimal("1.50"),
+            "km_incluidos": Decimal("1.5"),
+            "precio_km_extra": Decimal("0.50"),
+            "max_distancia_km": Decimal("3.0"),
+        }
 
     @classmethod
-    def _es_horario_nocturno(cls):
+    def _es_horario_nocturno(cls, config=None):
         """Verifica si la hora actual en Ecuador implica tarifa nocturna"""
         try:
+            if config is None:
+                config = cls._obtener_configuracion()
             zona_horaria = pytz.timezone("America/Guayaquil")
             hora_actual = timezone.now().astimezone(zona_horaria).hour
 
             # Es noche si:
-            # - Es mayor o igual a las 20:00 (8 PM)
-            # - O es menor a las 06:00 (6 AM)
+            # - Es mayor o igual a la hora de inicio nocturno
+            # - O es menor a la hora de fin nocturno
             return (
-                hora_actual >= cls.HORA_INICIO_NOCHE or hora_actual < cls.HORA_FIN_NOCHE
+                hora_actual >= config.hora_inicio_nocturno
+                or hora_actual < config.hora_fin_nocturno
             )
         except Exception:
             return False  # En caso de error, cobrar tarifa normal
@@ -280,3 +248,70 @@ class CalculadoraEnvioService:
         )
         # Multiplicamos por 1.3 para simular curvas de carretera en zona Andina/Amazónica
         return Decimal(distancia_lineal * 1.3)
+
+    @classmethod
+    def _obtener_configuracion(cls):
+        return ConfiguracionEnvios.obtener()
+
+    @classmethod
+    def _obtener_ciudades_configuradas(cls):
+        ciudades_qs = CiudadEnvio.objects.filter(activo=True).order_by("nombre")
+        if ciudades_qs.exists():
+            return [
+                cls._normalizar_ciudad(
+                    {
+                        "codigo": ciudad.codigo,
+                        "nombre": ciudad.nombre,
+                        "lat": ciudad.lat,
+                        "lng": ciudad.lng,
+                        "radio_max_cobertura_km": ciudad.radio_max_cobertura_km,
+                    }
+                )
+                for ciudad in ciudades_qs
+            ]
+
+        return [cls._normalizar_ciudad(ciudad) for ciudad in DEFAULT_CIUDADES]
+
+    @classmethod
+    def _obtener_zonas_configuradas(cls):
+        zonas_qs = ZonaTarifariaEnvio.objects.order_by("orden")
+        if zonas_qs.exists():
+            return [
+                cls._normalizar_zona(
+                    {
+                        "codigo": zona.codigo,
+                        "nombre_display": zona.nombre_display,
+                        "tarifa_base": zona.tarifa_base,
+                        "km_incluidos": zona.km_incluidos,
+                        "precio_km_extra": zona.precio_km_extra,
+                        "max_distancia_km": zona.max_distancia_km,
+                    }
+                )
+                for zona in zonas_qs
+            ]
+
+        return [cls._normalizar_zona(zona) for zona in DEFAULT_ZONAS]
+
+    @staticmethod
+    def _normalizar_ciudad(datos):
+        return {
+            "codigo": datos["codigo"],
+            "nombre": datos["nombre"],
+            "lat": float(datos["lat"]),
+            "lng": float(datos["lng"]),
+            "radio_max_cobertura_km": float(datos["radio_max_cobertura_km"]),
+        }
+
+    @staticmethod
+    def _normalizar_zona(datos):
+        def to_decimal(valor):
+            return Decimal(str(valor)) if valor is not None else None
+
+        return {
+            "codigo": datos["codigo"],
+            "nombre_display": datos["nombre_display"],
+            "tarifa_base": to_decimal(datos["tarifa_base"]),
+            "km_incluidos": to_decimal(datos["km_incluidos"]),
+            "precio_km_extra": to_decimal(datos["precio_km_extra"]),
+            "max_distancia_km": to_decimal(datos.get("max_distancia_km")),
+        }

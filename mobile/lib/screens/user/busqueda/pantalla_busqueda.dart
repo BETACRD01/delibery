@@ -1,6 +1,7 @@
 // lib/screens/user/busqueda/pantalla_busqueda.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show CircleAvatar, NetworkImage;
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../controllers/user/busqueda_controller.dart';
@@ -8,6 +9,8 @@ import '../../../models/producto_model.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../providers/proveedor_carrito.dart';
 import '../../../config/rutas.dart';
+import '../../../services/toast_service.dart';
+import '../../../widgets/util/add_to_cart_debounce.dart';
 
 class PantallaBusqueda extends StatefulWidget {
   const PantallaBusqueda({super.key});
@@ -23,58 +26,54 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
       create: (_) => BusquedaController(),
       child: Consumer<BusquedaController>(
         builder: (context, controller, _) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF3F5F9),
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0.4,
-              foregroundColor: JPColors.textPrimary,
-              titleSpacing: 0,
-              title: const Text(
-                'Buscar productos',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-              ),
-              actions: [
-                if (controller.controladorBusqueda.text.isNotEmpty)
-                  IconButton(
-                    icon: Badge(
-                      isLabelVisible: controller.tieneFiltrosActivos,
-                      child: const Icon(Icons.filter_list),
+          return CupertinoPageScaffold(
+            backgroundColor: JPCupertinoColors.background(context),
+            child: CustomScrollView(
+              slivers: [
+                // AppBar iOS
+                CupertinoSliverNavigationBar(
+                  backgroundColor: JPCupertinoColors.surface(context),
+                  largeTitle: const Text('Buscar productos'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (controller.controladorBusqueda.text.isNotEmpty)
+                        _buildFilterButton(context, controller),
+                      if (controller.resultados.isNotEmpty)
+                        _buildSortButton(context, controller),
+                    ],
+                  ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: JPCupertinoColors.separator(context),
+                      width: 0.5,
                     ),
-                    onPressed: () => _mostrarFiltros(context, controller),
                   ),
-                if (controller.resultados.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.sort_rounded),
-                    onPressed: () => _mostrarOrdenamiento(context, controller),
+                ),
+
+                // Barra de búsqueda pegajosa
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SearchBarDelegate(
+                    child: Container(
+                      color: JPCupertinoColors.background(context),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: _buildBarraBusqueda(context, controller),
+                    ),
                   ),
-              ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(1),
-                child: Container(height: 1, color: Colors.grey.shade200),
-              ),
-            ),
-            body: Column(
-              children: [
-                // Barra de búsqueda
-                _buildBarraBusqueda(context, controller),
+                ),
 
                 // Chips de filtros activos
                 if (controller.tieneFiltrosActivos)
-                  _buildChipsFiltros(controller),
+                  SliverToBoxAdapter(
+                    child: _buildChipsFiltros(context, controller),
+                  ),
 
-                // Resultados
-                Expanded(
-                  child: controller.buscando
-                      ? const Center(child: CircularProgressIndicator())
-                      : controller.error != null
-                      ? _buildEstadoError(controller.error!)
-                      : controller.controladorBusqueda.text.isEmpty
-                      ? _buildEstadoInicial(controller)
-                      : controller.resultados.isEmpty
-                      ? _buildSinResultados()
-                      : _buildListaResultados(controller),
-                ),
+                // Contenido
+                _buildContent(controller),
               ],
             ),
           );
@@ -82,53 +81,117 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
       ),
     );
   }
-  
+
   // ══════════════════════════════════════════════════════════════════════════
   // WIDGETS MODULARES
   // ══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildBarraBusqueda(BuildContext context, BusquedaController controller) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Material(
-        elevation: 6,
-        shadowColor: Colors.black.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        child: TextField(
-          controller: controller.controladorBusqueda,
-          onChanged: (query) => controller.buscarProductos(query),
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Buscar productos o tiendas',
-            prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: controller.controladorBusqueda.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: controller.limpiarBusqueda,
-                  )
-                : null,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(14)),
-              borderSide: BorderSide(color: JPColors.primary, width: 1.2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
+  Widget _buildFilterButton(
+    BuildContext context,
+    BusquedaController controller,
+  ) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: () => _mostrarFiltros(context, controller),
+      child: Stack(
+        children: [
+          Icon(
+            CupertinoIcons.slider_horizontal_3,
+            color: JPCupertinoColors.label(context),
+            size: 22,
           ),
-        ),
+          if (controller.tieneFiltrosActivos)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: JPCupertinoColors.systemBlue(context),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
       ),
     );
+  }
+
+  Widget _buildSortButton(BuildContext context, BusquedaController controller) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: () => _mostrarOrdenamiento(context, controller),
+      child: Icon(
+        CupertinoIcons.arrow_up_arrow_down,
+        color: JPCupertinoColors.label(context),
+        size: 22,
+      ),
+    );
+  }
+
+  Widget _buildBarraBusqueda(
+    BuildContext context,
+    BusquedaController controller,
+  ) {
+    return CupertinoTextField(
+      controller: controller.controladorBusqueda,
+      onChanged: (query) => controller.buscarProductos(query),
+      autofocus: true,
+      placeholder: 'Buscar productos o tiendas',
+      prefix: Padding(
+        padding: const EdgeInsets.only(left: 10),
+        child: Icon(
+          CupertinoIcons.search,
+          size: 20,
+          color: JPCupertinoColors.systemGrey(context),
+        ),
+      ),
+      suffix: controller.controladorBusqueda.text.isNotEmpty
+          ? CupertinoButton(
+              padding: const EdgeInsets.only(right: 8),
+              minimumSize: Size.zero,
+              onPressed: controller.limpiarBusqueda,
+              child: Icon(
+                CupertinoIcons.clear_circled_solid,
+                size: 20,
+                color: JPCupertinoColors.systemGrey(context),
+              ),
+            )
+          : null,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.systemGrey6(context),
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+
+  Widget _buildContent(BusquedaController controller) {
+    if (controller.buscando) {
+      return SliverFillRemaining(
+        child: Center(
+          child: CupertinoActivityIndicator(
+            radius: 14,
+            color: JPCupertinoColors.systemGrey(context),
+          ),
+        ),
+      );
+    }
+
+    if (controller.error != null) {
+      return SliverFillRemaining(child: _buildEstadoError(controller.error!));
+    }
+
+    if (controller.controladorBusqueda.text.isEmpty) {
+      return SliverFillRemaining(child: _buildEstadoInicial(controller));
+    }
+
+    if (controller.resultados.isEmpty) {
+      return SliverFillRemaining(child: _buildSinResultados());
+    }
+
+    return _buildListaResultados(controller);
   }
 
   Widget _buildEstadoInicial(BusquedaController controller) {
@@ -146,27 +209,67 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                   'Búsquedas recientes',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
+                    fontWeight: FontWeight.w600,
+                    color: JPCupertinoColors.label(context),
                   ),
                 ),
-                TextButton(
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
                   onPressed: controller.limpiarHistorial,
-                  child: const Text('Limpiar todo'),
+                  child: Text(
+                    'Limpiar todo',
+                    style: TextStyle(
+                      color: JPCupertinoColors.systemBlue(context),
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             ...controller.historialBusqueda.take(10).map((query) {
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.history, color: Colors.grey),
-                title: Text(query),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.grey),
-                  onPressed: () => controller.eliminarDelHistorial(query),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: JPCupertinoColors.surface(context),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                onTap: () => controller.buscarDesdeHistorial(query),
+                child: CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  onPressed: () => controller.buscarDesdeHistorial(query),
+                  child: Row(
+                    children: [
+                      Icon(
+                        CupertinoIcons.clock,
+                        size: 20,
+                        color: JPCupertinoColors.systemGrey(context),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          query,
+                          style: TextStyle(
+                            color: JPCupertinoColors.label(context),
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        onPressed: () => controller.eliminarDelHistorial(query),
+                        child: Icon(
+                          CupertinoIcons.xmark,
+                          size: 18,
+                          color: JPCupertinoColors.systemGrey(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }),
             const SizedBox(height: 24),
@@ -176,16 +279,26 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
           Center(
             child: Column(
               children: [
-                Icon(Icons.search, size: 80, color: Colors.grey[400]),
+                Icon(
+                  CupertinoIcons.search,
+                  size: 80,
+                  color: JPCupertinoColors.systemGrey3(context),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Busca tus productos favoritos',
-                  style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: JPCupertinoColors.secondaryLabel(context),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Escribe en el cuadro de búsqueda',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: JPCupertinoColors.tertiaryLabel(context),
+                  ),
                 ),
               ],
             ),
@@ -200,44 +313,61 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
+          Icon(
+            CupertinoIcons.search_circle,
+            size: 80,
+            color: JPCupertinoColors.systemGrey3(context),
+          ),
           const SizedBox(height: 16),
           Text(
             'No se encontraron resultados',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 18,
+              color: JPCupertinoColors.secondaryLabel(context),
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Intenta con otros términos',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            style: TextStyle(
+              fontSize: 14,
+              color: JPCupertinoColors.tertiaryLabel(context),
+            ),
           ),
         ],
       ),
     );
   }
 
- Widget _buildEstadoError(String mensaje) {
+  Widget _buildEstadoError(String mensaje) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.wifi_off, size: 80, color: JPColors.error),
+            Icon(
+              CupertinoIcons.wifi_slash,
+              size: 80,
+              color: JPCupertinoColors.systemRed(context),
+            ),
             const SizedBox(height: 16),
             Text(
               'Fallo la conexión',
               style: TextStyle(
-                fontSize: 18, 
-                fontWeight: FontWeight.bold, 
-                color: Colors.grey[700], 
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: JPCupertinoColors.label(context),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               mensaje,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 14,
+                color: JPCupertinoColors.secondaryLabel(context),
+              ),
             ),
           ],
         ),
@@ -246,306 +376,545 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
   }
 
   Widget _buildListaResultados(BusquedaController controller) {
-    return Column(
-      children: [
-        // Contador de resultados
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-          child: Align(
-            alignment: Alignment.centerLeft,
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        if (index == 0) {
+          // Contador de resultados
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                color: JPCupertinoColors.surface(context),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: JPConstants.cardShadow(context),
               ),
               child: Text(
                 '${controller.resultados.length} resultado${controller.resultados.length == 1 ? '' : 's'}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: JPColors.textSecondary,
+                  color: JPCupertinoColors.secondaryLabel(context),
                 ),
               ),
             ),
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            itemCount: controller.resultados.length,
-            itemBuilder: (context, index) {
-              final ProductoModel producto = controller.resultados[index];
-              return _ProductoCard(producto: producto);
-            },
-          ),
-        ),
-      ],
+          );
+        }
+
+        final ProductoModel producto = controller.resultados[index - 1];
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: _ProductoCard(producto: producto),
+        );
+      }, childCount: controller.resultados.length + 1),
     );
   }
 
   // Chips de filtros activos
-  Widget _buildChipsFiltros(BusquedaController controller) {
+  Widget _buildChipsFiltros(
+    BuildContext context,
+    BusquedaController controller,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
           if (controller.categoriaSeleccionada != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Chip(
-                label: const Text('Categoría'),
-                deleteIcon: const Icon(Icons.close, size: 18),
-                onDeleted: () => controller.setCategoria(null),
-              ),
+            _buildFilterChip(
+              context,
+              'Categoría',
+              () => controller.setCategoria(null),
             ),
           if (controller.precioMin > 0 || controller.precioMax < 1000)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Chip(
-                label: Text('\$${controller.precioMin.toInt()} - \$${controller.precioMax.toInt()}'),
-                deleteIcon: const Icon(Icons.close, size: 18),
-                onDeleted: () => controller.setRangoPrecio(0, 1000),
-              ),
+            _buildFilterChip(
+              context,
+              '\$${controller.precioMin.toInt()} - \$${controller.precioMax.toInt()}',
+              () => controller.setRangoPrecio(0, 1000),
             ),
           if (controller.ratingMin > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Chip(
-                label: Text('${controller.ratingMin}+ ⭐'),
-                deleteIcon: const Icon(Icons.close, size: 18),
-                onDeleted: () => controller.setRatingMinimo(0),
-              ),
+            _buildFilterChip(
+              context,
+              '${controller.ratingMin}+ ⭐',
+              () => controller.setRatingMinimo(0),
             ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ActionChip(
-              label: const Text('Limpiar filtros'),
-              onPressed: controller.limpiarFiltros,
-            ),
-          ),
+          _buildClearAllChip(context, controller),
         ],
       ),
     );
   }
 
-  // Diálogo de filtros
-  void _mostrarFiltros(BuildContext context, BusquedaController controller) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) {
-          return ChangeNotifierProvider.value(
-            value: controller,
-            child: Consumer<BusquedaController>(
-              builder: (context, ctrl, _) {
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Filtros',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              ctrl.limpiarFiltros();
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Limpiar todo'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: ListView(
-                          controller: scrollController,
-                          children: [
-                            // Categorías
-                            const Text('Categoría', style: TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              children: [
-                                ChoiceChip(
-                                  label: const Text('Todas'),
-                                  selected: ctrl.categoriaSeleccionada == null,
-                                  onSelected: (_) => ctrl.setCategoria(null),
-                                ),
-                                ...ctrl.categorias.map((cat) {
-                                  return ChoiceChip(
-                                    label: Text(cat.nombre),
-                                    selected: ctrl.categoriaSeleccionada == cat.id,
-                                    onSelected: (_) => ctrl.setCategoria(cat.id),
-                                  );
-                                }),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Rango de precio
-                            const Text('Rango de precio', style: TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
-                            RangeSlider(
-                              values: RangeValues(ctrl.precioMin, ctrl.precioMax),
-                              min: 0,
-                              max: 1000,
-                              divisions: 20,
-                              labels: RangeLabels(
-                                '\$${ctrl.precioMin.toInt()}',
-                                '\$${ctrl.precioMax.toInt()}',
-                              ),
-                              onChanged: (values) {
-                                ctrl.setRangoPrecio(values.start, values.end);
-                              },
-                            ),
-                            Text(
-                              '\$${ctrl.precioMin.toInt()} - \$${ctrl.precioMax.toInt()}',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Rating mínimo
-                            const Text('Calificación mínima', style: TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              children: [0.0, 3.0, 4.0, 4.5].map((rating) {
-                                return ChoiceChip(
-                                  label: Text(rating == 0 ? 'Todas' : '$rating+ ⭐'),
-                                  selected: ctrl.ratingMin == rating,
-                                  onSelected: (_) => ctrl.setRatingMinimo(rating),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Aplicar filtros'),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+  Widget _buildFilterChip(
+    BuildContext context,
+    String label,
+    VoidCallback onDelete,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onDelete,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: JPCupertinoColors.systemBlue(
+                context,
+              ).withValues(alpha: 0.3),
             ),
-          );
-        },
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: JPCupertinoColors.systemBlue(context),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                CupertinoIcons.xmark,
+                size: 14,
+                color: JPCupertinoColors.systemBlue(context),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  // Diálogo de ordenamiento
-  void _mostrarOrdenamiento(BuildContext context, BusquedaController controller) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Widget _buildClearAllChip(
+    BuildContext context,
+    BusquedaController controller,
+  ) {
+    return GestureDetector(
+      onTap: controller.limpiarFiltros,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: JPCupertinoColors.systemGrey6(context),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          'Limpiar filtros',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: JPCupertinoColors.label(context),
+          ),
+        ),
       ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
+    );
+  }
+
+  // Modal de filtros (iOS-style)
+  void _mostrarFiltros(BuildContext context, BusquedaController controller) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: JPCupertinoColors.surface(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Ordenar por',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: JPCupertinoColors.separator(context),
+                      width: 0.5,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancelar',
+                        style: TextStyle(
+                          color: JPCupertinoColors.systemBlue(context),
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Filtros',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: JPCupertinoColors.label(context),
+                      ),
+                    ),
+                    const Spacer(),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Aplicar',
+                        style: TextStyle(
+                          color: JPCupertinoColors.systemBlue(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              ListTile(
-                title: const Text('Relevancia'),
-                trailing: controller.ordenamiento == 'relevancia'
-                    ? const Icon(Icons.check, color: JPColors.primary)
-                    : null,
-                onTap: () {
-                  controller.setOrdenamiento('relevancia');
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Precio: menor a mayor'),
-                trailing: controller.ordenamiento == 'precio_asc'
-                    ? const Icon(Icons.check, color: JPColors.primary)
-                    : null,
-                onTap: () {
-                  controller.setOrdenamiento('precio_asc');
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Precio: mayor a menor'),
-                trailing: controller.ordenamiento == 'precio_desc'
-                    ? const Icon(Icons.check, color: JPColors.primary)
-                    : null,
-                onTap: () {
-                  controller.setOrdenamiento('precio_desc');
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Mejor calificados'),
-                trailing: controller.ordenamiento == 'rating'
-                    ? const Icon(Icons.check, color: JPColors.primary)
-                    : null,
-                onTap: () {
-                  controller.setOrdenamiento('rating');
-                  Navigator.pop(context);
-                },
+
+              // Contenido
+              Expanded(
+                child: ChangeNotifierProvider.value(
+                  value: controller,
+                  child: Consumer<BusquedaController>(
+                    builder: (context, ctrl, _) {
+                      return ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          _buildCategoriesFilter(ctrl),
+                          const SizedBox(height: 24),
+                          _buildPriceRangeFilter(ctrl),
+                          const SizedBox(height: 24),
+                          _buildRatingFilter(ctrl),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoriesFilter(BusquedaController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Categoría',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            color: JPCupertinoColors.label(context),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildCategoryChip(
+              'Todas',
+              controller.categoriaSeleccionada == null,
+              () {
+                controller.setCategoria(null);
+              },
+            ),
+            ...controller.categorias.map((cat) {
+              return _buildCategoryChip(
+                cat.nombre,
+                controller.categoriaSeleccionada == cat.id,
+                () => controller.setCategoria(cat.id),
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryChip(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? JPCupertinoColors.systemBlue(context)
+              : JPCupertinoColors.systemGrey6(context),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: selected
+                ? CupertinoColors.white
+                : JPCupertinoColors.label(context),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceRangeFilter(BusquedaController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Rango de precio',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            color: JPCupertinoColors.label(context),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Mínimo',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  CupertinoSlider(
+                    value: controller.precioMin,
+                    min: 0,
+                    max: 1000,
+                    divisions: 20,
+                    onChanged: (value) {
+                      controller.setRangoPrecio(value, controller.precioMax);
+                    },
+                  ),
+                  Text(
+                    '\$${controller.precioMin.toInt()}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: JPCupertinoColors.label(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Máximo',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  CupertinoSlider(
+                    value: controller.precioMax,
+                    min: 0,
+                    max: 1000,
+                    divisions: 20,
+                    onChanged: (value) {
+                      controller.setRangoPrecio(controller.precioMin, value);
+                    },
+                  ),
+                  Text(
+                    '\$${controller.precioMax.toInt()}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: JPCupertinoColors.label(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRatingFilter(BusquedaController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Calificación mínima',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            color: JPCupertinoColors.label(context),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [0.0, 3.0, 4.0, 4.5].map((rating) {
+            return _buildCategoryChip(
+              rating == 0 ? 'Todas' : '$rating+ ⭐',
+              controller.ratingMin == rating,
+              () => controller.setRatingMinimo(rating),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  // Modal de ordenamiento (iOS-style)
+  void _mostrarOrdenamiento(
+    BuildContext context,
+    BusquedaController controller,
+  ) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('Ordenar por', style: TextStyle(fontSize: 13)),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              controller.setOrdenamiento('relevancia');
+              Navigator.pop(context);
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Relevancia'),
+                if (controller.ordenamiento == 'relevancia')
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      CupertinoIcons.check_mark,
+                      size: 18,
+                      color: JPCupertinoColors.systemBlue(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              controller.setOrdenamiento('precio_asc');
+              Navigator.pop(context);
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Precio: menor a mayor'),
+                if (controller.ordenamiento == 'precio_asc')
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      CupertinoIcons.check_mark,
+                      size: 18,
+                      color: JPCupertinoColors.systemBlue(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              controller.setOrdenamiento('precio_desc');
+              Navigator.pop(context);
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Precio: mayor a menor'),
+                if (controller.ordenamiento == 'precio_desc')
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      CupertinoIcons.check_mark,
+                      size: 18,
+                      color: JPCupertinoColors.systemBlue(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              controller.setOrdenamiento('rating');
+              Navigator.pop(context);
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Mejor calificados'),
+                if (controller.ordenamiento == 'rating')
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      CupertinoIcons.check_mark,
+                      size: 18,
+                      color: JPCupertinoColors.systemBlue(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+      ),
     );
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// CARD DE PRODUCTO CON IMAGEN Y ADD TO CART
+// PERSISTENT HEADER DELEGATE PARA SEARCH BAR
+// ══════════════════════════════════════════════════════════════════════════
+
+class _SearchBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _SearchBarDelegate({required this.child});
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => 60;
+
+  @override
+  double get minExtent => 60;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      false;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CARD DE PRODUCTO CON IMAGEN Y ADD TO CART iOS-STYLE
 // ══════════════════════════════════════════════════════════════════════════
 
 class _ProductoCard extends StatelessWidget {
@@ -555,32 +924,21 @@ class _ProductoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final carritoProvider = Provider.of<ProveedorCarrito>(context, listen: false);
-    final tieneDescuento = producto.precioAnterior != null &&
+    final tieneDescuento =
+        producto.precioAnterior != null &&
         producto.precioAnterior! > producto.precio;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
+        boxShadow: JPConstants.cardShadow(context),
       ),
-      child: InkWell(
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
         borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            Rutas.productoDetalle,
-            arguments: producto,
-          );
-        },
+        onPressed: () => Rutas.irAProductoDetalle(context, producto),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -589,7 +947,8 @@ class _ProductoCard extends StatelessWidget {
               // Imagen del producto
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
+                child:
+                    producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: producto.imagenUrl!,
                         width: 88,
@@ -598,27 +957,34 @@ class _ProductoCard extends StatelessWidget {
                         placeholder: (context, url) => Container(
                           width: 88,
                           height: 88,
-                          color: Colors.grey[200],
-                          child: const Center(
-                            child: SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          color: JPCupertinoColors.systemGrey6(context),
+                          child: Center(
+                            child: CupertinoActivityIndicator(
+                              radius: 10,
+                              color: JPCupertinoColors.systemGrey(context),
                             ),
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(
                           width: 88,
                           height: 88,
-                          color: Colors.grey[200],
-                          child: Icon(Icons.fastfood, size: 32, color: Colors.grey[600]),
+                          color: JPCupertinoColors.systemGrey6(context),
+                          child: Icon(
+                            CupertinoIcons.cube_box,
+                            size: 32,
+                            color: JPCupertinoColors.systemGrey3(context),
+                          ),
                         ),
                       )
                     : Container(
                         width: 88,
                         height: 88,
-                        color: Colors.grey[200],
-                        child: Icon(Icons.fastfood, size: 32, color: Colors.grey[600]),
+                        color: JPCupertinoColors.systemGrey6(context),
+                        child: Icon(
+                          CupertinoIcons.cube_box,
+                          size: 32,
+                          color: JPCupertinoColors.systemGrey3(context),
+                        ),
                       ),
               ),
               const SizedBox(width: 12),
@@ -630,21 +996,22 @@ class _ProductoCard extends StatelessWidget {
                   children: [
                     Text(
                       producto.nombre,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
                         fontSize: 16,
                         height: 1.2,
+                        color: JPCupertinoColors.label(context),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    _buildProveedorBadge(),
+                    _buildProveedorBadge(context),
                     const SizedBox(height: 6),
                     Text(
                       producto.descripcion,
                       style: TextStyle(
-                        color: Colors.grey[700],
+                        color: JPCupertinoColors.secondaryLabel(context),
                         fontSize: 13,
                         height: 1.3,
                       ),
@@ -657,13 +1024,17 @@ class _ProductoCard extends StatelessWidget {
                     if (producto.rating > 0)
                       Row(
                         children: [
-                          const Icon(Icons.star, size: 16, color: Colors.amber),
+                          Icon(
+                            CupertinoIcons.star_fill,
+                            size: 16,
+                            color: JPCupertinoColors.systemYellow(context),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             producto.rating.toStringAsFixed(1),
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.grey[700],
+                              color: JPCupertinoColors.label(context),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -683,7 +1054,9 @@ class _ProductoCard extends StatelessWidget {
                                 producto.precioAnteriorFormateado,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[600],
+                                  color: JPCupertinoColors.secondaryLabel(
+                                    context,
+                                  ),
                                   decoration: TextDecoration.lineThrough,
                                 ),
                               ),
@@ -691,31 +1064,17 @@ class _ProductoCard extends StatelessWidget {
                             ],
                             Text(
                               producto.precioFormateado,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: JPColors.primary,
+                                fontWeight: FontWeight.w700,
+                                color: JPCupertinoColors.systemBlue(context),
                               ),
                             ),
                           ],
                         ),
 
                         // Botón agregar al carrito
-                        ElevatedButton.icon(
-                          onPressed: producto.disponible
-                              ? () async {
-                                  await carritoProvider.agregarProducto(producto);
-                                }
-                              : null,
-                          icon: const Icon(Icons.add_shopping_cart, size: 18),
-                          label: const Text('Agregar'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
+                        _AgregarAlCarritoButton(producto: producto),
                       ],
                     ),
                   ],
@@ -727,8 +1086,11 @@ class _ProductoCard extends StatelessWidget {
       ),
     );
   }
-  Widget _buildProveedorBadge() {
-    final tieneLogo = producto.proveedorLogoUrl != null && producto.proveedorLogoUrl!.isNotEmpty;
+
+  Widget _buildProveedorBadge(BuildContext context) {
+    final tieneLogo =
+        producto.proveedorLogoUrl != null &&
+        producto.proveedorLogoUrl!.isNotEmpty;
     final tieneNombre = (producto.proveedorNombre ?? '').isNotEmpty;
     if (!tieneLogo && !tieneNombre) return const SizedBox.shrink();
 
@@ -737,20 +1099,26 @@ class _ProductoCard extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 11,
-          backgroundColor: Colors.grey[200],
-          backgroundImage: tieneLogo ? NetworkImage(producto.proveedorLogoUrl!) : null,
+          backgroundColor: JPCupertinoColors.systemGrey6(context),
+          backgroundImage: tieneLogo
+              ? NetworkImage(producto.proveedorLogoUrl!)
+              : null,
           child: !tieneLogo
-              ? const Icon(Icons.storefront_outlined, size: 12, color: Colors.grey)
+              ? Icon(
+                  CupertinoIcons.building_2_fill,
+                  size: 12,
+                  color: JPCupertinoColors.systemGrey(context),
+                )
               : null,
         ),
         const SizedBox(width: 6),
         if (tieneNombre)
-          Expanded(
+          Flexible(
             child: Text(
               producto.proveedorNombre!,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[700],
+                color: JPCupertinoColors.secondaryLabel(context),
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 1,
@@ -758,6 +1126,103 @@ class _ProductoCard extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// BOTÓN AGREGAR AL CARRITO CON DEBOUNCE Y TOAST
+// ══════════════════════════════════════════════════════════════════════════
+
+class _AgregarAlCarritoButton extends StatefulWidget {
+  final ProductoModel producto;
+
+  const _AgregarAlCarritoButton({required this.producto});
+
+  @override
+  State<_AgregarAlCarritoButton> createState() =>
+      _AgregarAlCarritoButtonState();
+}
+
+class _AgregarAlCarritoButtonState extends State<_AgregarAlCarritoButton> {
+  bool _loading = false;
+
+  Future<void> _agregarAlCarrito() async {
+    if (_loading || !widget.producto.disponible) return;
+
+    // Debounce check
+    if (!AddToCartDebounce.canAdd(widget.producto.id.toString())) {
+      ToastService().showInfo(context, 'Por favor espera un momento');
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    final carrito = context.read<ProveedorCarrito>();
+    final success = await carrito.agregarProducto(widget.producto);
+
+    setState(() => _loading = false);
+
+    if (!mounted) return;
+
+    if (success) {
+      if (!context.mounted) return;
+      ToastService().showSuccess(
+        context,
+        '${widget.producto.nombre} agregado',
+        actionLabel: 'Ver Carrito',
+        onActionTap: () => Rutas.irACarrito(context),
+      );
+    } else {
+      if (!context.mounted) return;
+      ToastService().showError(
+        context,
+        carrito.error ?? 'Error al agregar producto',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      color: widget.producto.disponible
+          ? JPCupertinoColors.systemBlue(context)
+          : JPCupertinoColors.systemGrey4(context),
+      borderRadius: BorderRadius.circular(10),
+      onPressed: widget.producto.disponible ? _agregarAlCarrito : null,
+      child: _loading
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CupertinoActivityIndicator(
+                radius: 8,
+                color: CupertinoColors.white,
+              ),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  CupertinoIcons.cart_badge_plus,
+                  size: 18,
+                  color: widget.producto.disponible
+                      ? CupertinoColors.white
+                      : JPCupertinoColors.systemGrey(context),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Agregar',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: widget.producto.disponible
+                        ? CupertinoColors.white
+                        : JPCupertinoColors.systemGrey(context),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

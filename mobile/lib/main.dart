@@ -11,7 +11,6 @@ import './services/servicio_notificacion.dart';
 import './services/notification_handler.dart';
 import './services/auth_service.dart';
 import './apis/subapis/http_client.dart';
-import './providers/proveedor_roles.dart';
 import './providers/proveedor_carrito.dart';
 import './providers/proveedor_pedido.dart';
 import './providers/locale_provider.dart';
@@ -22,6 +21,7 @@ import './controllers/supplier/supplier_controller.dart';
 import './controllers/delivery/repartidor_controller.dart';
 import './services/pedido_service.dart';
 import './screens/delivery/pantalla_ver_comprobante.dart';
+import './services/role_manager.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -94,7 +94,7 @@ class _MyAppState extends State<MyApp> {
       providers: [
         ChangeNotifierProvider(create: (_) => SupplierController()),
         ChangeNotifierProvider(create: (_) => RepartidorController()),
-        ChangeNotifierProvider(create: (_) => ProveedorRoles()..inicializar()),
+        ChangeNotifierProvider(create: (_) => RoleManager()..initialize()),
         ChangeNotifierProvider(create: (_) => ProveedorCarrito()),
         ChangeNotifierProvider(create: (_) => PerfilController()),
         ChangeNotifierProvider(create: (_) => NotificacionesProvider()),

@@ -1,18 +1,19 @@
 // lib/screens/user/carrito/pantalla_carrito.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show CircleAvatar, NetworkImage, Divider;
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:google_places_flutter/google_places_flutter.dart';
-import 'package:google_places_flutter/model/prediction.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../providers/proveedor_carrito.dart';
 import '../../../services/envio_service.dart';
 import '../../../services/usuarios_service.dart';
 import '../../../models/usuario.dart';
+import '../../../services/toast_service.dart';
+import '../../user/perfil/configuracion/direcciones/pantalla_mis_direcciones.dart';
 
-/// Pantalla del carrito de compras
+/// Pantalla del carrito de compras iOS-style
 class PantallaCarrito extends StatefulWidget {
   const PantallaCarrito({super.key});
 
@@ -29,17 +30,130 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
   Map<String, dynamic>? _cotizacionEnvio;
   double? _destLat;
   double? _destLng;
-  String? _errorEnvio;
-  String? _infoEnvio;
   double? get _recargoNocturno {
     final valor = _cotizacionEnvio?['recargo_nocturno'];
     if (valor == null) return null;
     return double.tryParse(valor.toString());
   }
 
+  String _nombreDireccionVisible(DireccionModel dir) {
+    if (dir.etiqueta.isNotEmpty && !_esPlaceholder(dir.etiqueta)) {
+      return dir.etiqueta;
+    }
+
+    final partes = <String>[];
+
+    if (dir.direccion.isNotEmpty && !_esPlaceholder(dir.direccion)) {
+      partes.add(dir.direccion);
+    } else if (dir.direccionCompleta.isNotEmpty &&
+        !_esPlaceholder(dir.direccionCompleta)) {
+      partes.add(dir.direccionCompleta);
+    }
+
+    if (dir.ciudad != null && dir.ciudad!.isNotEmpty) {
+      partes.add(dir.ciudad!);
+    }
+
+    if (partes.isEmpty) return 'Dirección guardada';
+    return partes.join(', ');
+  }
+
+  Future<void> _irAAgregarDireccion() async {
+    await Navigator.push(
+      context,
+      CupertinoPageRoute(builder: (_) => const PantallaAgregarDireccion()),
+    );
+    await _cargarDireccionesGuardadas();
+  }
+
+  bool _esPlaceholder(String valor) {
+    final v = valor.toLowerCase().trim();
+    return RegExp(r'^direcci[oó]n\s*\d+$').hasMatch(v);
+  }
+
+  Widget _buildCardDireccionSeleccionada() {
+    final dir = _direccionSeleccionada!;
+    final titulo = _nombreDireccionVisible(dir);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: JPConstants.cardShadow(context),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              CupertinoIcons.location_solid,
+              color: JPCupertinoColors.systemBlue(context),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: JPCupertinoColors.label(context),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (dir.direccionCompleta.isNotEmpty &&
+                    !_esPlaceholder(dir.direccionCompleta)) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    dir.direccionCompleta,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (dir.esPredeterminada) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Predeterminada',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: JPCupertinoColors.systemBlue(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   bool _mostrarInstrucciones = false;
-  String? _errorDireccionManual;
-  static const _googlePlacesApiKey = "AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA";
 
   // Direcciones guardadas
   List<DireccionModel> _direccionesGuardadas = [];
@@ -66,11 +180,11 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
       final direcciones = await _usuarioService.listarDirecciones();
       setState(() {
         _direccionesGuardadas = direcciones;
-        _direccionSeleccionada = direcciones.firstWhere(
-          (d) => d.esPredeterminada,
-          orElse: () =>
-              direcciones.isNotEmpty ? direcciones.first : throw Exception(),
-        );
+        _direccionSeleccionada = direcciones.where((d) => d.esPredeterminada).fold<
+                DireccionModel?>(
+            null, (prev, curr) => curr)
+          ??
+          (direcciones.isNotEmpty ? direcciones.first : null);
 
         if (_direccionSeleccionada != null) {
           _direccionController.text = _direccionSeleccionada!.direccionCompleta;
@@ -84,6 +198,12 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
           } else {
             _instruccionesController.clear();
           }
+        } else {
+          _direccionController.clear();
+          _destLat = null;
+          _destLng = null;
+          _mostrarInstrucciones = false;
+          _instruccionesController.clear();
         }
       });
     } catch (e) {
@@ -101,9 +221,6 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
       _direccionController.text = direccion.direccionCompleta;
       _destLat = direccion.latitud;
       _destLng = direccion.longitud;
-      _errorDireccionManual = null;
-      _errorEnvio = null;
-      _infoEnvio = null;
       _mostrarInstrucciones = direccion.indicaciones?.isNotEmpty == true;
       if (_mostrarInstrucciones) {
         _instruccionesController.text = direccion.indicaciones!;
@@ -120,290 +237,251 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
     );
   }
 
-  Future<void> _handlePredictionSelection(
-    Prediction prediction,
-    void Function(void Function()) safeSetModalState,
-    ProveedorCarrito carritoProvider,
-  ) async {
-    final descripcion = prediction.description;
-    if (descripcion == null || descripcion.isEmpty) return;
-
-    safeSetModalState(() {
-      _direccionSeleccionada = null;
-      _errorDireccionManual = null;
-      _direccionController.text = descripcion;
-      _direccionController.selection = TextSelection.fromPosition(
-        TextPosition(offset: descripcion.length),
-      );
-    });
-
-    try {
-      final ubicaciones = await locationFromAddress(descripcion);
-      if (ubicaciones.isNotEmpty) {
-        await _cotizarEnvioConDestino(
-          ubicaciones.first.latitude,
-          ubicaciones.first.longitude,
-          safeSetModalState,
-          carritoProvider,
-        );
-      }
-    } catch (e) {
-      safeSetModalState(() {
-        _errorDireccionManual = 'No se pudo ubicar la dirección seleccionada.';
-      });
-    }
-  }
-
-  Widget _buildCampoDireccionConAutocompletado(
-    void Function(void Function()) safeSetModalState,
-    ProveedorCarrito carritoProvider,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GooglePlaceAutoCompleteTextField(
-          textEditingController: _direccionController,
-          googleAPIKey: _googlePlacesApiKey,
-          debounceTime: 300,
-          countries: const ["ec"],
-          isLatLngRequired: true,
-          inputDecoration: InputDecoration(
-            hintText: 'Ej. Av. Amazonas y 10 de Agosto',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide(color: JPColors.primary, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            suffixIcon: _direccionController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
-                    onPressed: () {
-                      safeSetModalState(() {
-                        _direccionController.clear();
-                        _destLat = null;
-                        _destLng = null;
-                      });
-                    },
-                  )
-                : null,
-          ),
-          textStyle: const TextStyle(fontSize: 14),
-          itemBuilder: (context, index, Prediction prediction) {
-            return ListTile(
-              dense: true,
-              leading: const Icon(
-                Icons.place,
-                color: JPColors.primary,
-                size: 18,
-              ),
-              title: Text(
-                prediction.description ?? "",
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          },
-          seperatedBuilder: const Divider(height: 1),
-          itemClick: (Prediction prediction) {
-            _direccionController.text = prediction.description ?? '';
-            _direccionController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _direccionController.text.length),
-            );
-            safeSetModalState(() {
-              _direccionSeleccionada = null;
-            });
-          },
-          getPlaceDetailWithLatLng: (Prediction prediction) async {
-            await _handlePredictionSelection(
-              prediction,
-              safeSetModalState,
-              carritoProvider,
-            );
-          },
-          isCrossBtnShown: false,
-          containerHorizontalPadding: 0,
-        ),
-      ],
-    );
-  }
-
   Future<void> _mostrarSelectorDireccionesGuardadas(
     void Function(void Function()) safeSetModalState,
     ProveedorCarrito carritoProvider,
   ) async {
     if (_direccionesGuardadas.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Aún no tienes direcciones guardadas'),
-          backgroundColor: JPColors.warning,
-        ),
+      ToastService().showWarning(
+        context,
+        'Aún no tienes direcciones guardadas',
       );
       return;
     }
 
     DireccionModel? seleccionTemporal = _direccionSeleccionada;
 
-    await showModalBottomSheet(
+    await showCupertinoModalPopup(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Indicador de arrastre
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.surface(context),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    // Handle
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: JPCupertinoColors.systemGrey4(context),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                  // Título
-                  const Text(
-                    'Mis direcciones guardadas',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: JPColors.textPrimary,
+                    // Título
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Mis direcciones guardadas',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: JPCupertinoColors.label(context),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Lista de direcciones
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.5,
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _direccionesGuardadas.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final direccion = _direccionesGuardadas[index];
-                        final estaSeleccionada =
-                            seleccionTemporal?.id == direccion.id;
+                    const SizedBox(height: 16),
+                    // Lista de direcciones
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _direccionesGuardadas.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final direccion = _direccionesGuardadas[index];
+                          final nombreAmigable = _nombreDireccionVisible(direccion);
+                          final isSelected = seleccionTemporal?.id == direccion.id;
 
-                        return CheckboxListTile(
-                          value: estaSeleccionada,
-                          activeColor: JPColors.primary,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                          ),
-                          title: Text(
-                            direccion.direccionCompleta,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                          return GestureDetector(
+                            onTap: () {
+                              setSheetState(() {
+                                seleccionTemporal = direccion;
+                              });
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1)
+                                    : JPCupertinoColors.systemGrey6(context),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? JPCupertinoColors.systemBlue(context)
+                                      : JPCupertinoColors.separator(context),
+                                  width: isSelected ? 2 : 0.5,
+                                ),
+                              ),
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? CupertinoIcons.checkmark_circle_fill
+                                        : CupertinoIcons.circle,
+                                    color: isSelected
+                                        ? JPCupertinoColors.systemBlue(context)
+                                        : JPCupertinoColors.systemGrey(context),
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          nombreAmigable,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                            color: JPCupertinoColors.label(context),
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (direccion.etiqueta.isNotEmpty &&
+                                            !_esPlaceholder(direccion.etiqueta)) ...[
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                CupertinoIcons.tag,
+                                                size: 14,
+                                                color: JPCupertinoColors.secondaryLabel(context),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                direccion.etiqueta,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: JPCupertinoColors.secondaryLabel(context),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                        if (direccion.esPredeterminada) ...[
+                                          const SizedBox(height: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: JPCupertinoColors.systemBlue(context)
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'Predeterminada',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: JPCupertinoColors.systemBlue(context),
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (direccion.etiqueta.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.label_outline,
-                                      size: 14,
-                                      color: Colors.grey[600],
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      direccion.etiqueta,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              if (direccion.esPredeterminada) ...[
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: JPColors.primary.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'Predeterminada',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: JPColors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          onChanged: (_) {
-                            setSheetState(() {
-                              seleccionTemporal = direccion;
-                            });
-                          },
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Botones
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancelar'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: seleccionTemporal == null
-                            ? null
-                            : () {
-                                Navigator.pop(context);
-                                _aplicarDireccionGuardada(
-                                  seleccionTemporal!,
-                                  safeSetModalState,
-                                  carritoProvider,
-                                );
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: JPColors.primary,
+                    const SizedBox(height: 12),
+                    // Agregar nueva
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () async {
+                          await _irAAgregarDireccion();
+                          await _cargarDireccionesGuardadas();
+                          setSheetState(() {
+                            seleccionTemporal = _direccionSeleccionada;
+                          });
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              CupertinoIcons.add_circled,
+                              color: JPCupertinoColors.systemBlue(context),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Agregar nueva dirección',
+                              style: TextStyle(
+                                color: JPCupertinoColors.systemBlue(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                        child: const Text(
-                          'Seleccionar',
-                          style: TextStyle(color: Colors.white),
-                        ),
                       ),
-                    ],
-                  ),
-                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-                ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Botones
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: CupertinoButton(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              color: JPCupertinoColors.systemGrey5(context),
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                'Cancelar',
+                                style: TextStyle(
+                                  color: JPCupertinoColors.label(context),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: CupertinoButton(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              color: seleccionTemporal == null
+                                  ? JPCupertinoColors.systemGrey4(context)
+                                  : JPCupertinoColors.systemBlue(context),
+                              onPressed: seleccionTemporal == null
+                                  ? null
+                                  : () {
+                                      Navigator.pop(context);
+                                      _aplicarDireccionGuardada(
+                                        seleccionTemporal!,
+                                        safeSetModalState,
+                                        carritoProvider,
+                                      );
+                                    },
+                              child: const Text(
+                                'Seleccionar',
+                                style: TextStyle(
+                                  color: CupertinoColors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 16),
+                  ],
+                ),
               ),
             );
           },
@@ -414,10 +492,10 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: JPColors.background,
-      appBar: _buildAppBar(),
-      body: Consumer<ProveedorCarrito>(
+    return CupertinoPageScaffold(
+      backgroundColor: JPCupertinoColors.background(context),
+      navigationBar: _buildNavigationBar(),
+      child: Consumer<ProveedorCarrito>(
         builder: (context, carritoProvider, _) {
           if (carritoProvider.loading) {
             return _buildLoadingState();
@@ -427,37 +505,47 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
             return _buildEmptyState();
           }
 
-          return _buildCarritoContent(carritoProvider);
-        },
-      ),
-      bottomNavigationBar: Consumer<ProveedorCarrito>(
-        builder: (context, carritoProvider, _) {
-          if (carritoProvider.estaVacio) return const SizedBox.shrink();
-          return _buildBottomBar(carritoProvider);
+          return Stack(
+            children: [
+              _buildCarritoContent(carritoProvider),
+              if (!carritoProvider.estaVacio)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _buildBottomBar(carritoProvider),
+                ),
+            ],
+          );
         },
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: const Text('Mi Carrito'),
-      backgroundColor: Colors.white,
-      foregroundColor: JPColors.textPrimary,
-      elevation: 0,
-      actions: [
-        Consumer<ProveedorCarrito>(
-          builder: (context, carritoProvider, _) {
-            if (carritoProvider.estaVacio) return const SizedBox.shrink();
+  CupertinoNavigationBar _buildNavigationBar() {
+    return CupertinoNavigationBar(
+      backgroundColor: JPCupertinoColors.surface(context),
+      middle: const Text('Mi Carrito'),
+      trailing: Consumer<ProveedorCarrito>(
+        builder: (context, carritoProvider, _) {
+          if (carritoProvider.estaVacio) return const SizedBox.shrink();
 
-            return IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => _mostrarDialogoLimpiar(carritoProvider),
-              tooltip: 'Limpiar carrito',
-            );
-          },
+          return CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () => _mostrarDialogoLimpiar(carritoProvider),
+            child: Icon(
+              CupertinoIcons.trash,
+              color: JPCupertinoColors.systemRed(context),
+            ),
+          );
+        },
+      ),
+      border: Border(
+        bottom: BorderSide(
+          color: JPCupertinoColors.separator(context),
+          width: 0.5,
         ),
-      ],
+      ),
     );
   }
 
@@ -467,7 +555,7 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
         _buildHeader(carritoProvider),
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
             itemCount: carritoProvider.items.length,
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
@@ -488,23 +576,37 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
   Widget _buildHeader(ProveedorCarrito carritoProvider) {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        border: Border(
+          bottom: BorderSide(
+            color: JPCupertinoColors.separator(context),
+            width: 0.5,
+          ),
+        ),
+      ),
       child: Row(
         children: [
-          const Icon(Icons.shopping_cart, color: JPColors.primary),
+          Icon(
+            CupertinoIcons.cart_fill,
+            color: JPCupertinoColors.systemBlue(context),
+          ),
           const SizedBox(width: 12),
           Text(
             '${carritoProvider.cantidadItems} productos',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: JPColors.textPrimary,
+              color: JPCupertinoColors.label(context),
             ),
           ),
           const Spacer(),
           Text(
             '${carritoProvider.cantidadTotal} items',
-            style: const TextStyle(fontSize: 14, color: JPColors.textSecondary),
+            style: TextStyle(
+              fontSize: 14,
+              color: JPCupertinoColors.secondaryLabel(context),
+            ),
           ),
         ],
       ),
@@ -515,56 +617,52 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: JPCupertinoColors.surface(context),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
+            color: CupertinoColors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
         ],
       ),
       child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Subtotal:',
-                  style: TextStyle(fontSize: 16, color: JPColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: JPCupertinoColors.secondaryLabel(context),
+                  ),
                 ),
                 Text(
                   carritoProvider.totalFormateado,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: JPColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    color: JPCupertinoColors.label(context),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: CupertinoButton.filled(
                 onPressed: carritoProvider.loading
                     ? null
                     : () => _mostrarCheckout(carritoProvider),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: JPColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
                 child: const Text(
                   'Continuar al Pago',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -576,7 +674,12 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(child: CircularProgressIndicator());
+    return Center(
+      child: CupertinoActivityIndicator(
+        radius: 14,
+        color: JPCupertinoColors.systemGrey(context),
+      ),
+    );
   }
 
   Widget _buildEmptyState() {
@@ -589,22 +692,22 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: JPColors.primary.withValues(alpha: 0.1),
+                color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.shopping_cart_outlined,
+                CupertinoIcons.cart,
                 size: 80,
-                color: JPColors.primary.withValues(alpha: 0.5),
+                color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'Tu carrito está vacío',
               style: TextStyle(
                 fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: JPColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                color: JPCupertinoColors.label(context),
               ),
             ),
             const SizedBox(height: 12),
@@ -615,35 +718,28 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
   }
 
   void _mostrarDialogoLimpiar(ProveedorCarrito carritoProvider) {
-    showDialog(
+    showCupertinoDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('Limpiar Carrito'),
         content: const Text(
           '¿Estás seguro de que quieres eliminar todos los productos del carrito?',
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          CupertinoDialogAction(
+            isDestructiveAction: true,
             onPressed: () async {
               Navigator.pop(context);
               final success = await carritoProvider.limpiarCarrito();
               if (success && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Carrito limpiado'),
-                    backgroundColor: JPColors.success,
-                  ),
-                );
+                ToastService().showSuccess(context, 'Carrito limpiado');
               }
             },
-            child: const Text(
-              'Limpiar',
-              style: TextStyle(color: JPColors.error),
-            ),
+            child: const Text('Limpiar'),
           ),
         ],
       ),
@@ -653,8 +749,6 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
   Future<void> _mostrarCheckout(ProveedorCarrito carritoProvider) async {
     _metodoPago = 'efectivo';
     _cotizacionEnvio = null;
-    _errorEnvio = null;
-    _infoEnvio = null;
 
     if (_direccionesGuardadas.isEmpty) {
       await _cargarDireccionesGuardadas();
@@ -672,12 +766,8 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
     if (!mounted) return;
 
     bool sheetMounted = true;
-    final resultado = await showModalBottomSheet<bool>(
+    final resultado = await showCupertinoModalPopup<bool>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -703,348 +793,323 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                 : 0.0;
             final recargoNocturno = _recargoNocturno ?? 0.0;
             final total = subtotal + envio + recargoMulti + recargoNocturno;
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.background(context),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
-              child: SingleChildScrollView(
+              child: SafeArea(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+                    // Handle
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: JPCupertinoColors.systemGrey4(context),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const Text(
+                    // Título
+                    Text(
                       'Resumen de compra',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: JPCupertinoColors.label(context),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 16),
+
+                    // Contenido scrollable
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         children: [
-                          const Text(
-                            'Productos',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: JPColors.textPrimary,
+                          // Productos
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: JPCupertinoColors.surface(context),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: JPConstants.cardShadow(context),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 160,
-                            child: ListView.separated(
-                              itemCount: carritoProvider.items.length,
-                              separatorBuilder: (_, __) =>
-                                  const Divider(height: 12),
-                              itemBuilder: (context, index) {
-                                final item = carritoProvider.items[index];
-                                return Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        item.nombre,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: JPColors.textPrimary,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Productos',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: JPCupertinoColors.label(context),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 160,
+                                  child: ListView.separated(
+                                    itemCount: carritoProvider.items.length,
+                                    separatorBuilder: (_, __) =>
+                                        Divider(
+                                          height: 12,
+                                          color: JPCupertinoColors.separator(context),
                                         ),
-                                      ),
-                                    ),
-                                    Text(
-                                      'x${item.cantidad}',
-                                      style: const TextStyle(
-                                        color: JPColors.textSecondary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '\$${item.subtotal.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                                    itemBuilder: (context, index) {
+                                      final item = carritoProvider.items[index];
+                                      return Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              item.nombre,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                                color: JPCupertinoColors.label(context),
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            'x${item.cantidad}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: JPCupertinoColors.secondaryLabel(context),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            '\$${item.subtotal.toStringAsFixed(2)}',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // SECCIÓN DE DIRECCIÓN MEJORADA
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Dirección de entrega',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: JPColors.textPrimary,
-                                ),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: () =>
-                                    _mostrarSelectorDireccionesGuardadas(
-                                      safeSetModalState,
-                                      carritoProvider,
-                                    ),
-                                icon: const Icon(
-                                  Icons.bookmark_border,
-                                  size: 16,
-                                ),
-                                label: const Text('Elegir dirección'),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  side: const BorderSide(
-                                    color: JPColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
                           const SizedBox(height: 12),
-                          _buildCampoDireccionConAutocompletado(
-                            safeSetModalState,
-                            carritoProvider,
-                          ),
-                          if (_errorDireccionManual != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                _errorDireccionManual!,
-                                style: const TextStyle(
-                                  color: JPColors.error,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          if (_errorEnvio != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                _errorEnvio!,
-                                style: const TextStyle(
-                                  color: JPColors.error,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          if (_infoEnvio != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
+
+                          // Botón de dirección
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: CupertinoButton(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              onPressed: () => _direccionesGuardadas.isNotEmpty
+                                  ? _mostrarSelectorDireccionesGuardadas(
+                                      safeSetModalState,
+                                      carritoProvider,
+                                    )
+                                  : _irAAgregarDireccion(),
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
-                                    Icons.check_circle_outline,
-                                    size: 14,
-                                    color: JPColors.success,
+                                  Icon(
+                                    CupertinoIcons.location,
+                                    size: 16,
+                                    color: JPCupertinoColors.systemBlue(context),
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    _infoEnvio!,
-                                    style: const TextStyle(
-                                      color: JPColors.success,
-                                      fontSize: 12,
+                                    _direccionesGuardadas.isNotEmpty
+                                        ? 'Elegir dirección'
+                                        : 'Agregar dirección',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: JPCupertinoColors.systemBlue(context),
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_mostrarInstrucciones) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Instrucciones de entrega',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: JPColors.textPrimary,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Dirección seleccionada
+                          if (_direccionSeleccionada != null)
+                            _buildCardDireccionSeleccionada(),
+                          if (_direccionSeleccionada != null)
+                            const SizedBox(height: 12),
+
+                          // Instrucciones
+                          if (_mostrarInstrucciones) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: JPCupertinoColors.surface(context),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: JPConstants.cardShadow(context),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Instrucciones de entrega',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: JPCupertinoColors.label(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  CupertinoTextField(
+                                    controller: _instruccionesController,
+                                    placeholder: 'Ej: Tocar el timbre',
+                                    style: const TextStyle(fontSize: 13),
+                                    placeholderStyle: TextStyle(
+                                      fontSize: 13,
+                                      color: JPCupertinoColors.systemGrey(context),
+                                    ),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: JPCupertinoColors.systemGrey6(context),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    minLines: 2,
+                                    maxLines: 3,
+                                    onChanged: (_) => safeSetModalState(() {}),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _instruccionesController,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                            const SizedBox(height: 12),
+                          ],
+
+                          // Método de pago
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: JPCupertinoColors.surface(context),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: JPConstants.cardShadow(context),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Método de pago',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: JPCupertinoColors.label(context),
+                                  ),
                                 ),
-                              ),
-                              minLines: 1,
-                              maxLines: 3,
-                              onChanged: (_) => safeSetModalState(() {}),
+                                const SizedBox(height: 12),
+                                CupertinoSlidingSegmentedControl<String>(
+                                  groupValue: _metodoPago,
+                                  children: const {
+                                    'efectivo': Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(CupertinoIcons.money_dollar, size: 14),
+                                          SizedBox(width: 4),
+                                          Text('Efectivo', style: TextStyle(fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                    'transferencia': Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(CupertinoIcons.money_dollar_circle, size: 14),
+                                          SizedBox(width: 4),
+                                          Text('Transferencia', style: TextStyle(fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                  },
+                                  onValueChanged: (value) {
+                                    if (value != null) {
+                                      safeSetModalState(() => _metodoPago = value);
+                                    }
+                                  },
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
                           ),
+                          const SizedBox(height: 12),
+
+                          // Resumen
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: JPCupertinoColors.systemGrey6(context),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              children: [
+                                _ResumenRow(
+                                  label: 'Subtotal productos',
+                                  value: subtotal,
+                                ),
+                                _ResumenRow(label: 'Envío', value: envio),
+                                if (recargoNocturno > 0)
+                                  _ResumenRow(
+                                    label: 'Recargo nocturno',
+                                    value: recargoNocturno,
+                                  ),
+                                if (recargoMulti > 0)
+                                  _ResumenRow(
+                                    label: 'Recargo multi-proveedor',
+                                    value: recargoMulti,
+                                  ),
+                                Divider(
+                                  height: 20,
+                                  color: JPCupertinoColors.separator(context),
+                                ),
+                                _ResumenRow(
+                                  label: 'Total a pagar',
+                                  value: total,
+                                  bold: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                         ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Método de pago',
+                    ),
+
+                    // Botón confirmar
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: CupertinoButton.filled(
+                          onPressed: () {
+                            if (_direccionSeleccionada == null ||
+                                _destLat == null ||
+                                _destLng == null) {
+                              ToastService().showWarning(
+                                context,
+                                'Selecciona o agrega una dirección para continuar',
+                              );
+                              return;
+                            }
+                            Navigator.pop(context, true);
+                          },
+                          child: const Text(
+                            'Confirmar pedido',
                             style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: JPColors.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          SegmentedButton<String>(
-                            segments: const [
-                              ButtonSegment(
-                                value: 'efectivo',
-                                label: Text('Efectivo'),
-                                icon: Icon(Icons.payments_outlined),
-                              ),
-                              ButtonSegment(
-                                value: 'transferencia',
-                                label: Text('Transferencia'),
-                                icon: Icon(Icons.account_balance_outlined),
-                              ),
-                            ],
-                            selected: {_metodoPago},
-                            onSelectionChanged: (v) {
-                              if (v.isNotEmpty) {
-                                safeSetModalState(() => _metodoPago = v.first);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: JPColors.background,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children: [
-                          _ResumenRow(
-                            label: 'Subtotal productos',
-                            value: subtotal,
-                          ),
-                          _ResumenRow(label: 'Envío', value: envio),
-                          if (recargoNocturno > 0)
-                            _ResumenRow(
-                              label: 'Recargo nocturno',
-                              value: recargoNocturno,
-                            ),
-                          if (recargoMulti > 0)
-                            _ResumenRow(
-                              label: 'Recargo multi-proveedor',
-                              value: recargoMulti,
-                            ),
-                          const Divider(),
-                          _ResumenRow(
-                            label: 'Total a pagar',
-                            value: total,
-                            bold: true,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: JPColors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Confirmar pedido',
-                          style: TextStyle(color: Colors.white),
                         ),
                       ),
                     ),
@@ -1064,12 +1129,7 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
             ? 'No se encontró ninguna dirección guardada. Agrega una dirección en Ajustes para continuar.'
             : 'Debes seleccionar una ubicación en el mapa o elegir una dirección guardada.';
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(mensaje),
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        ToastService().showWarning(context, mensaje, duration: const Duration(seconds: 4));
         return;
       }
 
@@ -1090,12 +1150,7 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
       );
 
       if (response != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pedido creado exitosamente'),
-            backgroundColor: JPColors.success,
-          ),
-        );
+        ToastService().showSuccess(context, 'Pedido creado exitosamente');
       }
     }
   }
@@ -1130,7 +1185,6 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
 
     setModalState(() {
       _cotizacionEnvio = resp;
-      _infoEnvio = 'Envío calculado automáticamente';
     });
   }
 
@@ -1178,16 +1232,18 @@ class _ResumenRow extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
+                fontSize: bold ? 14 : 13,
                 fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-                color: JPColors.textPrimary,
+                color: JPCupertinoColors.label(context),
               ),
             ),
           ),
           Text(
             '\$${value.toStringAsFixed(2)}',
             style: TextStyle(
+              fontSize: bold ? 14 : 13,
               fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
-              color: JPColors.textPrimary,
+              color: JPCupertinoColors.label(context),
             ),
           ),
         ],
@@ -1233,17 +1289,16 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
     final productosIncluidos = widget.item.productosIncluidos ?? [];
 
     return Container(
-      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: JPColors.primary.withValues(alpha: 0.3),
+          color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.3),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: JPColors.primary.withValues(alpha: 0.08),
+            color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1253,11 +1308,13 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
         children: [
           Stack(
             children: [
-              InkWell(
+              GestureDetector(
                 onTap: () => setState(() => _isExpanded = !_isExpanded),
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
+                child: Container(
                   padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Row(
                     children: [
                       _buildPromocionImage(promocion),
@@ -1272,23 +1329,23 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: JPColors.primary,
+                                color: JPCupertinoColors.systemBlue(context),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(
-                                    Icons.local_offer,
+                                    CupertinoIcons.tag_fill,
                                     size: 12,
-                                    color: Colors.white,
+                                    color: CupertinoColors.white,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     promocion.descuento,
                                     style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
+                                      color: CupertinoColors.white,
+                                      fontWeight: FontWeight.w600,
                                       fontSize: 11,
                                     ),
                                   ),
@@ -1298,10 +1355,10 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                             const SizedBox(height: 8),
                             Text(
                               promocion.titulo,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
                                 fontSize: 16,
-                                color: JPColors.textPrimary,
+                                color: JPCupertinoColors.label(context),
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -1311,7 +1368,7 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                               '${productosIncluidos.length} productos incluidos',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey[600],
+                                color: JPCupertinoColors.secondaryLabel(context),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -1319,9 +1376,9 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                               children: [
                                 Text(
                                   '\$${widget.item.precioUnitario.toStringAsFixed(2)}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 15,
-                                    color: JPColors.primary,
+                                    color: JPCupertinoColors.systemBlue(context),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1334,10 +1391,10 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                                 const Spacer(),
                                 Text(
                                   '\$${widget.item.subtotal.toStringAsFixed(2)}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: JPColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                    color: JPCupertinoColors.label(context),
                                   ),
                                 ),
                               ],
@@ -1346,9 +1403,11 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                         ),
                       ),
                       Icon(
-                        _isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: JPColors.primary,
-                        size: 28,
+                        _isExpanded
+                            ? CupertinoIcons.chevron_up
+                            : CupertinoIcons.chevron_down,
+                        color: JPCupertinoColors.systemBlue(context),
+                        size: 24,
                       ),
                     ],
                   ),
@@ -1357,14 +1416,14 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
               Positioned(
                 top: 8,
                 right: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: widget.onRemove,
-                  color: Colors.grey[400],
+                child: CupertinoButton(
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
+                  minimumSize: const Size(32, 32),
+                  onPressed: widget.onRemove,
+                  child: Icon(
+                    CupertinoIcons.xmark_circle_fill,
+                    size: 24,
+                    color: JPCupertinoColors.systemGrey3(context),
                   ),
                 ),
               ),
@@ -1372,9 +1431,9 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
           ),
           if (_isExpanded && productosIncluidos.isNotEmpty)
             Container(
-              decoration: const BoxDecoration(
-                color: JPColors.background,
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
                 ),
@@ -1393,7 +1452,7 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
+                        color: JPCupertinoColors.secondaryLabel(context),
                       ),
                     ),
                   ),
@@ -1413,9 +1472,11 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(
+          color: JPCupertinoColors.separator(context),
+        ),
       ),
       child: Row(
         children: [
@@ -1424,27 +1485,27 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
             child: Container(
               width: 40,
               height: 40,
-              color: Colors.grey[100],
+              color: JPCupertinoColors.systemGrey6(context),
               child:
                   producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: producto.imagenUrl!,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: JPColors.primary.withValues(alpha: 0.5),
+                        child: CupertinoActivityIndicator(
+                          radius: 8,
+                          color: JPCupertinoColors.systemGrey(context),
                         ),
                       ),
                       errorWidget: (context, url, error) => Icon(
-                        Icons.fastfood_outlined,
-                        color: Colors.grey[400],
+                        CupertinoIcons.cube_box,
+                        color: JPCupertinoColors.systemGrey3(context),
                         size: 20,
                       ),
                     )
                   : Icon(
-                      Icons.fastfood_outlined,
-                      color: Colors.grey[400],
+                      CupertinoIcons.cube_box,
+                      color: JPCupertinoColors.systemGrey3(context),
                       size: 20,
                     ),
             ),
@@ -1456,10 +1517,10 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
               children: [
                 Text(
                   producto.nombre,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: JPColors.textPrimary,
+                    color: JPCupertinoColors.label(context),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1467,17 +1528,23 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                 const SizedBox(height: 2),
                 Text(
                   '\$${producto.precio.toStringAsFixed(2)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: JPCupertinoColors.secondaryLabel(context),
+                  ),
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.remove_circle_outline, size: 18),
-            onPressed: () => _mostrarDialogoEliminarProducto(producto),
-            color: Colors.red[400],
+          CupertinoButton(
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            minimumSize: const Size(28, 28),
+            onPressed: () => _mostrarDialogoEliminarProducto(producto),
+            child: Icon(
+              CupertinoIcons.minus_circle,
+              size: 24,
+              color: JPCupertinoColors.systemRed(context),
+            ),
           ),
         ],
       ),
@@ -1485,32 +1552,25 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
   }
 
   void _mostrarDialogoEliminarProducto(producto) {
-    showDialog(
+    showCupertinoDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('Eliminar producto'),
         content: Text(
           '¿Deseas eliminar "${producto.nombre}" de esta promoción?\n\nNota: La promoción completa permanecerá en el carrito.',
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          CupertinoDialogAction(
+            isDestructiveAction: true,
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${producto.nombre} eliminado'),
-                  backgroundColor: JPColors.success,
-                ),
-              );
+              ToastService().showSuccess(context, '${producto.nombre} eliminado');
             },
-            child: const Text(
-              'Eliminar',
-              style: TextStyle(color: JPColors.error),
-            ),
+            child: const Text('Eliminar'),
           ),
         ],
       ),
@@ -1523,38 +1583,29 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
       child: Container(
         width: 80,
         height: 80,
-        color: JPColors.background,
+        color: JPCupertinoColors.systemGrey6(context),
         child: promocion.imagenUrl != null && promocion.imagenUrl!.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: promocion.imagenUrl!,
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[100],
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: JPColors.primary.withValues(alpha: 0.5),
-                    ),
+                placeholder: (context, url) => Center(
+                  child: CupertinoActivityIndicator(
+                    radius: 10,
+                    color: JPCupertinoColors.systemGrey(context),
                   ),
                 ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[100],
-                  child: Icon(
-                    Icons.local_offer_outlined,
-                    color: Colors.grey[400],
-                    size: 32,
-                  ),
-                ),
-              )
-            : Container(
-                color: Colors.grey[100],
-                child: Icon(
-                  Icons.local_offer_outlined,
-                  color: Colors.grey[400],
+                errorWidget: (context, url, error) => Icon(
+                  CupertinoIcons.tag,
+                  color: JPCupertinoColors.systemGrey3(context),
                   size: 32,
                 ),
+              )
+            : Icon(
+                CupertinoIcons.tag,
+                color: JPCupertinoColors.systemGrey3(context),
+                size: 32,
               ),
       ),
     );
@@ -1562,18 +1613,13 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
 
   Widget _buildProductoCard() {
     return Container(
-      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: JPCupertinoColors.separator(context),
+        ),
+        boxShadow: JPConstants.cardShadow(context),
       ),
       child: Stack(
         children: [
@@ -1589,10 +1635,10 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                     children: [
                       Text(
                         widget.item.producto!.nombre,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
                           fontSize: 16,
-                          color: JPColors.textPrimary,
+                          color: JPCupertinoColors.label(context),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -1604,9 +1650,9 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                         children: [
                           Text(
                             '\$${widget.item.precioUnitario.toStringAsFixed(2)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
-                              color: JPColors.primary,
+                              color: JPCupertinoColors.systemBlue(context),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1615,7 +1661,7 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                             'c/u',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[500],
+                              color: JPCupertinoColors.secondaryLabel(context),
                             ),
                           ),
                         ],
@@ -1627,10 +1673,10 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                           const Spacer(),
                           Text(
                             '\$${widget.item.subtotal.toStringAsFixed(2)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: JPColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                              color: JPCupertinoColors.label(context),
                             ),
                           ),
                         ],
@@ -1644,12 +1690,15 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
           Positioned(
             top: 8,
             right: 8,
-            child: IconButton(
-              icon: const Icon(Icons.close, size: 20),
-              onPressed: widget.onRemove,
-              color: Colors.grey[400],
+            child: CupertinoButton(
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              minimumSize: const Size(32, 32),
+              onPressed: widget.onRemove,
+              child: Icon(
+                CupertinoIcons.xmark_circle_fill,
+                size: 24,
+                color: JPCupertinoColors.systemGrey3(context),
+              ),
             ),
           ),
         ],
@@ -1663,7 +1712,7 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
       child: Container(
         width: 80,
         height: 80,
-        color: JPColors.background,
+        color: JPCupertinoColors.systemGrey6(context),
         child:
             widget.item.producto!.imagenUrl != null &&
                 widget.item.producto!.imagenUrl!.isNotEmpty
@@ -1672,31 +1721,22 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[100],
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: JPColors.primary.withValues(alpha: 0.5),
-                    ),
+                placeholder: (context, url) => Center(
+                  child: CupertinoActivityIndicator(
+                    radius: 10,
+                    color: JPCupertinoColors.systemGrey(context),
                   ),
                 ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[100],
-                  child: Icon(
-                    Icons.fastfood_outlined,
-                    color: Colors.grey[400],
-                    size: 32,
-                  ),
-                ),
-              )
-            : Container(
-                color: Colors.grey[100],
-                child: Icon(
-                  Icons.fastfood_outlined,
-                  color: Colors.grey[400],
+                errorWidget: (context, url, error) => Icon(
+                  CupertinoIcons.cube_box,
+                  color: JPCupertinoColors.systemGrey3(context),
                   size: 32,
                 ),
+              )
+            : Icon(
+                CupertinoIcons.cube_box,
+                color: JPCupertinoColors.systemGrey3(context),
+                size: 32,
               ),
       ),
     );
@@ -1714,15 +1754,15 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
       children: [
         CircleAvatar(
           radius: 12,
-          backgroundColor: Colors.grey[200],
+          backgroundColor: JPCupertinoColors.systemGrey5(context),
           backgroundImage: (logo != null && logo.isNotEmpty)
               ? NetworkImage(logo)
               : null,
           child: (logo == null || logo.isEmpty)
-              ? const Icon(
-                  Icons.storefront_outlined,
+              ? Icon(
+                  CupertinoIcons.building_2_fill,
                   size: 14,
-                  color: Colors.grey,
+                  color: JPCupertinoColors.systemGrey(context),
                 )
               : null,
         ),
@@ -1733,8 +1773,8 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
               nombre,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w600,
+                color: JPCupertinoColors.secondaryLabel(context),
+                fontWeight: FontWeight.w500,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1748,50 +1788,46 @@ class _ItemCarritoCardState extends State<_ItemCarritoCard> {
   Widget _buildQuantityControls() {
     return Container(
       decoration: BoxDecoration(
-        color: JPColors.background,
+        color: JPCupertinoColors.systemGrey6(context),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(
+          color: JPCupertinoColors.separator(context),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onDecrement,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: Icon(
-                  Icons.remove,
-                  size: 18,
-                  color: widget.item.cantidad > 1
-                      ? JPColors.primary
-                      : Colors.grey[400],
-                ),
-              ),
+          CupertinoButton(
+            padding: const EdgeInsets.all(8),
+            minimumSize: Size.zero,
+            onPressed: widget.onDecrement,
+            child: Icon(
+              CupertinoIcons.minus,
+              size: 18,
+              color: widget.item.cantidad > 1
+                  ? JPCupertinoColors.systemBlue(context)
+                  : JPCupertinoColors.systemGrey3(context),
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               '${widget.item.cantidad}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
                 fontSize: 16,
-                color: JPColors.textPrimary,
+                color: JPCupertinoColors.label(context),
               ),
             ),
           ),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onIncrement,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: const Icon(Icons.add, size: 18, color: JPColors.primary),
-              ),
+          CupertinoButton(
+            padding: const EdgeInsets.all(8),
+            minimumSize: Size.zero,
+            onPressed: widget.onIncrement,
+            child: Icon(
+              CupertinoIcons.plus,
+              size: 18,
+              color: JPCupertinoColors.systemBlue(context),
             ),
           ),
         ],

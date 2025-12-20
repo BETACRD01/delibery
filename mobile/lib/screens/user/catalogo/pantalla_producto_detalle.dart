@@ -9,13 +9,16 @@ import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
 import '../../../models/producto_model.dart';
 import '../../../services/productos_service.dart';
+import '../../../services/toast_service.dart';
+import '../../../widgets/util/add_to_cart_debounce.dart';
 
 /// Pantalla de detalle completo de un producto
 class PantallaProductoDetalle extends StatefulWidget {
   const PantallaProductoDetalle({super.key});
 
   @override
-  State<PantallaProductoDetalle> createState() => _PantallaProductoDetalleState();
+  State<PantallaProductoDetalle> createState() =>
+      _PantallaProductoDetalleState();
 }
 
 class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
@@ -34,9 +37,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
     if (producto == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Error')),
-        body: const Center(
-          child: Text('Producto no encontrado'),
-        ),
+        body: const Center(child: Text('Producto no encontrado')),
       );
     }
 
@@ -107,7 +108,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                      colors: [
+                    colors: [
                       Colors.transparent,
                       Colors.black.withValues(alpha: 0.7), // ✅ CORREGIDO
                     ],
@@ -149,11 +150,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
   Widget _buildPlaceholderImage() {
     return Container(
       color: Colors.grey[200],
-      child: Icon(
-        Icons.restaurant_menu,
-        size: 120,
-        color: Colors.grey[400],
-      ),
+      child: Icon(Icons.restaurant_menu, size: 120, color: Colors.grey[400]),
     );
   }
 
@@ -185,8 +182,8 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                   index < producto.rating.floor()
                       ? Icons.star
                       : (index < producto.rating
-                          ? Icons.star_half
-                          : Icons.star_border),
+                            ? Icons.star_half
+                            : Icons.star_border),
                   color: Colors.amber,
                   size: 20,
                 );
@@ -237,9 +234,15 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
         CircleAvatar(
           radius: 14,
           backgroundColor: Colors.grey[200],
-          backgroundImage: (logo != null && logo.isNotEmpty) ? NetworkImage(logo) : null,
+          backgroundImage: (logo != null && logo.isNotEmpty)
+              ? NetworkImage(logo)
+              : null,
           child: (logo == null || logo.isEmpty)
-              ? const Icon(Icons.storefront_outlined, size: 16, color: Colors.grey)
+              ? const Icon(
+                  Icons.storefront_outlined,
+                  size: 16,
+                  color: Colors.grey,
+                )
               : null,
         ),
         if (nombre != null && nombre.isNotEmpty) ...[
@@ -267,19 +270,14 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
         children: [
           IconButton(
             icon: const Icon(Icons.remove),
-            onPressed: _cantidad > 1
-                ? () => setState(() => _cantidad--)
-                : null,
+            onPressed: _cantidad > 1 ? () => setState(() => _cantidad--) : null,
             iconSize: 20,
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               _cantidad.toString(),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
           IconButton(
@@ -300,10 +298,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
         children: [
           const Text(
             'Descripción',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
@@ -327,10 +322,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
         children: [
           const Text(
             'Información adicional',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           if (producto.proveedorNombre != null)
@@ -415,7 +407,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                         color: Colors.black.withValues(alpha: 0.06),
                         blurRadius: 10,
                         offset: const Offset(0, 6),
-                      )
+                      ),
                     ],
                   ),
                   child: InkWell(
@@ -432,23 +424,34 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(14),
+                          ),
                           child: SizedBox(
                             height: 86,
                             width: double.infinity,
-                            child: prod.imagenUrl != null && prod.imagenUrl!.isNotEmpty
+                            child:
+                                prod.imagenUrl != null &&
+                                    prod.imagenUrl!.isNotEmpty
                                 ? CachedNetworkImage(
                                     imageUrl: prod.imagenUrl!,
                                     fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(color: Colors.grey.shade200),
+                                    placeholder: (_, __) =>
+                                        Container(color: Colors.grey.shade200),
                                     errorWidget: (_, __, ___) => Container(
                                       color: Colors.grey.shade200,
-                                      child: const Icon(Icons.fastfood, color: JPColors.textHint),
+                                      child: const Icon(
+                                        Icons.fastfood,
+                                        color: JPColors.textHint,
+                                      ),
                                     ),
                                   )
                                 : Container(
                                     color: Colors.grey.shade200,
-                                    child: const Icon(Icons.fastfood, color: JPColors.textHint),
+                                    child: const Icon(
+                                      Icons.fastfood,
+                                      color: JPColors.textHint,
+                                    ),
                                   ),
                           ),
                         ),
@@ -532,7 +535,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                 ],
               ),
             ),
-            
+
             // Botón agregar al carrito
             Expanded(
               flex: 2,
@@ -554,7 +557,9 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Icon(Icons.shopping_cart),
@@ -573,14 +578,20 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
     );
   }
 
-  // ✅ CORREGIDO - Método completo
+  // ✅ CORREGIDO - Método completo con toast iOS
   void _agregarAlCarrito(ProductoModel producto) async {
     if (_loading) return;
+
+    // Debounce check
+    if (!AddToCartDebounce.canAdd(producto.id.toString())) {
+      ToastService().showInfo(context, 'Por favor espera un momento');
+      return;
+    }
 
     setState(() => _loading = true);
 
     final carrito = context.read<ProveedorCarrito>();
-    
+
     final success = await carrito.agregarProducto(
       producto,
       cantidad: _cantidad,
@@ -588,17 +599,24 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
 
     setState(() => _loading = false);
 
-    if (success && mounted) {
-      // Resetear cantidad sin mostrar mensaje
+    if (!mounted) return;
+
+    if (success) {
+      // Resetear cantidad
       setState(() => _cantidad = 1);
-    } else if (!success && mounted) {
-      // Solo mostrar mensaje en caso de error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(carrito.error ?? 'Error al agregar producto'),
-          backgroundColor: JPColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+
+      if (!context.mounted) return;
+      ToastService().showSuccess(
+        context,
+        '${producto.nombre} agregado',
+        actionLabel: 'Ver Carrito',
+        onActionTap: () => Rutas.irACarrito(context),
+      );
+    } else {
+      if (!context.mounted) return;
+      ToastService().showError(
+        context,
+        carrito.error ?? 'Error al agregar producto',
       );
     }
   }
@@ -629,9 +647,13 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
       }
 
       // Complementar con populares/ofertas para cubrir otros proveedores
-      final populares = await _productosService.obtenerProductosMasPopulares(random: true);
+      final populares = await _productosService.obtenerProductosMasPopulares(
+        random: true,
+      );
       candidatos.addAll(populares);
-      final ofertas = await _productosService.obtenerProductosEnOferta(random: true);
+      final ofertas = await _productosService.obtenerProductosEnOferta(
+        random: true,
+      );
       candidatos.addAll(ofertas);
 
       // Filtrar duplicados y el producto actual
@@ -699,10 +721,7 @@ class _InfoItem extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             '$titulo:',
-            style: const TextStyle(
-              color: JPColors.textSecondary,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: JPColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(width: 8),
           Text(

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../../config/rutas.dart';
 import '../../../apis/helpers/api_exception.dart';
-import '../../../apis/helpers/api_validators.dart';
+import '../../../services/core/validation/validators.dart';
 
 /// Pantalla para establecer nueva contraseña
 /// ✅ Última etapa del flujo de recuperación
@@ -217,7 +217,7 @@ Future<void> _cambiarPassword() async {
               if (value == null || value.isEmpty) {
                 return 'Por favor ingresa tu contraseña';
               }
-              final validacion = ApiValidators.validarPassword(value);
+              final validacion = Validators.validarPassword(value);
               if (!validacion['valida']) {
                 final errores = validacion['errores'] as List<String>;
                 return errores.first;

@@ -534,67 +534,136 @@ def detalle_solicitud_cambio_rol(request, solicitud_id):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def cambiar_rol_activo(request):
+    """
+    Cambia el rol activo del usuario.
+
+    OPTIMIZADO:
+    - Valida que el rol esté aprobado antes de cambiar
+    - Previene activación de roles pendientes o rechazados
+    - Devuelve tokens en formato compatible con Flutter (access/refresh directos)
+    - Agrega cache control para invalidar caché del cliente
+    """
     user = request.user
     nuevo_rol = request.data.get("nuevo_rol")
 
     if not nuevo_rol:
         return Response({"error": "Debe especificar el nuevo rol."}, status=400)
 
-    nuevo_rol = nuevo_rol.upper()
-    
-    # 1. Validar si el usuario realmente tiene ese perfil
+    rol_claim = nuevo_rol.upper()
+    rol_model = rol_claim.lower()
+
+    # 1. Validar si el usuario realmente tiene ese perfil ACTIVO y APROBADO
     tiene_permiso = False
-    
-    if nuevo_rol in {"CLIENTE", "USUARIO"}:
+    motivo_rechazo = ""
+
+    if rol_claim in {"CLIENTE", "USUARIO"}:
         # Solo validamos que el Perfil existe y el usuario está activo
         tiene_permiso = hasattr(user, "perfil") and user.is_active
-    elif nuevo_rol == "PROVEEDOR":
-        # Verificamos si existe la relación en la BD
+        motivo_rechazo = "No tienes un perfil de cliente activo"
+    elif rol_claim == "PROVEEDOR":
+        # Verificamos si existe la relación en la BD Y está activo
         if hasattr(user, 'proveedor') and user.proveedor.activo:
-            tiene_permiso = True
-    elif nuevo_rol == "REPARTIDOR":
-        # Verificamos si existe la relación en la BD
+            # Verificar si está verificado (si aplica)
+            if hasattr(user.proveedor, 'verificado'):
+                if user.proveedor.verificado:
+                    tiene_permiso = True
+                    motivo_rechazo = ""
+                else:
+                    motivo_rechazo = "Tu perfil de proveedor aún no está verificado. Espera la aprobación del administrador."
+            else:
+                tiene_permiso = True
+        else:
+            # Verificar si hay solicitud pendiente
+            solicitud = SolicitudCambioRol.objects.filter(
+                user=user, rol_solicitado="PROVEEDOR"
+            ).order_by("-creado_en").first()
+
+            if solicitud:
+                if solicitud.estado == "PENDIENTE":
+                    motivo_rechazo = "Tu solicitud de proveedor está en revisión. Te notificaremos cuando sea aprobada."
+                elif solicitud.estado == "RECHAZADO":
+                    razon = solicitud.razon_rechazo or "Contacta con soporte para más información"
+                    motivo_rechazo = f"Tu solicitud de proveedor fue rechazada: {razon}"
+                else:
+                    motivo_rechazo = "No tienes perfil de proveedor activo"
+            else:
+                motivo_rechazo = "No tienes perfil de proveedor. Solicita el rol desde la app."
+
+    elif rol_claim == "REPARTIDOR":
+        # Verificamos si existe la relación en la BD Y está activo
         if hasattr(user, 'repartidor') and user.repartidor.activo:
             tiene_permiso = True
-            
+        else:
+            # Verificar solicitud
+            solicitud = SolicitudCambioRol.objects.filter(
+                user=user, rol_solicitado="REPARTIDOR"
+            ).order_by("-creado_en").first()
+
+            if solicitud:
+                if solicitud.estado == "PENDIENTE":
+                    motivo_rechazo = "Tu solicitud de repartidor está en revisión. Te notificaremos cuando sea aprobada."
+                elif solicitud.estado == "RECHAZADO":
+                    razon = solicitud.razon_rechazo or "Contacta con soporte para más información"
+                    motivo_rechazo = f"Tu solicitud de repartidor fue rechazada: {razon}"
+                else:
+                    motivo_rechazo = "No tienes perfil de repartidor activo"
+            else:
+                motivo_rechazo = "No tienes perfil de repartidor. Solicita el rol desde la app."
+
     # Admin (Opcional)
-    elif nuevo_rol == "ADMINISTRADOR" and user.is_staff:
+    elif rol_claim == "ADMINISTRADOR" and user.is_staff:
         tiene_permiso = True
 
     if not tiene_permiso:
         return Response(
-            {"error": f"No tienes el perfil de {nuevo_rol} activo o verificado."}, 
+            {"error": motivo_rechazo or f"No tienes el perfil de {rol_claim} activo o verificado."},
             status=403
         )
 
     try:
-        # 2. Actualizar el campo rol en User (si existe)
-        if hasattr(user, 'rol'):
-            user.rol = nuevo_rol
-            user.save(update_fields=['rol'])
-        
-        # 3. Actualizar rol_activo si existe
-        if hasattr(user, 'rol_activo'):
-            user.rol_activo = nuevo_rol.lower()
-            user.save(update_fields=['rol_activo'])
-        
-        # 4. Generar nuevos tokens
+        # 2. Asegurar que el rol esté en roles_aprobados
+        if hasattr(user, "roles_aprobados"):
+            roles = [r.lower() for r in (user.roles_aprobados or [])]
+            if rol_model not in roles:
+                roles.append(rol_model)
+            user.roles_aprobados = roles
+
+        # 3. Actualizar el tipo_usuario (campo real del modelo)
+        user.tipo_usuario = rol_model
+
+        # 4. Actualizar rol_activo (minúsculas para modelo)
+        user.rol_activo = rol_model
+
+        user.save(update_fields=['roles_aprobados', 'tipo_usuario', 'rol_activo', 'updated_at'])
+        user.refresh_from_db(fields=['roles_aprobados', 'tipo_usuario', 'rol_activo'])
+
+        # 5. Generar nuevos tokens
         from rest_framework_simplejwt.tokens import RefreshToken
         refresh = RefreshToken.for_user(user)
-        refresh['rol'] = nuevo_rol
-        
-        return Response({
-            "mensaje": f"Rol cambiado a {nuevo_rol}",
-            "tokens": {
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "rol": nuevo_rol
-            }
-        }, status=200)
+        refresh['rol'] = rol_claim
+
+        # 6. Preparar respuesta optimizada para Flutter
+        response_data = {
+            "mensaje": f"Rol cambiado a {rol_claim}",
+            "rol_activo": rol_claim,
+            # Tokens en formato directo (compatible con Flutter ApiClient.saveTokens)
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "rol": rol_claim
+        }
+
+        response = Response(response_data, status=200)
+
+        # 7. Agregar headers de cache control
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+
+        return response
 
     except Exception as e:
-        logger.error(f"Error cambio rol: {e}")
-        return Response({"error": "Error interno."}, status=500)
+        logger.error(f"Error cambio rol: {e}", exc_info=True)
+        return Response({"error": "Error interno al cambiar de rol."}, status=500)
 
 
 @api_view(["GET"])
@@ -603,35 +672,62 @@ def mis_roles(request):
     """
     Devuelve los roles que tiene el usuario basados en sus perfiles activos
     y el estado de sus solicitudes.
+
+    OPTIMIZADO:
+    - Incluye estados detallados (ACEPTADO, PENDIENTE, RECHAZADO)
+    - Incluye razón de rechazo cuando aplica
+    - Agrega cache-control para sincronización
+    - Compatible con RoleManager de Flutter
     """
     user = request.user
+    user.refresh_from_db(fields=['roles_aprobados', 'rol_activo', 'tipo_usuario'])
     roles_data = []
 
     # 1. ROL CLIENTE (Siempre activo por defecto)
     roles_data.append({
         "nombre": "CLIENTE",
         "estado": "ACEPTADO",
-        "activo": True
+        "activo": True,
+        "razon_rechazo": None
     })
 
     # 2. ROL PROVEEDOR (Verificar perfil real)
     if hasattr(user, 'proveedor') and user.proveedor.activo:
-        roles_data.append({
-            "nombre": "PROVEEDOR",
-            "estado": "ACEPTADO", 
-            "activo": True
-        })
+        # Verificar si está verificado
+        if hasattr(user.proveedor, 'verificado'):
+            if user.proveedor.verificado:
+                roles_data.append({
+                    "nombre": "PROVEEDOR",
+                    "estado": "ACEPTADO",
+                    "activo": True,
+                    "razon_rechazo": None
+                })
+            else:
+                roles_data.append({
+                    "nombre": "PROVEEDOR",
+                    "estado": "PENDIENTE",
+                    "activo": False,
+                    "razon_rechazo": "Perfil en proceso de verificación"
+                })
+        else:
+            roles_data.append({
+                "nombre": "PROVEEDOR",
+                "estado": "ACEPTADO",
+                "activo": True,
+                "razon_rechazo": None
+            })
     else:
         # Si no tiene perfil, buscar si tiene solicitud pendiente/rechazada
         solicitud = SolicitudCambioRol.objects.filter(
             user=user, rol_solicitado="PROVEEDOR"
         ).order_by("-creado_en").first()
-        
+
         if solicitud:
             roles_data.append({
                 "nombre": "PROVEEDOR",
                 "estado": solicitud.estado,
-                "activo": False
+                "activo": False,
+                "razon_rechazo": solicitud.razon_rechazo if solicitud.estado == "RECHAZADO" else None
             })
 
     # 3. ROL REPARTIDOR (Verificar perfil real)
@@ -639,22 +735,58 @@ def mis_roles(request):
         roles_data.append({
             "nombre": "REPARTIDOR",
             "estado": "ACEPTADO",
-            "activo": True
+            "activo": True,
+            "razon_rechazo": None
         })
     else:
         # Buscar solicitud
         solicitud = SolicitudCambioRol.objects.filter(
             user=user, rol_solicitado="REPARTIDOR"
         ).order_by("-creado_en").first()
-        
+
         if solicitud:
             roles_data.append({
                 "nombre": "REPARTIDOR",
                 "estado": solicitud.estado,
-                "activo": False
+                "activo": False,
+                "razon_rechazo": solicitud.razon_rechazo if solicitud.estado == "RECHAZADO" else None
             })
 
-    return Response({"roles": roles_data}, status=status.HTTP_200_OK)
+    # Determinar rol activo
+    rol_token = None
+    try:
+        token_obj = getattr(request, "auth", None)
+        if isinstance(token_obj, dict):
+            rol_token = token_obj.get("rol")
+        elif hasattr(token_obj, "get"):
+            rol_token = token_obj.get("rol", None)
+    except Exception:
+        rol_token = None
+
+    rol_activo_db = (
+        getattr(user, "rol_activo", None)
+        or getattr(user, "tipo_usuario", None)
+        or getattr(user, "rol", "cliente")
+    )
+
+    rol_activo = rol_token or rol_activo_db or "cliente"
+    rol_activo = rol_activo.upper() if isinstance(rol_activo, str) else "CLIENTE"
+
+    response_data = {
+        "roles": roles_data,
+        "rol_activo": rol_activo,
+        "roles_disponibles": [
+            r["nombre"] for r in roles_data if r.get("estado") == "ACEPTADO"
+        ]
+    }
+
+    response = Response(response_data, status=status.HTTP_200_OK)
+
+    # Agregar cache control - permitir caché por 5 minutos
+    response['Cache-Control'] = 'private, max-age=300'  # 5 minutos
+    response['Vary'] = 'Authorization'  # Varía según usuario
+
+    return response
 
 
 @api_view(["GET"])

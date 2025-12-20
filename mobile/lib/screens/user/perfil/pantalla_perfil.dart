@@ -1,15 +1,27 @@
 // lib/screens/user/perfil/pantalla_perfil.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../controllers/user/perfil_controller.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/roles_service.dart';
+import '../../../services/role_manager.dart';
+import '../../../config/rutas.dart';
+import '../../../switch/roles.dart';
+import '../../../switch/role_router.dart';
+import 'package:provider/provider.dart';
 import 'editar/pantalla_editar_informacion.dart';
 import 'editar/pantalla_editar_foto.dart';
-import 'configuracion/pantalla_configuracion.dart'; 
 import 'rifas/pantalla_rifa_activa.dart';
-import '../../solicitudes_rol/pantalla_mis_solicitudes.dart';
+import 'configuracion/direcciones/pantalla_lista_direcciones.dart';
+import 'configuracion/notificaciones/pantalla_notificaciones.dart';
+import 'configuracion/idioma/pantalla_idioma.dart';
+import 'configuracion/ayuda/pantalla_ayuda_soporte.dart';
+import 'configuracion/ayuda/pantalla_terminos.dart';
 import '../../solicitudes_rol/pantalla_solicitar_rol.dart';
-/// 👤 PANTALLA DE PERFIL
+import '../../../widgets/role_switcher_ios.dart';
+
 class PantallaPerfil extends StatefulWidget {
   const PantallaPerfil({super.key});
 
@@ -17,18 +29,28 @@ class PantallaPerfil extends StatefulWidget {
   State<PantallaPerfil> createState() => _PantallaPerfilState();
 }
 
-class _PantallaPerfilState extends State<PantallaPerfil> {
+class _PantallaPerfilState extends State<PantallaPerfil>
+    with WidgetsBindingObserver {
   late final PerfilController _controller;
+  final _authService = AuthService();
+  final _rolesService = RolesService();
+  List<String> _rolesActivos = [];
+  String? _rolActual;
+  bool _rolesCargando = false;
+  bool _cambiandoRol = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = PerfilController();
     _cargarDatos();
+    _cargarRoles();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
   }
@@ -39,649 +61,544 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
 
   Future<void> _recargarDatos() async {
     await _controller.cargarDatosCompletos(forzarRecarga: true);
+    await _cargarRoles();
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // ⚙️ NAVEGACIÓN
-  // ══════════════════════════════════════════════════════════════════════════
+  Future<void> _cargarRoles() async {
+    setState(() => _rolesCargando = true);
+    try {
+      final rolesResponse = await _rolesService.obtenerRolesDisponibles();
+      if (mounted) _actualizarRolesLocales(rolesResponse);
+    } catch (_) {
+      if (mounted) setState(() => _rolesCargando = false);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _cargarRoles();
+    }
+  }
 
   void _editarPerfil() async {
     if (_controller.perfil == null) return;
-    
     final resultado = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (context) => PantallaEditarInformacion(perfil: _controller.perfil!),
+      CupertinoPageRoute(
+        builder: (context) =>
+            PantallaEditarInformacion(perfil: _controller.perfil!),
       ),
     );
-    
     if (resultado == true) _recargarDatos();
   }
 
   void _editarFoto() async {
     final resultado = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (context) => PantallaEditarFoto(fotoActual: _controller.perfil?.fotoPerfilUrl),
+      CupertinoPageRoute(
+        builder: (context) =>
+            PantallaEditarFoto(fotoActual: _controller.perfil?.fotoPerfilUrl),
       ),
     );
     if (resultado == true) _recargarDatos();
   }
 
-  void _irASeleccionarRol() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const PantallaSolicitarRol()),
-    );
-  }
-
-  void _verMisSolicitudes() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const PantallaMisSolicitudes()),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 🎨 UI PRINCIPAL
-  // ══════════════════════════════════════════════════════════════════════════
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F9),
-      appBar: _buildAppBar(),
+      backgroundColor: CupertinoColors.systemGroupedBackground,
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
           if (_controller.isLoading && !_controller.tieneDatos) {
-            return const Center(child: JPLoading());
+            return const Center(child: CupertinoActivityIndicator(radius: 14));
           }
 
           if (_controller.tieneError && !_controller.tieneDatos) {
             return _buildErrorState();
           }
 
-          return RefreshIndicator(
-            onRefresh: _recargarDatos,
-            color: JPColors.primary,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 40),
-              child: Column(
-                children: [
-                  if (_controller.errorPerfil != null || _controller.errorEstadisticas != null)
-                    _buildWarningBanner(),
-
-                  _buildHeader(), 
-
-                  const SizedBox(height: 20),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: [
-                        _buildInfoPersonal(),
-                        const SizedBox(height: 16),
-                        _buildEstadisticas(),
-                        const SizedBox(height: 16),
-                        _buildSolicitudesRolCard(),
-                        const SizedBox(height: 16),
-                      _buildRifasCard(),
-                      const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-                ],
+          return CustomScrollView(
+            physics: const ClampingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(child: _buildHeader()),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    if (_controller.errorPerfil != null ||
+                        _controller.errorEstadisticas != null)
+                      _buildWarningBanner(),
+                    _buildSettingsSection(),
+                  ]),
+                ),
               ),
-            ),
+            ],
           );
         },
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: const Text(
-        'Mi Perfil',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      ),
-      backgroundColor: Colors.white,
-      foregroundColor: JPColors.textPrimary,
-      elevation: 0,
-      centerTitle: true,
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(color: Colors.grey[200], height: 1),
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: 'Configuración',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const PantallaAjustes()),
-            );
-          },
-        ),
-        const SizedBox(width: 8),
-      ],
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 👤 HEADER (LIMPIO: Sin lápiz redundante)
-  // ══════════════════════════════════════════════════════════════════════════
   Widget _buildHeader() {
     final perfil = _controller.perfil;
-    if (perfil == null) return const SizedBox.shrink();
-
-    return Stack(
-      children: [
-        Container(
-          height: 150,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0DA1D5), Color(0xFF29C2D3)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0DA1D5), Color(0xFF29C2D3)],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: JPColors.primary.withValues(alpha: 0.16),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: JPAvatar(
-                        imageUrl: perfil.fotoPerfilUrl,
-                        radius: 50,
-                        onTap: _editarFoto,
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      left: 0,
-                      bottom: -6,
-                      child: Center(child: _buildChangeChip()),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  perfil.usuarioNombre,
-                  style: JPTextStyles.h2.copyWith(fontSize: 22),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 4),
-                Text(perfil.usuarioEmail, style: JPTextStyles.bodySecondary),
-                if (perfil.esClienteFrecuente) ...[
-                  const SizedBox(height: 12),
-                  const JPBadge(label: 'Cliente Frecuente', color: JPColors.secondary),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChangeChip() {
-    return Material(
-      color: Colors.white,
-      elevation: 1.5,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: _editarFoto,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child:const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.camera_alt_outlined, size: 16, color: JPColors.primary),
-              SizedBox(width: 4),
-              Text(
-                'Cambiar',
-                style: TextStyle(
-                  color: JPColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 📋 INFORMACIÓN PERSONAL (Aquí se queda el botón "Editar")
-  // ══════════════════════════════════════════════════════════════════════════
-  Widget _buildInfoPersonal() {
-    final perfil = _controller.perfil;
-    if (perfil == null) return const SizedBox.shrink();
-
-    String fechaFormateada = 'Agregar fecha';
-    if (perfil.fechaNacimiento != null) {
-      final f = perfil.fechaNacimiento!;
-      final dia = f.day.toString().padLeft(2, '0');
-      final mes = f.month.toString().padLeft(2, '0');
-      fechaFormateada = '$dia/$mes/${f.year}';
-    }
+    if (perfil == null) return const SizedBox(height: 100);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          )
-        ],
+        color: CupertinoColors.systemGroupedBackground.resolveFrom(context),
       ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader('Información Personal', onEdit: _editarPerfil),
-          const SizedBox(height: 14),
-          _buildInfoRow(
-            icon: Icons.phone_outlined,
-            label: 'Teléfono',
-            value: perfil.telefono ?? 'Agregar teléfono',
-            isPlaceholder: !perfil.tieneTelefono,
-          ),
-          const SizedBox(height: 14),
-          _buildInfoRow(
-            icon: Icons.cake_outlined,
-            label: 'Nacimiento',
-            value: fechaFormateada,
-            isPlaceholder: perfil.fechaNacimiento == null,
-          ),
-          if (!_controller.perfilCompleto) ...[
-            const SizedBox(height: 16),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            Text(
+              'Mi Perfil',
+              style: TextStyle(
+                color: CupertinoColors.label.resolveFrom(context),
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Card del perfil compacta
             Container(
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: JPColors.warning.withAlpha(25),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: JPColors.warning.withAlpha(76)),
+                color: CupertinoColors.systemBackground.resolveFrom(context),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, color: JPColors.warning, size: 18),
-                  const SizedBox(width: 10),
+                  // Foto de perfil
+                  GestureDetector(
+                    onTap: _editarFoto,
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+                            ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: JPAvatar(
+                              imageUrl: perfil.fotoPerfilUrl,
+                              radius: 32,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF007AFF),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.camera_fill,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 14),
+
+                  // Nombre y correo
                   Expanded(
-                    child: Text(
-                      _controller.mensajeCompletitud,
-                      style: const TextStyle(color: JPColors.warning, fontSize: 13),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          perfil.usuarioNombre,
+                          style: TextStyle(
+                            color: CupertinoColors.label.resolveFrom(context),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          perfil.usuarioEmail,
+                          style: TextStyle(
+                            color: CupertinoColors.secondaryLabel.resolveFrom(
+                              context,
+                            ),
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (perfil.esClienteFrecuente) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.star_fill,
+                                  size: 10,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Cliente Frecuente',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+
+            const SizedBox(height: 8),
           ],
-        ],
+        ),
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // 📊 ESTADÍSTICAS
-  // ══════════════════════════════════════════════════════════════════════════
-  Widget _buildEstadisticas() {
-    final perfil = _controller.perfil;
-
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.03),
-          blurRadius: 12,
-          offset: const Offset(0, 6),
-        ),
-      ],
-    ),
-    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-    child: Row(
-      children: [
-        Expanded(
-          child: _buildStatItem(
-            'Pedidos',
-            '${perfil?.totalPedidos ?? 0}',
-          ),
-        ),
-        Container(width: 1, height: 30, color: Colors.grey[200]),
-
-        Expanded(
-          child: _buildStatItem(
-            'Calificación',
-            perfil?.calificacion.toStringAsFixed(1) ?? '0.0',
-          ),
-        ),
-        Container(width: 1, height: 30, color: Colors.grey[200]),
-
-        Expanded(
-          child: _buildStatItem(
-            'Nivel',
-            _controller.nivelCliente,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-  Widget _buildStatItem(String label, String value, {Widget? badge}) {
+  Widget _buildSettingsSection() {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                value,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: JPColors.primary),
-                maxLines: 1,
-              ),
-            ),
-            if (badge != null) ...[const SizedBox(width: 4), badge]
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(label, style: const TextStyle(fontSize: 13, color: JPColors.textSecondary, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 16),
+
+        // CUENTA
+        _buildSectionHeader('CUENTA'),
+        _buildSettingsCard([
+          _buildSettingsTile(
+            icon: CupertinoIcons.person_fill,
+            iconBgColor: const Color(0xFF5AC8FA),
+            title: 'Información del perfil',
+            onTap: _editarPerfil,
+          ),
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: CupertinoIcons.location_solid,
+            iconBgColor: const Color(0xFF34C759),
+            title: 'Mis direcciones',
+            onTap: () => _navegarA(const PantallaListaDirecciones()),
+          ),
+        ]),
+
+        const SizedBox(height: 24),
+
+        // PREFERENCIAS
+        _buildSectionHeader('PREFERENCIAS'),
+        _buildSettingsCard([
+          _buildSettingsTile(
+            icon: CupertinoIcons.bell_fill,
+            iconBgColor: const Color(0xFFFF3B30),
+            title: 'Notificaciones',
+            onTap: () => _navegarA(const PantallaNotificaciones()),
+          ),
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: CupertinoIcons.globe,
+            iconBgColor: const Color(0xFF007AFF),
+            title: 'Idioma',
+            onTap: () => _navegarA(const PantallaIdioma()),
+          ),
+        ]),
+
+        const SizedBox(height: 24),
+
+        // RIFAS Y PROMOCIONES
+        _buildSectionHeader('RIFAS Y PROMOCIONES'),
+        _buildSettingsCard([
+          _buildSettingsTile(
+            icon: CupertinoIcons.ticket_fill,
+            iconBgColor: const Color(0xFFFF9500),
+            title: 'Rifas activas',
+            onTap: () => _navegarA(const PantallaRifaActiva()),
+          ),
+        ]),
+
+        // CAMBIAR ROL (solo si hay roles disponibles)
+        if (_tieneRolesDisponibles()) ...[
+          const SizedBox(height: 24),
+          _buildSectionHeader('CAMBIAR ROL'),
+          _buildRoleCard(),
+        ],
+
+        const SizedBox(height: 24),
+
+        // SOLICITUDES
+        _buildSectionHeader('SOLICITUDES'),
+        _buildSettingsCard([
+          _buildSettingsTile(
+            icon: CupertinoIcons.arrow_right_arrow_left,
+            iconBgColor: const Color(0xFFAF52DE),
+            title: 'Solicitar cambio de rol',
+            subtitle: 'Solicita ser proveedor o repartidor',
+            onTap: () => _navegarA(const PantallaSolicitarRol()),
+          ),
+        ]),
+
+        const SizedBox(height: 24),
+
+        // SOPORTE (AL FINAL)
+        _buildSectionHeader('SOPORTE'),
+        _buildSettingsCard([
+          _buildSettingsTile(
+            icon: CupertinoIcons.question_circle_fill,
+            iconBgColor: const Color(0xFF5856D6),
+            title: 'Ayuda y soporte',
+            onTap: () => _navegarA(const PantallaAyudaSoporte()),
+          ),
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: CupertinoIcons.doc_text_fill,
+            iconBgColor: const Color(0xFF8E8E93),
+            title: 'Términos y condiciones',
+            onTap: () => _navegarA(const PantallaTerminos()),
+          ),
+        ]),
       ],
     );
   }
 
-  Widget _buildRifasCard() {
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: CupertinoColors.systemGrey.resolveFrom(context),
+            letterSpacing: -0.08,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            JPColors.primary.withValues(alpha: 0.12),
-            Colors.white,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildRoleCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: _buildRoleSwitcher(),
+    );
+  }
+
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required Color iconBgColor,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+    Widget? trailing,
+  }) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(7),
               ),
-              child: const Icon(Icons.confirmation_num_outlined, color: JPColors.primary, size: 24),
+              child: Icon(icon, color: Colors.white, size: 18),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Rifas',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: JPColors.textPrimary),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      _buildRifaStat('Participaciones', '${_controller.rifasParticipadas}'),
-                      const SizedBox(width: 16),
-                      _buildRifaStat('Ganadas', '${_controller.rifasGanadas}'),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: _verRifaActiva,
-                      icon: const Icon(Icons.visibility_outlined, size: 16),
-                      label: const Text(
-                        'Ver rifa activa',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: CupertinoColors.label,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
+            trailing ??
+                Icon(
+                  CupertinoIcons.chevron_forward,
+                  size: 14,
+                  color: CupertinoColors.systemGrey3.resolveFrom(context),
+                ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRifaStat(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: JPColors.primary,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: JPColors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSolicitudesRolCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Solicitudes de rol', style: JPTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          const Text(
-            'Solicita ser Proveedor o Repartidor y mantén tu historial visible para el admin.',
-            style: TextStyle(color: JPColors.textSecondary, fontSize: 13),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _irASeleccionarRol,
-                  child: const Text('Solicitar rol'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _verMisSolicitudes,
-                  child: const Text('Ver solicitudes'),
-                ),
-              ),
-            ],
-          ),
-        ],
+  Widget _buildDivider() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 60),
+      child: Container(
+        height: 0.5,
+        color: CupertinoColors.separator.resolveFrom(context),
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // 🚀 BANNER CAMBIO ROL
-  // ══════════════════════════════════════════════════════════════════════════
-  // ══════════════════════════════════════════════════════════════════════════
-  // 🧩 WIDGETS AUXILIARES
-  // ══════════════════════════════════════════════════════════════════════════
-
-  Widget _buildSectionHeader(String title, {VoidCallback? onEdit}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: JPTextStyles.h3.copyWith(fontWeight: FontWeight.w700)),
-        if (onEdit != null)
-          InkWell(
-            onTap: onEdit,
-            borderRadius: BorderRadius.circular(20),
-            child: const Padding(
-              padding: EdgeInsets.all(4.0),
-              child: Text(
-                'Editar',
-                style: TextStyle(
-                  color: JPColors.primary, 
-                  fontWeight: FontWeight.w600, 
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+  bool _tieneRolesDisponibles() {
+    return _rolesActivos.contains('PROVEEDOR') ||
+        _rolesActivos.contains('REPARTIDOR');
   }
 
-  Widget _buildInfoRow({required IconData icon, required String label, required String value, bool isPlaceholder = false}) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: JPColors.primary.withAlpha(25),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 20, color: JPColors.primary),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: JPColors.textSecondary)),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isPlaceholder ? JPColors.textHint : JPColors.textPrimary,
-                  fontWeight: isPlaceholder ? FontWeight.normal : FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+  void _actualizarRolesLocales(Map<String, dynamic> rolesResponse) {
+    final disponiblesRaw =
+        (rolesResponse['roles_disponibles'] as List<dynamic>? ?? []);
+    final rolActivoRaw = (rolesResponse['rol_activo'] as String?)
+        ?.toUpperCase();
+
+    final roles = disponiblesRaw
+        .map((r) => r.toString().toUpperCase())
+        .where((r) => r == 'PROVEEDOR' || r == 'REPARTIDOR')
+        .toList();
+
+    setState(() {
+      _rolesActivos = roles;
+      _rolActual = rolActivoRaw;
+      _rolesCargando = false;
+    });
+  }
+
+  Widget _buildRoleSwitcher() {
+    if (_rolesCargando) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CupertinoActivityIndicator()),
+      );
+    }
+
+    final disponibleProveedor = _rolesActivos.contains('PROVEEDOR');
+    final disponibleRepartidor = _rolesActivos.contains('REPARTIDOR');
+
+    final options = <String, String>{};
+    if (disponibleProveedor) options['PROVEEDOR'] = 'Proveedor';
+    if (disponibleRepartidor) options['REPARTIDOR'] = 'Repartidor';
+
+    final selected = options.keys.contains(_rolActual)
+        ? _rolActual
+        : (options.keys.isNotEmpty ? options.keys.first : null);
+
+    return RoleSwitcherIOS(
+      opciones: options,
+      rolSeleccionado: selected,
+      onChanged: (valor) => _goToRole(valor),
     );
   }
 
   Widget _buildWarningBanner() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: JPColors.warning.withAlpha(25),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: JPColors.warning.withAlpha(128)),
+        color: const Color(0xFFFFF3CD),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFECB5)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: JPColors.warning),
+          const Icon(
+            CupertinoIcons.exclamationmark_triangle_fill,
+            color: Color(0xFF856404),
+            size: 20,
+          ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Alguna información no se pudo cargar.',
-              style: TextStyle(color: JPColors.warning, fontSize: 13),
+              style: TextStyle(color: Color(0xFF856404), fontSize: 13),
             ),
           ),
-          InkWell(
-            onTap: _recargarDatos,
-            child: const Icon(Icons.refresh, color: JPColors.warning),
-          )
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            onPressed: _recargarDatos,
+            child: const Icon(
+              CupertinoIcons.refresh,
+              color: Color(0xFF856404),
+              size: 18,
+            ),
+          ),
         ],
       ),
     );
@@ -689,29 +606,139 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
 
   Widget _buildErrorState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: JPColors.error),
-          const SizedBox(height: 16),
-          Text('Error al cargar perfil', style: JPTextStyles.h3.copyWith(color: JPColors.error)),
-          const SizedBox(height: 8),
-          Text(_controller.error ?? 'Ocurrió un problema inesperado', textAlign: TextAlign.center, style: JPTextStyles.bodySecondary),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(onPressed: _recargarDatos, icon: const Icon(Icons.refresh), label: const Text('Reintentar')),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemRed.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                CupertinoIcons.xmark_circle_fill,
+                size: 48,
+                color: CupertinoColors.systemRed,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Error al cargar perfil',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.label,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _controller.error ?? 'Ocurrió un problema inesperado',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              ),
+            ),
+            const SizedBox(height: 24),
+            CupertinoButton.filled(
+              onPressed: _recargarDatos,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.refresh, size: 18),
+                  SizedBox(width: 8),
+                  Text('Reintentar'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // ⚙️ LÓGICA DE ACCIONES
-  // ══════════════════════════════════════════════════════════════════════════
+  void _navegarA(Widget pantalla) {
+    Navigator.push(context, CupertinoPageRoute(builder: (_) => pantalla));
+  }
 
-  void _verRifaActiva() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const PantallaRifaActiva()),
+  String _rutaHomePorRol(String rol) {
+    switch (rol.toUpperCase()) {
+      case 'PROVEEDOR':
+        return Rutas.proveedorHome;
+      case 'REPARTIDOR':
+        return Rutas.repartidorHome;
+      case 'USUARIO':
+      case 'CLIENTE':
+        return Rutas.inicio;
+      default:
+        return Rutas.inicio;
+    }
+  }
+
+  Future<void> _goToRole(String nuevoRol) async {
+    if (nuevoRol.isEmpty) return;
+    if (_cambiandoRol) {
+      debugPrint('[Perfil][Rol] Cambio en progreso, acción ignorada');
+      return;
+    }
+
+    final rolDestino = nuevoRol.toUpperCase();
+    final rolAnterior = _rolActual?.toUpperCase();
+
+    debugPrint(
+      '[Perfil][Rol] Solicitud de cambio: ${rolAnterior ?? "N/A"} -> $rolDestino',
     );
+
+    _cambiandoRol = true;
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CupertinoActivityIndicator()),
+    );
+
+    try {
+      final roleManager = context.read<RoleManager>();
+      final destino = parseRole(rolDestino);
+      final exito = await roleManager.switchRole(destino);
+
+      if (!exito) {
+        throw Exception('No se pudo cambiar al rol $rolDestino');
+      }
+
+      final rolCacheado =
+          _authService.getRolCacheado()?.toUpperCase() ?? 'DESCONOCIDO';
+      final ruta = _rutaHomePorRol(roleToApi(destino));
+
+      debugPrint(
+        '[Perfil][Rol] Cambio aplicado: ${rolAnterior ?? "N/A"} -> '
+        '${roleToApi(destino)} | cache=$rolCacheado | ruta=$ruta',
+      );
+
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      await RoleRouter.navigateByRole(context, destino);
+    } catch (e) {
+      debugPrint('[Perfil][Rol] Error al cambiar a $rolDestino: $e');
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (mounted) {
+        showCupertinoDialog(
+          context: context,
+          builder: (dialogContext) => CupertinoAlertDialog(
+            title: const Text('Error'),
+            content: Text('No se pudo cambiar de rol: $e'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(dialogContext),
+              ),
+            ],
+          ),
+        );
+      }
+    } finally {
+      _cambiandoRol = false;
+    }
   }
 }

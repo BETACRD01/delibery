@@ -9,6 +9,8 @@ import '../../../../../providers/proveedor_carrito.dart';
 import '../../../../../services/productos_service.dart';
 import '../../../models/promocion_model.dart';
 import '../../../models/producto_model.dart';
+import '../../../services/toast_service.dart';
+import '../../../widgets/util/add_to_cart_debounce.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -17,14 +19,15 @@ class PantallaPromocionDetalle extends StatefulWidget {
   const PantallaPromocionDetalle({super.key});
 
   @override
-  State<PantallaPromocionDetalle> createState() => _PantallaPromocionDetalleState();
+  State<PantallaPromocionDetalle> createState() =>
+      _PantallaPromocionDetalleState();
 }
 
 class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
   List<ProductoModel> _productosIncluidos = [];
   bool _loading = true;
   String _error = '';
-  
+
   Timer? _timer;
   Duration _tiempoRestante = Duration.zero;
 
@@ -87,7 +90,9 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
       // 1) Producto asociado
       if ((promocion.productoAsociadoId ?? '').isNotEmpty) {
         try {
-          final prod = await productosService.obtenerProducto(promocion.productoAsociadoId!);
+          final prod = await productosService.obtenerProducto(
+            promocion.productoAsociadoId!,
+          );
           productosReales.add(prod);
         } catch (_) {
           // continúa con otros métodos
@@ -95,7 +100,8 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
       }
 
       // 2) Categoría asociada
-      if (productosReales.isEmpty && (promocion.categoriaAsociadaId ?? '').isNotEmpty) {
+      if (productosReales.isEmpty &&
+          (promocion.categoriaAsociadaId ?? '').isNotEmpty) {
         productosReales = await productosService.obtenerProductos(
           categoriaId: promocion.categoriaAsociadaId,
         );
@@ -103,9 +109,13 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
       // 3) Fallback: ofertas/random para que siempre haya sugerencias reales
       if (productosReales.isEmpty) {
-        productosReales = await productosService.obtenerProductosEnOferta(random: true);
+        productosReales = await productosService.obtenerProductosEnOferta(
+          random: true,
+        );
         if (productosReales.isEmpty) {
-          productosReales = await productosService.obtenerProductosMasPopulares(random: true);
+          productosReales = await productosService.obtenerProductosMasPopulares(
+            random: true,
+          );
         }
       }
 
@@ -135,7 +145,6 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final promocion = Rutas.obtenerArgumentos<PromocionModel>(context);
@@ -143,9 +152,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
     if (promocion == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Error')),
-        body: const Center(
-          child: Text('Promoción no encontrada'),
-        ),
+        body: const Center(child: Text('Promoción no encontrada')),
       );
     }
 
@@ -178,7 +185,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
   Widget _buildSliverAppBar(PromocionModel promocion) {
     // Usamos el color de la promoción directamente, asumiendo que es objeto Color
-    final promoColor = promocion.color; 
+    final promoColor = promocion.color;
 
     return SliverAppBar(
       expandedHeight: 250,
@@ -200,9 +207,8 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                     child: CircularProgressIndicator(color: Colors.white),
                   ),
                 ),
-                errorWidget: (context, url, error) => Container(
-                  color: promoColor,
-                ),
+                errorWidget: (context, url, error) =>
+                    Container(color: promoColor),
               )
             else
               // Fondo con color de la promoción si no hay imagen
@@ -274,9 +280,9 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: promocion.esVigente
-             ? JPColors.success.withValues(alpha: 0.1)
-             : JPColors.error.withValues(alpha: 0.1),
-             borderRadius: BorderRadius.circular(20),
+                  ? JPColors.success.withValues(alpha: 0.1)
+                  : JPColors.error.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -284,13 +290,17 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                 Icon(
                   promocion.esVigente ? Icons.check_circle : Icons.cancel,
                   size: 16,
-                  color: promocion.esVigente ? JPColors.success : JPColors.error,
+                  color: promocion.esVigente
+                      ? JPColors.success
+                      : JPColors.error,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   promocion.esVigente ? 'ACTIVA' : 'EXPIRADA',
                   style: TextStyle(
-                    color: promocion.esVigente ? JPColors.success : JPColors.error,
+                    color: promocion.esVigente
+                        ? JPColors.success
+                        : JPColors.error,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -429,7 +439,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
           ),
         ),
         const SizedBox(height: 12),
-        
+
         if (_loading)
           const Center(
             child: Padding(
@@ -443,7 +453,11 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
               padding: const EdgeInsets.all(32),
               child: Column(
                 children: [
-                  Icon(Icons.error_outline, size: 48, color: JPColors.error.withValues(alpha: 0.5)),
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: JPColors.error.withValues(alpha: 0.5),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     _error,
@@ -464,7 +478,11 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
               padding: const EdgeInsets.all(32),
               child: Column(
                 children: [
-                  Icon(Icons.fastfood_outlined, size: 48, color: Colors.grey[300]),
+                  Icon(
+                    Icons.fastfood_outlined,
+                    size: 48,
+                    color: Colors.grey[300],
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     'Esta promoción aplica a todo el catálogo\no no tiene productos específicos.',
@@ -484,7 +502,10 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
             itemBuilder: (context, index) {
               return _ProductoPromoCard(
                 producto: _productosIncluidos[index],
-                onTap: () => Rutas.irAProductoDetalle(context, _productosIncluidos[index]),
+                onTap: () => Rutas.irAProductoDetalle(
+                  context,
+                  _productosIncluidos[index],
+                ),
               );
             },
           ),
@@ -518,16 +539,19 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _TerminoItem(
-                  texto: 'Promoción válida solo durante el periodo especificado.',
+                  texto:
+                      'Promoción válida solo durante el periodo especificado.',
                 ),
                 _TerminoItem(
-                  texto: 'Descuento aplicable únicamente a productos incluidos.',
+                  texto:
+                      'Descuento aplicable únicamente a productos incluidos.',
                 ),
                 _TerminoItem(
                   texto: 'No acumulable con otras promociones activas.',
                 ),
                 _TerminoItem(
-                  texto: 'Sujeto a disponibilidad de stock en el momento de la compra.',
+                  texto:
+                      'Sujeto a disponibilidad de stock en el momento de la compra.',
                 ),
               ],
             ),
@@ -539,13 +563,16 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
   Widget _buildBottomBar(PromocionModel promocion) {
     // Calculamos totales solo si hay productos específicos
-    final precioTotal = _productosIncluidos.fold<double>(0, (sum, p) => sum + p.precio);
+    final precioTotal = _productosIncluidos.fold<double>(
+      0,
+      (sum, p) => sum + p.precio,
+    );
     final precioAnterior = _productosIncluidos.fold<double>(
       0,
       (sum, p) => sum + (p.precioAnterior ?? p.precio),
     );
     final ahorro = (precioAnterior - precioTotal).clamp(0, double.infinity);
-    
+
     // Si no hay productos específicos, mostramos botón simple
     final mostrarTotales = _productosIncluidos.isNotEmpty;
 
@@ -574,7 +601,10 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                     children: [
                       if (ahorro > 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: JPColors.success.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -610,12 +640,12 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                       ),
                     ),
                   ),
-                
+
                 const SizedBox(width: 16),
-                
+
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: promocion.esVigente 
+                    onPressed: promocion.esVigente
                         ? _agregarPromocionAlCarrito
                         : null,
                     style: ElevatedButton.styleFrom(
@@ -642,10 +672,16 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
   }
 
   void _agregarPromocionAlCarrito() async {
-    final carrito = context.read<ProveedorCarrito>();
     final promocion = Rutas.obtenerArgumentos<PromocionModel>(context);
-
     if (promocion == null) return;
+
+    // Debounce check
+    if (!AddToCartDebounce.canAdd('promo_${promocion.id}')) {
+      ToastService().showInfo(context, 'Por favor espera un momento');
+      return;
+    }
+
+    final carrito = context.read<ProveedorCarrito>();
 
     // Si hay productos específicos, agregamos la promoción completa
     if (_productosIncluidos.isNotEmpty) {
@@ -654,19 +690,26 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
         _productosIncluidos,
       );
 
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('¡${promocion.titulo} agregada al carrito!'),
-            backgroundColor: JPColors.success,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-          ),
+      if (!mounted) return;
+
+      if (success) {
+        if (!context.mounted) return;
+        ToastService().showSuccess(
+          context,
+          '${promocion.titulo} agregada',
+          actionLabel: 'Ver Carrito',
+          onActionTap: () => Rutas.irACarrito(context),
         );
 
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) Navigator.pop(context);
         });
+      } else {
+        if (!context.mounted) return;
+        ToastService().showError(
+          context,
+          carrito.error ?? 'Error al agregar promoción',
+        );
       }
     } else {
       // Promo general: ir al home/catalogo
@@ -682,7 +725,6 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 // ══════════════════════════════════════════════════════════════════════════════
 // WIDGETS AUXILIARES
 // ══════════════════════════════════════════════════════════════════════════════
-
 
 class _InfoRow extends StatelessWidget {
   final IconData icono;
@@ -713,10 +755,7 @@ class _InfoRow extends StatelessWidget {
           children: [
             Text(
               titulo,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
             Text(
               texto,
@@ -762,94 +801,92 @@ class _ProductoPromoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Row(
-        children: [
-          // Imagen del producto
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: 80,
-              height: 80,
-              color: Colors.grey[100],
-              child: producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: producto.imagenUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: JPColors.primary.withValues(alpha: 0.5),
+          children: [
+            // Imagen del producto
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 80,
+                height: 80,
+                color: Colors.grey[100],
+                child:
+                    producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: producto.imagenUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: JPColors.primary.withValues(alpha: 0.5),
+                          ),
                         ),
-                      ),
-                      errorWidget: (context, url, error) => Icon(
+                        errorWidget: (context, url, error) => Icon(
+                          Icons.fastfood_outlined,
+                          size: 30,
+                          color: Colors.grey[400],
+                        ),
+                      )
+                    : Icon(
                         Icons.fastfood_outlined,
                         size: 30,
                         color: Colors.grey[400],
                       ),
-                    )
-                  : Icon(
-                      Icons.fastfood_outlined,
-                      size: 30,
-                      color: Colors.grey[400],
-                    ),
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
+            const SizedBox(width: 16),
 
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  producto.nombre,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: JPColors.textPrimary,
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    producto.nombre,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: JPColors.textPrimary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  producto.descripcion,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
+                  const SizedBox(height: 4),
+                  Text(
+                    producto.descripcion,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (tieneDescuento) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (tieneDescuento) ...[
+                        Text(
+                          '\$${producto.precioAnterior!.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[500],
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       Text(
-                        '\$${producto.precioAnterior!.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[500],
-                          decoration: TextDecoration.lineThrough,
+                        '\$${producto.precio.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: JPColors.primary,
                         ),
                       ),
-                      const SizedBox(width: 8),
                     ],
-                    Text(
-                      '\$${producto.precio.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: JPColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -869,11 +906,7 @@ class _TerminoItem extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 2),
-            child: Icon(
-              Icons.check_circle,
-              size: 16,
-              color: JPColors.success,
-            ),
+            child: Icon(Icons.check_circle, size: 16, color: JPColors.success),
           ),
           const SizedBox(width: 12),
           Expanded(

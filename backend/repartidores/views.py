@@ -1281,6 +1281,114 @@ def obtener_mis_pedidos_activos(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsRepartidor])
+def obtener_actualizaciones_pedidos(request):
+    """
+    Endpoint incremental optimizado para smart polling.
+
+    Solo devuelve pedidos modificados después del timestamp especificado.
+    Reduce significativamente el ancho de banda y carga del servidor.
+
+    Query params:
+    - desde: ISO timestamp (opcional) - solo devuelve pedidos modificados después de esta fecha
+
+    Optimizaciones:
+    - Cache-Control headers para permitir caché del cliente
+    - Respuesta compacta con solo datos necesarios
+    - Índices de DB optimizados con updated_at
+    """
+    try:
+        from datetime import datetime
+        from django.utils import timezone
+
+        repartidor = request.user.repartidor
+        Pedido = apps.get_model('pedidos', 'Pedido')
+        from pedidos.serializers import PedidoRepartidorDetalladoSerializer
+
+        # Obtener timestamp desde parámetro
+        desde_param = request.query_params.get('desde')
+        desde = None
+
+        if desde_param:
+            try:
+                # Parsear ISO timestamp
+                desde = datetime.fromisoformat(desde_param.replace('Z', '+00:00'))
+                # Asegurar que tenga timezone
+                if timezone.is_naive(desde):
+                    desde = timezone.make_aware(desde)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Timestamp inválido recibido: {desde_param}, error: {e}")
+                desde = None
+
+        # Query base - pedidos activos del repartidor
+        queryset = Pedido.objects.filter(
+            repartidor=repartidor
+        ).exclude(
+            estado__in=['entregado', 'cancelado']
+        ).select_related(
+            'cliente__user',
+            'proveedor'
+        ).prefetch_related(
+            'items__producto'
+        )
+
+        # Aplicar filtro incremental si hay timestamp
+        if desde:
+            queryset = queryset.filter(updated_at__gt=desde)
+
+        queryset = queryset.order_by('-updated_at')
+
+        # Serializar pedidos
+        pedidos_data = []
+        for pedido in queryset:
+            try:
+                pedidos_data.append(
+                    PedidoRepartidorDetalladoSerializer(
+                        pedido,
+                        context={'request': request}
+                    ).data
+                )
+            except Exception as e:
+                logger.error(f"Error serializando pedido {pedido.id}: {e}")
+                continue
+
+        # Timestamp actual para próxima sincronización
+        ahora = timezone.now()
+
+        logger.info(
+            f"Actualización incremental - Repartidor {repartidor.id}: "
+            f"{len(pedidos_data)} pedidos desde {desde_param or 'inicio'}"
+        )
+
+        response_data = {
+            'pedidos': pedidos_data,
+            'timestamp': ahora.isoformat(),
+            'total': len(pedidos_data),
+            'es_incremental': desde is not None
+        }
+
+        response = Response(response_data, status=status.HTTP_200_OK)
+
+        # Headers de cache - permitir caché por 30 segundos
+        response['Cache-Control'] = 'private, max-age=30'
+        response['Vary'] = 'Authorization'
+
+        return response
+
+    except Repartidor.DoesNotExist:
+        return Response(
+            {"error": "No tienes perfil de repartidor asociado."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error en actualizaciones incrementales: {e}", exc_info=True)
+        return Response(
+            {"error": "Error interno al obtener actualizaciones."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsRepartidor])
 def detalle_pedido_repartidor(request, pedido_id):
     """
     Obtiene el detalle COMPLETO de un pedido (con datos sensibles).

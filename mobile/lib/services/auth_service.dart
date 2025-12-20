@@ -231,14 +231,19 @@ class AuthService {
 
     if (response.containsKey('tokens')) {
       final tokens = response['tokens'];
+      final rolFinal =
+          (tokens['rol'] as String? ?? nuevoRol).toString().toUpperCase();
       await _client.saveTokens(
         tokens['access'],
         tokens['refresh'],
-        role: tokens['rol'] as String?,
+        role: rolFinal,
         userId: _client.userId,
         lifetime: _tokenDuration,
       );
-      _log('Rol cambiado');
+      _log('Rol cambiado (con tokens). Rol final: $rolFinal');
+    } else {
+      await _client.cacheUserRole(nuevoRol);
+      _log('Rol cambiado sin tokens, cache actualizado');
     }
 
     return response;

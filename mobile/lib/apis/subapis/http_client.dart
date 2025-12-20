@@ -73,6 +73,19 @@ class ApiClient {
   // Token Management
   // --------------------------------------------------------------------------
 
+  /// Actualiza solo el rol cacheado cuando la API no devuelve nuevos tokens.
+  Future<void> cacheUserRole(String role) async {
+    final normalized = role.toUpperCase();
+    _userRole = normalized;
+
+    try {
+      await _storage.write(key: _keyRole, value: normalized);
+      _log('Rol cacheado localmente: $normalized');
+    } catch (e) {
+      _log('Error cacheando rol', error: e);
+    }
+  }
+
   Future<void> saveTokens(
     String access,
     String refresh, {

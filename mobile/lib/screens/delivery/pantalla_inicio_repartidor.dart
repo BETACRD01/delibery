@@ -79,10 +79,15 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
 
     if (!accesoValido) {
       _manejarAccesoDenegado();
+      return;
     }
+
     // Cargar pendientes y pedidos activos iniciales
-    _controller.cargarPedidosDisponibles();
-    _controller.cargarPedidosActivos();
+    await _controller.cargarPedidosDisponibles();
+    await _controller.cargarPedidosActivos();
+
+    // Iniciar smart polling automático
+    _controller.startSmartPolling();
   }
 
   // ============================================

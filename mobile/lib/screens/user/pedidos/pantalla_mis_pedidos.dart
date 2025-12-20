@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../../../models/pedido_model.dart';
 import '../../../providers/proveedor_pedido.dart';
-import 'pedido_detalle_screen.dart';
-import '../../../widgets/util/utils_pedidos.dart'; 
+import '../../../widgets/cards/jp_order_card.dart';
+import '../../../widgets/common/jp_empty_state.dart';
+import '../../../widgets/common/jp_cupertino_button.dart';
+import '../../../theme/jp_theme.dart';
+import 'pedido_detalle_screen.dart'; 
 
 class PantallaMisPedidos extends StatefulWidget {
   const PantallaMisPedidos({super.key});
@@ -12,12 +15,15 @@ class PantallaMisPedidos extends StatefulWidget {
   State<PantallaMisPedidos> createState() => _PantallaMisPedidosState();
 }
 
-class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
+class _PantallaMisPedidosState extends State<PantallaMisPedidos>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
+  DateTime _ultimaRecarga = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _cargarPedidos(refresh: true);
     });
@@ -25,9 +31,26 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
   }
 
   void _cargarPedidos({bool refresh = false}) {
+    _ultimaRecarga = DateTime.now();
     context.read<PedidoProvider>().cargarPedidos(
       refresh: refresh,
     );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      final provider = context.read<PedidoProvider>();
+      final yaCargando = provider.isLoading;
+      final listaVacia = provider.pedidos.isEmpty;
+      final haceMucho = DateTime.now().difference(_ultimaRecarga) >
+          const Duration(seconds: 30);
+
+      if (!yaCargando && (listaVacia || haceMucho)) {
+        _cargarPedidos(refresh: true);
+      }
+    }
   }
 
   void _onScroll() {
@@ -45,56 +68,74 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F9), // Fondo suave y uniforme
-      appBar: AppBar(
-        title: const Text('Mis Pedidos', style: TextStyle(fontWeight: FontWeight.w700)),
-        centerTitle: false,
-        elevation: 0.2,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        shadowColor: Colors.black12,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualizar',
-            onPressed: () => _cargarPedidos(refresh: true),
-          )
-        ],
+    return CupertinoPageScaffold(
+      backgroundColor: JPCupertinoColors.background(context),
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: JPCupertinoColors.surface(context),
+        border: null,
+        middle: Text(
+          'Mis Pedidos',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: JPCupertinoColors.label(context),
+          ),
+        ),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => _cargarPedidos(refresh: true),
+          child: Icon(
+            CupertinoIcons.refresh,
+            size: 22,
+            color: JPCupertinoColors.systemBlue(context),
+          ),
+        ),
       ),
-      body: Consumer<PedidoProvider>(
+      child: Consumer<PedidoProvider>(
         builder: (context, provider, child) {
           if (provider.error != null && provider.pedidos.isEmpty) {
-            return _buildError(provider.error!);
+            return _buildError(provider.error!, context);
           }
 
           if (provider.pedidos.isEmpty && provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CupertinoActivityIndicator(radius: 14));
           }
 
           if (provider.pedidos.isEmpty) {
-            return _buildSinPedidos();
+            return _buildSinPedidos(context);
           }
 
-          return RefreshIndicator(
-            onRefresh: () async => _cargarPedidos(refresh: true),
-            child: ListView.separated(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              itemCount: provider.pedidos.length + (provider.hasMore ? 1 : 0),
-              separatorBuilder: (ctx, i) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                if (index == provider.pedidos.length) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  );
-                }
-                return _buildTarjetaPedido(provider.pedidos[index]);
-              },
-            ),
+          return CustomScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              CupertinoSliverRefreshControl(
+                onRefresh: () async => _cargarPedidos(refresh: true),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index == provider.pedidos.length) {
+                        return provider.hasMore
+                            ? const Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Center(child: CupertinoActivityIndicator()),
+                              )
+                            : const SizedBox.shrink();
+                      }
+
+                      final pedido = provider.pedidos[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildTarjetaPedido(pedido),
+                      );
+                    },
+                    childCount: provider.pedidos.length + (provider.hasMore ? 1 : 0),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -102,195 +143,70 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos> {
   }
 
   Widget _buildTarjetaPedido(PedidoListItem pedido) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return JPOrderCard(
+      numeroPedido: pedido.numeroPedido,
+      estado: pedido.estado,
+      estadoDisplay: pedido.estadoDisplay,
+      proveedorNombre: pedido.proveedorNombre,
+      creadoEn: pedido.creadoEn,
+      cantidadItems: pedido.cantidadItems,
+      total: pedido.total,
+      onTap: () => Navigator.push(
+        context,
+        CupertinoPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Cabecera: Numero y Estado
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    pedido.numeroPedido,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  PedidoUtils.buildEstadoBadge(pedido.estado, pedido.estadoDisplay),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Información del proveedor
-              if (pedido.proveedorNombre != null)
-                _buildInfoRow(Icons.storefront_outlined, pedido.proveedorNombre!),
-
-              const SizedBox(height: 6),
-              
-              // Fecha y Items
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoRow(
-                      Icons.calendar_today_outlined,
-                      _formatearFecha(pedido.creadoEn),
-                    ),
-                  ),
-                  _buildInfoRow(
-                    Icons.shopping_bag_outlined,
-                    '${pedido.cantidadItems} items',
-                  ),
-                ],
-              ),
-
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Divider(height: 1),
-              ),
-
-              // Footer: Total y Acción
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Total', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                      Text(
-                        '\$${pedido.total.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                  _buildBotonAccion(pedido),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: Colors.grey[500]),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
-          ),
-        ),
-      ],
+      actionButton: _buildBotonAccion(pedido),
     );
   }
 
   Widget _buildBotonAccion(PedidoListItem pedido) {
     if (pedido.estado == 'en_ruta') {
-      return FilledButton.icon(
+      return JPCupertinoButton.filled(
+        text: 'Rastrear',
+        icon: CupertinoIcons.map,
+        size: JPButtonSize.compact,
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
-        ),
-        icon: const Icon(Icons.map, size: 16),
-        label: const Text('Rastrear'),
-        style: FilledButton.styleFrom(
-          backgroundColor: Theme.of(context).primaryColor,
-          visualDensity: VisualDensity.compact,
+          CupertinoPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
         ),
       );
     }
-    return TextButton(
+    return JPCupertinoButton.text(
+      text: 'Ver Detalles',
+      size: JPButtonSize.compact,
       onPressed: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
-      ),
-      child: const Text('Ver Detalles'),
-    );
-  }
-
-  Widget _buildError(String error) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.wifi_off_rounded, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text('Algo salió mal', style: TextStyle(fontSize: 18, color: Colors.grey[800])),
-            const SizedBox(height: 8),
-            Text(error, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[600])),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: () {
-                context.read<PedidoProvider>().limpiarError();
-                _cargarPedidos(refresh: true);
-              },
-              child: const Text('Intentar de nuevo'),
-            ),
-          ],
-        ),
+        CupertinoPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
       ),
     );
   }
 
-  Widget _buildSinPedidos() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.receipt_long_rounded, size: 80, color: Colors.grey[300]),
-          const SizedBox(height: 20),
-          Text('No hay pedidos', 
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[700])
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Desliza hacia abajo o toca actualizar para recargar',
-            style: TextStyle(color: Colors.grey[500]),
-          ),
-        ],
-      ),
+  Widget _buildError(String error, BuildContext context) {
+    return JPEmptyState(
+      icon: CupertinoIcons.wifi_slash,
+      iconColor: JPCupertinoColors.systemRed(context),
+      title: 'Algo salió mal',
+      message: error,
+      actionText: 'Intentar de nuevo',
+      onAction: () {
+        context.read<PedidoProvider>().limpiarError();
+        _cargarPedidos(refresh: true);
+      },
     );
   }
 
-  String _formatearFecha(DateTime fecha) {
-    // Función simple de formateo, idealmente usar intl
-    final now = DateTime.now();
-    final diff = now.difference(fecha);
-    if (diff.inDays == 0) return 'Hoy';
-    if (diff.inDays == 1) return 'Ayer';
-    return '${fecha.day}/${fecha.month}/${fecha.year}';
+  Widget _buildSinPedidos(BuildContext context) {
+    return JPEmptyState(
+      icon: CupertinoIcons.bag,
+      iconColor: JPCupertinoColors.systemGrey(context),
+      title: 'No hay pedidos',
+      message: 'Desliza hacia abajo o toca actualizar para recargar',
+    );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
   }

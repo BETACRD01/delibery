@@ -5,6 +5,13 @@ Sincronizado con la lógica de Baños/Tena.
 """
 from rest_framework import serializers
 import logging
+from decimal import Decimal
+
+from .models import (
+    ZonaTarifariaEnvio,
+    CiudadEnvio,
+    ConfiguracionEnvios,
+)
 
 logger = logging.getLogger('envios')
 
@@ -79,3 +86,79 @@ class CotizacionEnvioResponseSerializer(serializers.Serializer):
     es_horario_nocturno = serializers.BooleanField(required=False, default=False)
     metodo_calculo = serializers.CharField()
     advertencia = serializers.CharField(required=False, allow_null=True)  # Campo opcional para warnings
+
+
+# ======================================================
+#  ADMIN: CONFIGURACIÓN DINÁMICA DE ENVÍOS
+# ======================================================
+
+
+class ZonaTarifariaEnvioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ZonaTarifariaEnvio
+        fields = (
+            "id",
+            "codigo",
+            "nombre_display",
+            "tarifa_base",
+            "km_incluidos",
+            "precio_km_extra",
+            "max_distancia_km",
+            "orden",
+        )
+
+    def validate(self, attrs):
+        max_dist = attrs.get("max_distancia_km")
+        if max_dist is not None and max_dist <= Decimal("0"):
+            raise serializers.ValidationError(
+                {"max_distancia_km": "Debe ser mayor a 0 o dejar vacío para zona abierta."}
+            )
+        return attrs
+
+
+class CiudadEnvioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CiudadEnvio
+        fields = (
+            "id",
+            "codigo",
+            "nombre",
+            "lat",
+            "lng",
+            "radio_max_cobertura_km",
+            "activo",
+        )
+
+    def validate_radio_max_cobertura_km(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("El radio de cobertura debe ser mayor a 0.")
+        return value
+
+    def validate(self, attrs):
+        lat = attrs.get("lat")
+        lng = attrs.get("lng")
+        if lat is not None and (lat < Decimal("-90") or lat > Decimal("90")):
+            raise serializers.ValidationError({"lat": "Latitud inválida."})
+        if lng is not None and (lng < Decimal("-180") or lng > Decimal("180")):
+            raise serializers.ValidationError({"lng": "Longitud inválida."})
+        return attrs
+
+
+class ConfiguracionEnviosSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConfiguracionEnvios
+        fields = (
+            "id",
+            "recargo_nocturno",
+            "hora_inicio_nocturno",
+            "hora_fin_nocturno",
+            "actualizado_en",
+        )
+        read_only_fields = ("id", "actualizado_en")
+
+    def validate(self, attrs):
+        inicio = attrs.get("hora_inicio_nocturno", getattr(self.instance, "hora_inicio_nocturno", None))
+        fin = attrs.get("hora_fin_nocturno", getattr(self.instance, "hora_fin_nocturno", None))
+        if inicio is not None and fin is not None and not (0 <= inicio <= 23 and 0 <= fin <= 23):
+            raise serializers.ValidationError("Las horas deben estar entre 0 y 23.")
+        return attrs

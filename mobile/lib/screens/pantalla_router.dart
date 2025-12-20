@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/roles_service.dart';
+import '../apis/subapis/http_client.dart';
 import './user/pantalla_inicio.dart'; 
 import './supplier/pantalla_inicio_proveedor.dart';
 import './delivery/pantalla_inicio_repartidor.dart';
@@ -65,13 +67,30 @@ class _PantallaRouterState extends State<PantallaRouter> {
         }
       }
 
-      // 4. Fallback de seguridad: Si sigue nulo, asumir USUARIO
+      // 4. Sincronizar con rol activo del backend para evitar desvíos
+      try {
+        final rolesService = RolesService();
+        final rolesResponse = await rolesService.obtenerRolesDisponibles();
+        final rolActivoApi =
+            (rolesResponse['rol_activo'] as String?)?.toUpperCase();
+        if (rolActivoApi != null && rolActivoApi.isNotEmpty) {
+          await ApiClient().cacheUserRole(rolActivoApi);
+          debugPrint(
+            'Rol sincronizado desde API: $rolActivoApi (cache previo: ${rol ?? "N/A"})',
+          );
+          rol = rolActivoApi;
+        }
+      } catch (e) {
+        debugPrint('No se pudo sincronizar rol activo: $e');
+      }
+
+      // 5. Fallback de seguridad: Si sigue nulo, asumir USUARIO
       if (rol == null || rol.isEmpty) {
         debugPrint('No se encontró rol tras intentos. Asignando rol: USUARIO');
         rol = 'USUARIO';
       }
 
-      // 5. Ejecutar navegación
+      // 6. Ejecutar navegación
       if (mounted) {
         await _navegarSegunRol(rol);
       }

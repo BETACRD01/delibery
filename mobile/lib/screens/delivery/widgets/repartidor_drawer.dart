@@ -3,10 +3,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../../../config/rutas.dart';
-import '../../../apis/helpers/api_exception.dart';
 import '../../../models/repartidor.dart';
-import '../../../services/roles_service.dart';
+import '../../../widgets/role/role_selector_modal.dart';
 import '../perfil/pantalla_perfil_repartidor.dart';
 import '../soporte/pantalla_ayuda_soporte_repartidor.dart';
 import '../configuracion/pantalla_configuracion_repartidor.dart';
@@ -40,9 +38,6 @@ class RepartidorDrawer extends StatelessWidget {
     required this.onAbrirMapa,
     required this.onCerrarSesion,
   });
-
-  // Servicio de roles (singleton)
-  static final RolesService _rolesService = RolesService();
 
   @override
   Widget build(BuildContext context) {
@@ -155,9 +150,8 @@ class RepartidorDrawer extends StatelessWidget {
                     title: 'Cambiar rol',
                     subtitle: 'Cliente / Proveedor',
                     onTap: () {
-                      final navigatorContext = context;
-                      Navigator.pop(navigatorContext);
-                      _mostrarCambiarRolSheet(navigatorContext);
+                      Navigator.pop(context);
+                      showRoleSelectorModal(context);
                     },
                   ),
                   Padding(
@@ -402,194 +396,6 @@ class RepartidorDrawer extends StatelessWidget {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // 🔄 SELECTOR DE ROLES (Estilo Simple)
-  // ════════════════════════════════════════════════════════════════════════
-
-  void _mostrarCambiarRolSheet(BuildContext parentContext) {
-    final rolesFuture = _rolesService.obtenerRolesDisponibles();
-    bool isChangingRole = false;
-
-    showModalBottomSheet(
-      context: parentContext,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (sheetContext) {
-        return FutureBuilder<Map<String, dynamic>>(
-          future: rolesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const SizedBox(
-                height: 200,
-                child: Center(
-                  child: CircularProgressIndicator(color: _primario),
-                ),
-              );
-            }
-
-            if (snapshot.hasError) {
-              return Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'No se pudieron cargar los roles',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(snapshot.error.toString()),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(sheetContext).pop();
-                        _mostrarCambiarRolSheet(parentContext);
-                      },
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final rolesDisponibles =
-                (snapshot.data?['roles_disponibles'] as List<dynamic>?)
-                    ?.map((value) => value.toString().toUpperCase())
-                    .toList() ??
-                [];
-            final rolActivo =
-                (snapshot.data?['rol_activo'] as String?)?.toUpperCase() ?? '';
-            final fallbackRoles = ['CLIENTE', 'USUARIO', 'PROVEEDOR'];
-            final rolesSet = <String>{};
-            rolesSet.addAll(fallbackRoles);
-            rolesSet.addAll(rolesDisponibles);
-            rolesSet.remove(rolActivo);
-            rolesSet.remove('REPARTIDOR');
-            final rolesParaMostrar = rolesSet.toList();
-
-
-            return StatefulBuilder(
-              builder: (context, setSheetState) {
-                return Padding(
-                  padding: const EdgeInsets.only(
-                    top: 18,
-                    left: 20,
-                    right: 20,
-                    bottom: 30,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Elegir rol',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Cambia al rol que necesites. Si el backend requiere verificación, recibirás una notificación.',
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                      const SizedBox(height: 16),
-                      if (rolesParaMostrar.isEmpty)
-                        const Text(
-                          'No hay otros roles disponibles.',
-                          style: TextStyle(color: Colors.grey),
-                        )
-                      else
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: rolesParaMostrar.map((rol) {
-                            final activo = rol == rolActivo;
-                            final isDisabled = isChangingRole;
-                            return ActionChip(
-                              backgroundColor: activo
-                                  ? _primario.withValues(alpha: 0.14)
-                                  : Colors.grey.shade100,
-                              label: Text(
-                                _rolesService.obtenerNombreRol(rol),
-                                style: TextStyle(
-                                  color: activo ? _primario : Colors.black87,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              onPressed: isDisabled
-                                  ? null
-                                  : () async {
-                                      setSheetState(() => isChangingRole = true);
-                                      final messenger =
-                                          ScaffoldMessenger.of(sheetContext);
-                                      final rootNavigator = Navigator.of(
-                                        sheetContext,
-                                        rootNavigator: true,
-                                      );
-                                      final homeRoute = _rutaHomePorRol(rol);
-
-                                    try {
-                                      await _rolesService.cambiarRolActivo(rol);
-                                      if (sheetContext.mounted) {
-                                        Navigator.of(sheetContext).pop();
-                                      }
-                                      rootNavigator.pushNamedAndRemoveUntil(
-                                        homeRoute,
-                                        (_) => false,
-                                      );
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Rol cambiado a ${_rolesService.obtenerNombreRol(rol)}',
-                                          ),
-                                        ),
-                                      );
-                                    } on ApiException catch (e) {
-                                      if (sheetContext.mounted) {
-                                        messenger.showSnackBar(
-                                          SnackBar(
-                                            backgroundColor: _rojo,
-                                            content: Text(
-                                              e.getUserFriendlyMessage(),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    } catch (_) {
-                                      if (sheetContext.mounted) {
-                                        messenger.showSnackBar(
-                                          const SnackBar(
-                                            backgroundColor: _rojo,
-                                            content: Text(
-                                              'No se pudo cambiar de rol',
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    } finally {
-                                      setSheetState(() => isChangingRole = false);
-                                    }
-                                    },
-                            );
-                          }).toList(),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // ════════════════════════════════════════════════════════════════════════
   // 📋 HELPERS & MENU ITEMS
   // ════════════════════════════════════════════════════════════════════════
 
@@ -658,21 +464,5 @@ class RepartidorDrawer extends StatelessWidget {
         color: Colors.black54,
       ),
     );
-  }
-
-  String _rutaHomePorRol(String rol) {
-    switch (rol.toUpperCase()) {
-      case 'ADMINISTRADOR':
-      case 'STAFF':
-        return Rutas.adminHome;
-      case 'REPARTIDOR':
-        return Rutas.repartidorHome;
-      case 'PROVEEDOR':
-        return Rutas.proveedorHome;
-      case 'USUARIO':
-      case 'CLIENTE':
-      default:
-        return Rutas.inicio;
-    }
   }
 }

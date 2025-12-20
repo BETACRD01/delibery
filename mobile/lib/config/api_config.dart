@@ -12,7 +12,7 @@ class ApiConfig {
   // ============================================================================
 
   static const _redCasa = '192.168.1';
-  static const _ipLocal = '192.168.1.5';
+  static const _ipLocal = '192.168.1.6';
   static const _redInstitucional = '172.16';
   static const _ipInstitucional = '172.16.61.251';
   static const _redHotspot = '192.168.137';
@@ -171,6 +171,7 @@ class ApiConfig {
   static String get _suppliers => '$apiUrl/proveedores';
   static String get _delivery => '$apiUrl/repartidores';
   static String get _admin => '$apiUrl/admin';
+  static String get _adminEnvios => '$_admin/envios';
   static String get _payments => '$apiUrl/pagos';
   static String get _ratings => '$apiUrl/calificaciones';
   static String get _super => '$apiUrl/super-categorias';
@@ -358,6 +359,10 @@ class ApiConfig {
 
   static String get adminDashboard => '$_admin/dashboard/';
   static String get adminAcciones => '$_admin/acciones/';
+  // Admin - Envíos (solo administradores)
+  static String get adminEnviosConfiguracion => '$_adminEnvios/configuracion/';
+  static String get adminEnviosZonas => '$_adminEnvios/zonas/';
+  static String get adminEnviosCiudades => '$_adminEnvios/ciudades/';
 
   // Admin - Proveedores
   static String get adminProveedores => '$_admin/proveedores/';

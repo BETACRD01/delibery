@@ -32,6 +32,7 @@ import '../screens/admin/screen/pantalla_crear_rifa.dart';
 import '../screens/admin/screen/pantalla_rifas_admin.dart';
 import '../screens/admin/screen/config/pantalla_cambiar_password.dart';
 import '../screens/admin/screen/config/pantalla_resetear_password_usuario.dart';
+import '../screens/admin/screen/pantalla_config_envios.dart';
 
 class Rutas {
   Rutas._();
@@ -106,6 +107,7 @@ class Rutas {
   static const adminRepartidoresGestion = '/admin/gestion-repartidores';
   static const adminRifasGestion = '/admin/rifas';
   static const adminCrearRifa = '/admin/rifas/crear';
+  static const adminEnviosConfig = '/admin/envios/configuracion';
   static const test = '/test';
 
   // ============================================================================
@@ -152,6 +154,7 @@ class Rutas {
     adminRepartidoresGestion: (_) => const PantallaAdminRepartidores(),
     adminRifasGestion: (_) => const PantallaRifasAdmin(),
     adminCrearRifa: (_) => const PantallaCrearRifa(),
+    adminEnviosConfig: (_) => const PantallaConfigEnviosAdmin(),
   };
 
   // ============================================================================

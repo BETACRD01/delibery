@@ -2,10 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/proveedor_roles.dart';
-import '../../../config/rutas.dart';
 import '../../../config/api_config.dart';
 import '../../../controllers/supplier/supplier_controller.dart';
+import '../../../widgets/role/role_selector_modal.dart';
 import '../perfil/perfil_proveedor_panel.dart';
 import '../screens/pantalla_productos_proveedor.dart';
 import '../screens/pantalla_estadisticas_proveedor.dart';
@@ -24,7 +23,6 @@ class SupplierDrawer extends StatelessWidget {
   static const Color _exito = Color(0xFF43A047);
   static const Color _alerta = Color(0xFFFB8C00);
   static const Color _peligro = Color(0xFFE53935);
-  static const Color _rojo = Color(0xFFEF4444);
   static const Color _fondoTarjeta = Color(0xFFF8FAFC);
 
   @override
@@ -110,7 +108,8 @@ class SupplierDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const PantallaConfiguracionProveedor(),
+                          builder: (_) =>
+                              const PantallaConfiguracionProveedor(),
                         ),
                       );
                     },
@@ -213,11 +212,7 @@ class SupplierDrawer extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.circle,
-                    size: 10,
-                    color: Colors.white70,
-                  ),
+                  const Icon(Icons.circle, size: 10, color: Colors.white70),
                 ],
               ),
               const SizedBox(height: 12),
@@ -253,7 +248,7 @@ class SupplierDrawer extends StatelessWidget {
 
   Widget _buildLogoAvatar(SupplierController controller) {
     final logoUrl = controller.logo;
-    
+
     return Container(
       width: 56,
       height: 56,
@@ -269,9 +264,7 @@ class SupplierDrawer extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipOval(
-        child: _buildLogoImage(logoUrl, controller),
-      ),
+      child: ClipOval(child: _buildLogoImage(logoUrl, controller)),
     );
   }
 
@@ -280,11 +273,7 @@ class SupplierDrawer extends StatelessWidget {
       // ✅ CORRECCIÓN: Agregado 'const'
       return Container(
         color: _fondoTarjeta,
-        child: const Icon(
-          Icons.store,
-          size: 28,
-          color: _primario,
-        ),
+        child: const Icon(Icons.store, size: 28, color: _primario),
       );
     }
 
@@ -296,11 +285,7 @@ class SupplierDrawer extends StatelessWidget {
     if (controller.esLogoCaido(urlCompleta)) {
       return Container(
         color: _fondoTarjeta,
-        child: const Icon(
-          Icons.store,
-          size: 28,
-          color: _primario,
-        ),
+        child: const Icon(Icons.store, size: 28, color: _primario),
       );
     }
 
@@ -322,7 +307,7 @@ class SupplierDrawer extends StatelessWidget {
                 color: _primario,
                 value: loadingProgress.expectedTotalBytes != null
                     ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
+                          loadingProgress.expectedTotalBytes!
                     : null,
               ),
             ),
@@ -336,11 +321,7 @@ class SupplierDrawer extends StatelessWidget {
         });
         return Container(
           color: _fondoTarjeta,
-          child: const Icon(
-            Icons.store,
-            size: 28,
-            color: _primario,
-          ),
+          child: const Icon(Icons.store, size: 28, color: _primario),
         );
       },
     );
@@ -418,9 +399,7 @@ class SupplierDrawer extends StatelessWidget {
       decoration: BoxDecoration(
         color: _alerta.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _alerta.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: _alerta.withValues(alpha: 0.3)),
       ),
       child: const Row(
         children: [
@@ -454,244 +433,67 @@ class SupplierDrawer extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   Widget _buildRoleCard(BuildContext context) {
-    return Consumer<ProveedorRoles>(
-      builder: (context, proveedorRoles, _) {
-        if (!proveedorRoles.tieneMultiplesRoles) {
-          return const SizedBox.shrink();
-        }
-        final rolesDisponibles = proveedorRoles.rolesDisponibles
-            .where((r) => r.toUpperCase() != 'PROVEEDOR')
-            .toList();
-        if (rolesDisponibles.isEmpty) return const SizedBox.shrink();
-
-        final tituloActivo = proveedorRoles.rolActivo != null
-            ? _getNombreRol(proveedorRoles.rolActivo!)
-            : _getNombreRol(rolesDisponibles.first);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Material(
-            color: Colors.transparent,
-            elevation: 4,
-            shadowColor: Colors.black.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(24),
-            child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Material(
+        color: Colors.transparent,
+        elevation: 4,
+        shadowColor: Colors.black.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () => showRoleSelectorModal(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 18,
+            ),
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              onTap: () => _mostrarCambiarRolSheet(context, proveedorRoles),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  color: Colors.white,
+              color: Colors.white,
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: _primario.withValues(alpha: 0.15),
+                  child: const Icon(Icons.swap_horiz, color: Colors.white),
                 ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: _primario.withValues(alpha: 0.15),
-                      child: const Icon(
-                        Icons.swap_horiz,
-                        color: Colors.white,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cambiar rol',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey.shade900,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Cambiar rol',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade900,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Actualmente: $tituloActivo',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Cliente / Repartidor',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
-                    Icon(
-                      Icons.chevron_right,
-                      color: Colors.grey[400],
-                      size: 24,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[400],
+                  size: 24,
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
-  }
-
-  void _mostrarCambiarRolSheet(
-    BuildContext parentContext,
-    ProveedorRoles proveedorRoles,
-  ) {
-    final rolesDisponibles = proveedorRoles.rolesDisponibles
-        .where((r) => r.toUpperCase() != 'PROVEEDOR')
-        .toList();
-
-    if (rolesDisponibles.isEmpty) return;
-
-    bool isChanging = false;
-
-    showModalBottomSheet(
-      context: parentContext,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Container(
-              padding: const EdgeInsets.only(
-                top: 16,
-                left: 20,
-                right: 20,
-                bottom: 24,
-              ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    alignment: Alignment.center,
-                    child: Container(
-                      width: 48,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Cambiar rol',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Selecciona el rol que quieras activar.',
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: rolesDisponibles.map((rol) {
-                      final isDisabled = isChanging;
-                      return ActionChip(
-                        backgroundColor: Colors.grey.shade100,
-                        label: Text(
-                          _getNombreRol(rol),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        onPressed: isDisabled
-                            ? null
-                            : () async {
-                                final navigatorState = Navigator.of(parentContext);
-                                final scaffoldMessenger =
-                                    ScaffoldMessenger.of(parentContext);
-                                final sheetMessenger =
-                                    ScaffoldMessenger.of(sheetContext);
-                                final rutaHome = _rutaHomePorRol(rol);
-                                setSheetState(() => isChanging = true);
-                                try {
-                                  final success =
-                                      await proveedorRoles.cambiarARol(rol);
-                                  if (!success) {
-                                    throw Exception('No puedes activar $rol');
-                                  }
-                                  if (sheetContext.mounted) {
-                                    Navigator.of(sheetContext).pop();
-                                  }
-                                  await navigatorState.pushNamedAndRemoveUntil(
-                                    rutaHome,
-                                    (route) => false,
-                                  );
-                                  if (scaffoldMessenger.mounted) {
-                                    scaffoldMessenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Rol cambiado a ${_getNombreRol(rol)}',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (sheetMessenger.mounted) {
-                                    sheetMessenger.showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: _rojo,
-                                        content: Text(
-                                          e.toString(),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } finally {
-                                  setSheetState(() => isChanging = false);
-                                }
-                              },
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // HELPERS
-  // ---------------------------------------------------------------------------
-
-  String _rutaHomePorRol(String rol) {
-    switch (rol.toUpperCase()) {
-      case 'ADMINISTRADOR':
-        return Rutas.adminHome;
-      case 'REPARTIDOR':
-        return Rutas.repartidorHome;
-      case 'PROVEEDOR':
-        return Rutas.proveedorHome;
-      case 'CLIENTE':
-      case 'USUARIO':
-      default:
-        return Rutas.inicio;
-    }
-  }
-
-  String _getNombreRol(String rol) {
-    switch (rol.toUpperCase()) {
-      case 'CLIENTE':
-      case 'USUARIO':
-        return 'Modo Cliente';
-      case 'REPARTIDOR':
-        return 'Modo Repartidor';
-      case 'ADMINISTRADOR':
-        return 'Administrador';
-      case 'PROVEEDOR':
-        return 'Proveedor';
-      default:
-        return rol;
-    }
   }
 
 }

@@ -1,13 +1,17 @@
 // lib/screens/user/perfil/configuracion/pantalla_configuracion.dart
 
-import 'package:flutter/material.dart';
-import '../../../../../theme/jp_theme.dart' hide JPSnackbar;
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Divider, showDialog;
+import 'package:provider/provider.dart';
+import '../../../../../theme/jp_theme.dart';
 import '../../../../../services/auth_service.dart';
 import '../../../../../services/solicitudes_service.dart';
+import '../../../../../services/toast_service.dart';
+import '../../../../../services/role_manager.dart';
 import '../../../../../models/solicitud_cambio_rol.dart';
-import '../../../../../config/rutas.dart';
-import '../../../../../widgets/jp_snackbar.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../switch/role_router.dart';
+import '../../../../switch/roles.dart';
 import 'ayuda/pantalla_ayuda_soporte.dart';
 import '../../../solicitudes_rol/pantalla_solicitar_rol.dart';
 import 'ayuda/pantalla_terminos.dart';
@@ -24,10 +28,6 @@ class PantallaAjustes extends StatefulWidget {
 }
 
 class _PantallaAjustesState extends State<PantallaAjustes> {
-  static const _celeste = Color(0xFF2DAAE1);
-  static const _celesteSuave = Color(0xFFE5F5FD);
-  static const _naranja = Color(0xFFFF8A3D);
-
   final _authService = AuthService();
   final _solicitudesService = SolicitudesService();
 
@@ -36,6 +36,7 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
 
   bool _isLoading = true;
   String? _rolSeleccionado;
+  String? _rolActual;
 
   @override
   void initState() {
@@ -59,7 +60,8 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
         }
       }
 
-      final solicitudesResponse = await _solicitudesService.obtenerMisSolicitudes();
+      final solicitudesResponse = await _solicitudesService
+          .obtenerMisSolicitudes();
       Map<String, SolicitudCambioRol> mapaSolicitudes = {};
 
       List<dynamic>? listaSol;
@@ -79,16 +81,24 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
       }
 
       if (mounted) {
+        final rolCacheado = _authService.getRolCacheado()?.toUpperCase();
+        final rolActivoNormalizado =
+            rolCacheado != null && rolesActivos.contains(rolCacheado)
+            ? rolCacheado
+            : _obtenerPrimerRolActivo();
         setState(() {
           _rolesActivos = rolesActivos;
           _ultimasSolicitudes.addAll(mapaSolicitudes);
-          _rolSeleccionado = _obtenerPrimerRolActivo();
+          _rolSeleccionado = rolActivoNormalizado;
+          _rolActual = rolActivoNormalizado;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      if (mounted) JPSnackbar.error(context, 'Error cargando configuración');
+      if (mounted) {
+        ToastService().showError(context, 'Error cargando configuración');
+      }
     }
   }
 
@@ -116,148 +126,163 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
   }
 
   // ==========================================================
-  // UI PRINCIPAL MEJORADA (DISEÑO)
+  // UI PRINCIPAL iOS-STYLE
   // ==========================================================
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F9),
-      appBar: AppBar(
-        title: Text(
-          l10n.settings,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
+    return CupertinoPageScaffold(
+      backgroundColor: JPCupertinoColors.background(context),
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: JPCupertinoColors.surface(context),
+        middle: Text(l10n.settings),
+        border: Border(
+          bottom: BorderSide(
+            color: JPCupertinoColors.separator(context),
+            width: 0.5,
           ),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0.2,
-        shadowColor: Colors.black12,
-        foregroundColor: JPColors.textPrimary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: JPColors.primary))
-          : SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_esProveedorActivo || _esRepartidorActivo) ...[
-                    _buildSectionTitle('Modo de trabajo'),
-                    const SizedBox(height: 8),
-                    _buildRoleSelector(),
-                    const SizedBox(height: 12),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _buildDiagnosticPanel(),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+      child: _isLoading
+          ? Center(
+              child: CupertinoActivityIndicator(
+                radius: 14,
+                color: JPCupertinoColors.systemGrey(context),
+              ),
+            )
+          : SafeArea(
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // Refresh control iOS
+                  CupertinoSliverRefreshControl(
+                    onRefresh: _cargarDatosCompletos,
+                  ),
 
-                  if (_tieneEstadoVisible('PROVEEDOR') || _tieneEstadoVisible('REPARTIDOR')) ...[
-                    _buildSectionTitle('Estado de solicitudes'),
-                    const SizedBox(height: 10),
-                    if (_tieneEstadoVisible('PROVEEDOR')) _buildStatusCard('PROVEEDOR'),
-                    if (_tieneEstadoVisible('REPARTIDOR')) _buildStatusCard('REPARTIDOR'),
-                    const SizedBox(height: 22),
-                  ],
+                  // Contenido principal
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        // Modo de trabajo
+                        if (_esProveedorActivo || _esRepartidorActivo) ...[
+                          _buildSectionTitle('Modo de trabajo'),
+                          const SizedBox(height: 8),
+                          _buildRoleList(),
+                          const SizedBox(height: 18),
+                        ],
 
-                  if (_mostrarOportunidad('PROVEEDOR') || _mostrarOportunidad('REPARTIDOR')) ...[
-                    _buildSectionTitle('Oportunidades'),
-                    const SizedBox(height: 10),
-                    if (_mostrarOportunidad('PROVEEDOR'))
-                      _buildOpportunityCard(
-                        title: 'Quiero ser Proveedor',
-                        subtitle: 'Publica tus productos',
-                        icon: Icons.storefront_rounded,
-                        color: const Color(0xFFFF8C00),
-                      ),
-                    if (_mostrarOportunidad('PROVEEDOR') && _mostrarOportunidad('REPARTIDOR'))
-                      const SizedBox(height: 12),
-                    if (_mostrarOportunidad('REPARTIDOR'))
-                      _buildOpportunityCard(
-                        title: 'Quiero ser Repartidor',
-                        subtitle: 'Gana dinero extra',
-                        icon: Icons.two_wheeler_rounded,
-                        color: _celeste,
-                      ),
-                    const SizedBox(height: 22),
-                  ],
+                        // Estado de solicitudes
+                        if (_tieneEstadoVisible('PROVEEDOR') ||
+                            _tieneEstadoVisible('REPARTIDOR')) ...[
+                          _buildSectionTitle('Estado de solicitudes'),
+                          const SizedBox(height: 8),
+                          _buildStatusList(),
+                          const SizedBox(height: 18),
+                        ],
 
-                  _buildSectionTitle(l10n.account),
-                  const SizedBox(height: 10),
-                  _buildSettingsContainer([
-                    _buildSettingsTile(
-                      icon: Icons.location_on_outlined,
-                      title: l10n.myAddresses,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PantallaListaDirecciones()),
-                      ),
-                    ),
-                    _buildDivider(),
-                    _buildSettingsTile(
-                      icon: Icons.lock_outline,
-                      title: 'Cambiar Contraseña',
-                      onTap: _mostrarDialogoCambiarPassword,
-                    ),
-                  ]),
-                  const SizedBox(height: 22),
+                        // Oportunidades
+                        if (_mostrarOportunidad('PROVEEDOR') ||
+                            _mostrarOportunidad('REPARTIDOR')) ...[
+                          _buildSectionTitle('Oportunidades'),
+                          const SizedBox(height: 8),
+                          _buildOportunidades(),
+                          const SizedBox(height: 18),
+                        ],
 
-                  _buildSectionTitle('General'),
-                  const SizedBox(height: 10),
-                  _buildSettingsContainer([
-                    _buildSettingsTile(
-                      icon: Icons.notifications_none_rounded,
-                      title: l10n.notifications,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PantallaNotificaciones()),
-                      ),
-                    ),
-                    _buildDivider(),
-                    _buildSettingsTile(
-                      icon: Icons.language,
-                      title: l10n.language,
-                      trailingText: _getLanguageName(context),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PantallaIdioma()),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 22),
+                        // Solicitar rol
+                        _buildSectionTitle('Solicitar rol'),
+                        const SizedBox(height: 8),
+                        _buildSettingsContainer([_buildSolicitudRolTile()]),
+                        const SizedBox(height: 18),
 
-                  _buildSectionTitle('Soporte'),
-                  const SizedBox(height: 10),
-                  _buildSettingsContainer([
-                    _buildSettingsTile(
-                      icon: Icons.help_outline_rounded,
-                      title: l10n.helpSupport,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PantallaAyudaSoporte()),
-                      ),
+                        // Cuenta
+                        _buildSectionTitle(l10n.account),
+                        const SizedBox(height: 8),
+                        _buildSettingsContainer([
+                          _buildSettingsTile(
+                            icon: CupertinoIcons.location,
+                            title: l10n.myAddresses,
+                            onTap: () => Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (_) => const PantallaListaDirecciones(),
+                              ),
+                            ),
+                          ),
+                          _buildDivider(),
+                          _buildSettingsTile(
+                            icon: CupertinoIcons.lock,
+                            title: 'Cambiar Contraseña',
+                            onTap: _mostrarDialogoCambiarPassword,
+                          ),
+                        ]),
+                        const SizedBox(height: 18),
+
+                        // General
+                        _buildSectionTitle('General'),
+                        const SizedBox(height: 8),
+                        _buildSettingsContainer([
+                          _buildSettingsTile(
+                            icon: CupertinoIcons.bell,
+                            title: l10n.notifications,
+                            onTap: () => Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (_) => const PantallaNotificaciones(),
+                              ),
+                            ),
+                          ),
+                          _buildDivider(),
+                          _buildSettingsTile(
+                            icon: CupertinoIcons.globe,
+                            title: l10n.language,
+                            trailingText: _getLanguageName(context),
+                            onTap: () => Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (_) => const PantallaIdioma(),
+                              ),
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 18),
+
+                        // Soporte
+                        _buildSectionTitle('Soporte'),
+                        const SizedBox(height: 8),
+                        _buildSettingsContainer([
+                          _buildSettingsTile(
+                            icon: CupertinoIcons.question_circle,
+                            title: l10n.helpSupport,
+                            onTap: () => Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (_) => const PantallaAyudaSoporte(),
+                              ),
+                            ),
+                          ),
+                          _buildDivider(),
+                          _buildSettingsTile(
+                            icon: CupertinoIcons.doc_text,
+                            title: l10n.termsConditions,
+                            onTap: () => Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (_) => const PantallaTerminos(),
+                              ),
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 24),
+                      ]),
                     ),
-                    _buildDivider(),
-                    _buildSettingsTile(
-                      icon: Icons.description_outlined,
-                      title: l10n.termsConditions,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PantallaTerminos()),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 32),
+                  ),
                 ],
               ),
             ),
@@ -265,92 +290,119 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
   }
 
   // ==========================================================
-  // WIDGETS PERSONALIZADOS - DISEÑO COMPACTO
+  // WIDGETS PERSONALIZADOS - iOS STYLE
   // ==========================================================
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF6B7A90),
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          color: JPCupertinoColors.secondaryLabel(context),
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
 
-  Widget _buildRoleSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: _celesteSuave,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _celeste.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        children: [
-          if (_esProveedorActivo)
-            Expanded(
-              child: _buildRoleTab(
-                label: 'Proveedor',
-                icon: Icons.storefront,
-                color: const Color(0xFFFF8C00),
-                isSelected: _rolSeleccionado == 'PROVEEDOR',
-                onTap: () => setState(() => _rolSeleccionado = 'PROVEEDOR'),
-              ),
-            ),
-          if (_esProveedorActivo && _esRepartidorActivo) const SizedBox(width: 4),
-          if (_esRepartidorActivo)
-            Expanded(
-              child: _buildRoleTab(
-                label: 'Repartidor',
-                icon: Icons.delivery_dining,
-                color: _celeste,
-                isSelected: _rolSeleccionado == 'REPARTIDOR',
-                onTap: () => setState(() => _rolSeleccionado = 'REPARTIDOR'),
-              ),
-            ),
-      ],
-      ),
-    );
+  Widget _buildRoleList() {
+    final items = <Widget>[];
+    if (_esProveedorActivo) {
+      items.add(
+        _buildRoleTile(
+          label: 'Proveedor',
+          icon: CupertinoIcons.bag,
+          rol: 'PROVEEDOR',
+        ),
+      );
+    }
+    if (_esRepartidorActivo) {
+      items.add(
+        _buildRoleTile(
+          label: 'Repartidor',
+          icon: CupertinoIcons.car_detailed,
+          rol: 'REPARTIDOR',
+        ),
+      );
+    }
+
+    return _buildSettingsContainer(_withDividers(items));
   }
 
-  Widget _buildRoleTab({
+  Widget _buildRoleTile({
     required String label,
     required IconData icon,
-    required Color color,
-    required bool isSelected,
-    required VoidCallback onTap,
+    required String rol,
   }) {
+    final isSelected = (_rolActual ?? _rolSeleccionado) == rol;
     return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isSelected ? color.withValues(alpha: 0.35) : Colors.transparent),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.15),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : null,
-        ),
-        child: Column(
+      onTap: () => setState(() => _rolSeleccionado = rol),
+      child: Container(
+        color: CupertinoColors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
           children: [
-            Icon(icon, color: isSelected ? color : JPColors.textHint, size: 20),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: isSelected ? JPColors.textPrimary : JPColors.textHint,
+            // Icon container
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: JPCupertinoColors.systemGrey(context),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Title and subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: JPCupertinoColors.label(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isSelected ? 'Rol actual' : 'Cambiar a este rol',
+                    style: TextStyle(
+                      color: JPCupertinoColors.secondaryLabel(context),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Change button
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              color: isSelected
+                  ? JPCupertinoColors.systemGrey4(context)
+                  : JPCupertinoColors.systemBlue(context),
+              borderRadius: BorderRadius.circular(8),
+              onPressed: isSelected ? null : () => _cambiarRol(rol),
+              child: Text(
+                isSelected ? 'Actual' : 'Cambiar',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: isSelected
+                      ? JPCupertinoColors.secondaryLabel(context)
+                      : CupertinoColors.white,
+                ),
               ),
             ),
           ],
@@ -359,248 +411,267 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
     );
   }
 
-  Widget _buildDiagnosticPanel() {
-    if (_rolSeleccionado == 'PROVEEDOR') {
-      return _buildActionPanel(
-        title: 'Panel de Proveedor',
-        description: 'Gestiona tu tienda.',
-        icon: Icons.storefront_rounded,
-        color: const Color(0xFFFF8C00),
-        btnText: 'IR A MI TIENDA',
-        onTap: () => _cambiarRol('PROVEEDOR'),
-      );
-    } else if (_rolSeleccionado == 'REPARTIDOR') {
-      return _buildActionPanel(
-        title: 'Panel de Repartidor',
-        description: 'Ver pedidos disponibles.',
-        icon: Icons.delivery_dining_rounded,
-        color: _celeste,
-        btnText: 'IR A REPARTIR',
-        onTap: () => _cambiarRol('REPARTIDOR'),
-      );
+  Widget _buildStatusList() {
+    final tiles = <Widget>[];
+    if (_tieneEstadoVisible('PROVEEDOR')) {
+      tiles.add(_buildStatusTile('PROVEEDOR'));
     }
-    return const SizedBox.shrink();
+    if (_tieneEstadoVisible('REPARTIDOR')) {
+      tiles.add(_buildStatusTile('REPARTIDOR'));
+    }
+    return _buildSettingsContainer(_withDividers(tiles));
   }
 
-  Widget _buildActionPanel({
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required String btnText,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildStatusTile(String rol) {
+    final solicitud = _ultimasSolicitudes[rol];
+    if (solicitud == null) return const SizedBox.shrink();
+
+    final esPendiente = solicitud.estaPendiente;
+    final title = rol == 'PROVEEDOR'
+        ? 'Solicitud Proveedor'
+        : 'Solicitud Repartidor';
+    final estado = esPendiente ? 'En revisión' : 'Rechazada';
+    final icon = rol == 'PROVEEDOR'
+        ? CupertinoIcons.bag
+        : CupertinoIcons.car_detailed;
+    final statusColor = esPendiente
+        ? JPCupertinoColors.systemOrange(context)
+        : JPCupertinoColors.systemRed(context);
+
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _celeste.withValues(alpha: 0.12)),
-      ),
-      child: Column(
+      color: CupertinoColors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: JPColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      description,
-                      style: const TextStyle(
-                        color: JPColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // Icon container
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: JPCupertinoColors.systemGrey6(context),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: JPCupertinoColors.systemGrey(context),
+              size: 20,
+            ),
           ),
-          const SizedBox(height: 10),
-          _buildGradientActionButton(
-            text: btnText,
-            color: color,
-            onTap: onTap,
+          const SizedBox(width: 12),
+
+          // Title and status
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: JPCupertinoColors.label(context),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    estado,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+
+          // Retry button
+          if (!esPendiente)
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              color: JPCupertinoColors.systemBlue(context),
+              borderRadius: BorderRadius.circular(8),
+              onPressed: _irASolicitarRol,
+              child: const Text(
+                'Reintentar',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: CupertinoColors.white,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildGradientActionButton({
-    required String text,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      height: 38,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color),
-        color: color.withValues(alpha: 0.06),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: onTap,
-          child: Center(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: JPColors.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+  Widget _buildOportunidades() {
+    final items = <Widget>[];
+    if (_mostrarOportunidad('PROVEEDOR')) {
+      items.add(
+        _buildOpportunityTile(
+          title: 'Quiero ser Proveedor',
+          subtitle: 'Publica tus productos y vende más',
+          icon: CupertinoIcons.bag,
         ),
-      ),
-    );
+      );
+    }
+    if (_mostrarOportunidad('REPARTIDOR')) {
+      if (items.isNotEmpty) {
+        items.add(_buildDivider());
+      }
+      items.add(
+        _buildOpportunityTile(
+          title: 'Quiero ser Repartidor',
+          subtitle: 'Gana dinero extra entregando pedidos',
+          icon: CupertinoIcons.car_detailed,
+        ),
+      );
+    }
+    return _buildSettingsContainer(items);
   }
 
-  Widget _buildStatusCard(String rol) {
-    final solicitud = _ultimasSolicitudes[rol];
-    if (solicitud == null) return const SizedBox.shrink();
-
-    final esPendiente = solicitud.estaPendiente;
-    final color = rol == 'PROVEEDOR'
-        ? _naranja
-        : _celeste;
-
-    final title = rol == 'PROVEEDOR'
-        ? 'Solicitud Proveedor'
-        : 'Solicitud Repartidor';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            rol == 'PROVEEDOR' ? Icons.store : Icons.two_wheeler,
-            color: color,
-            size: 20,
-          ),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: (esPendiente ? JPColors.warning : JPColors.error)
-                  .withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              esPendiente ? 'En Revisión' : 'Rechazada',
-              style: TextStyle(
-                color: esPendiente ? JPColors.warning : JPColors.error,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        trailing: !esPendiente
-            ? TextButton(
-                onPressed: _irASolicitarRol,
-                style: TextButton.styleFrom(foregroundColor: color),
-                child: const Text(
-                  'Reintentar',
-                  style: TextStyle(fontSize: 12),
-                ),
-              )
-            : null,
-      ),
-    );
+  List<Widget> _withDividers(List<Widget> children) {
+    final result = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      result.add(children[i]);
+      if (i != children.length - 1) {
+        result.add(_buildDivider());
+      }
+    }
+    return result;
   }
 
-  Widget _buildOpportunityCard({
+  Widget _buildOpportunityTile({
     required String title,
     required String subtitle,
     required IconData icon,
-    required Color color,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: _irASolicitarRol,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 22),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          )),
-                      const SizedBox(height: 3),
-                      Text(
-                      subtitle,
-                      style: const TextStyle(
-                      fontSize: 13,
-                      color: JPColors.textSecondary,
-                      ),
-                     )
-                    ],
-                  ),
-                ),
-                Icon(Icons.arrow_forward_ios_rounded,
-                    size: 15, color: Colors.grey.shade400),
-              ],
+    return GestureDetector(
+      onTap: _irASolicitarRol,
+      child: Container(
+        color: CupertinoColors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: JPCupertinoColors.systemBlue(context),
+                size: 20,
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+
+            // Title and subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: JPCupertinoColors.label(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Chevron
+            Icon(
+              CupertinoIcons.chevron_forward,
+              size: 16,
+              color: JPCupertinoColors.systemGrey3(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSolicitudRolTile() {
+    return GestureDetector(
+      onTap: _irASolicitarRol,
+      child: Container(
+        color: CupertinoColors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                CupertinoIcons.person_badge_plus,
+                color: JPCupertinoColors.systemGrey(context),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Title and subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Solicitar cambio de rol',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: JPCupertinoColors.label(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Envía una solicitud al administrador',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Chevron
+            Icon(
+              CupertinoIcons.chevron_forward,
+              size: 16,
+              color: JPCupertinoColors.systemGrey3(context),
+            ),
+          ],
         ),
       ),
     );
@@ -609,15 +680,9 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
   Widget _buildSettingsContainer(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: JPConstants.cardShadow(context),
       ),
       child: Column(children: children),
     );
@@ -629,43 +694,67 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
     String? trailingText,
     VoidCallback? onTap,
   }) {
-    return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+    return GestureDetector(
       onTap: onTap,
-      leading: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: JPColors.primary.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: JPColors.primary, size: 18),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
-        ),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (trailingText != null)
-            Text(
-              trailingText,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+      child: Container(
+        color: CupertinoColors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: JPCupertinoColors.systemGrey(context),
+                size: 18,
+              ),
             ),
-          const SizedBox(width: 4),
-          Icon(Icons.arrow_forward_ios_rounded,
-              size: 14, color: Colors.grey.shade400),
-        ],
+            const SizedBox(width: 12),
+
+            // Title
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  color: JPCupertinoColors.label(context),
+                ),
+              ),
+            ),
+
+            // Trailing text and chevron
+            if (trailingText != null) ...[
+              Text(
+                trailingText,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: JPCupertinoColors.secondaryLabel(context),
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+            Icon(
+              CupertinoIcons.chevron_forward,
+              size: 14,
+              color: JPCupertinoColors.systemGrey3(context),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildDivider() =>
-      Divider(height: 1, indent: 54, color: Colors.grey.shade100);
+  Widget _buildDivider() => Divider(
+        height: 1,
+        indent: 56,
+        color: JPCupertinoColors.separator(context),
+      );
 
   String _getLanguageName(BuildContext context) {
     final locale = Localizations.localeOf(context);
@@ -682,13 +771,13 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
   }
 
   // ==========================================================
-  // LÓGICA (SIN CAMBIOS)
+  // LÓGICA
   // ==========================================================
 
   void _irASolicitarRol() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const PantallaSolicitarRol()),
+      CupertinoPageRoute(builder: (_) => const PantallaSolicitarRol()),
     );
   }
 
@@ -699,30 +788,29 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
     );
 
     if (resultado == true && mounted) {
-      // La contraseña fue cambiada exitosamente
-      // Opcional: podrías cerrar sesión automáticamente
-      // await _authService.cerrarSesion();
-      // Navigator.of(context).pushNamedAndRemoveUntil(Rutas.login, (route) => false);
+      ToastService().showSuccess(context, 'Contraseña actualizada exitosamente');
     }
   }
 
   Future<void> _cambiarRol(String nuevoRol) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) =>
-          const Center(child: CircularProgressIndicator(color: JPColors.primary)),
+    final roleManager = Provider.of<RoleManager>(context, listen: false);
+    final target = parseRole(nuevoRol);
+
+    ToastService().showInfo(
+      context,
+      'Cambiando a ${roleToDisplay(target)}...',
     );
 
-    try {
-      await _authService.cambiarRolActivo(nuevoRol);
-      if (mounted) {
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil(Rutas.router, (route) => false);
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      if (mounted) JPSnackbar.error(context, 'Error al cambiar modo: $e');
+    final exito = await roleManager.switchRole(target);
+    if (!mounted) return;
+
+    if (exito) {
+      await RoleRouter.navigateByRole(context, target);
+    } else {
+      ToastService().showError(
+        context,
+        'No se pudo cambiar al rol ${roleToDisplay(target)}',
+      );
     }
   }
 }

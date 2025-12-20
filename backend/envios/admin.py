@@ -2,7 +2,13 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import Envio
+
+from .models import (
+    Envio,
+    CiudadEnvio,
+    ZonaTarifariaEnvio,
+    ConfiguracionEnvios,
+)
 
 @admin.register(Envio)
 class EnvioAdmin(admin.ModelAdmin):
@@ -104,3 +110,51 @@ class EnvioAdmin(admin.ModelAdmin):
             return format_html('<span title="Tarifa Nocturna aplicada">🌙 Sí</span>')
         return "-"
     es_nocturno_icon.short_description = 'Nocturno'
+
+
+@admin.register(ZonaTarifariaEnvio)
+class ZonaTarifariaEnvioAdmin(admin.ModelAdmin):
+    list_display = (
+        'codigo',
+        'nombre_display',
+        'tarifa_base',
+        'km_incluidos',
+        'precio_km_extra',
+        'max_distancia_km',
+        'orden',
+    )
+    list_editable = (
+        'tarifa_base',
+        'km_incluidos',
+        'precio_km_extra',
+        'max_distancia_km',
+        'orden',
+    )
+    ordering = ('orden',)
+    search_fields = ('codigo', 'nombre_display')
+
+
+@admin.register(CiudadEnvio)
+class CiudadEnvioAdmin(admin.ModelAdmin):
+    list_display = (
+        'codigo',
+        'nombre',
+        'radio_max_cobertura_km',
+        'activo',
+    )
+    list_editable = ('activo',)
+    search_fields = ('codigo', 'nombre')
+
+
+@admin.register(ConfiguracionEnvios)
+class ConfiguracionEnviosAdmin(admin.ModelAdmin):
+    list_display = (
+        'recargo_nocturno',
+        'hora_inicio_nocturno',
+        'hora_fin_nocturno',
+        'actualizado_en',
+    )
+    readonly_fields = ('actualizado_en',)
+
+    def has_delete_permission(self, request, obj=None):
+        return False

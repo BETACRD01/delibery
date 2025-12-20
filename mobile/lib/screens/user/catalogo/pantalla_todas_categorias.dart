@@ -1,12 +1,13 @@
 // lib/screens/user/catalogo/pantalla_todas_categorias.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../../../config/rutas.dart';
 import '../../../../../services/productos_service.dart';
 import '../../../models/categoria_model.dart';
 
-/// Pantalla que muestra todas las categorías en formato grid
+/// Pantalla que muestra todas las categorías en formato grid iOS-style
 class PantallaTodasCategorias extends StatefulWidget {
   const PantallaTodasCategorias({super.key});
 
@@ -16,7 +17,8 @@ class PantallaTodasCategorias extends StatefulWidget {
 
 class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
   final _productosService = ProductosService();
-  
+  final _searchController = TextEditingController();
+
   List<CategoriaModel> _categorias = [];
   List<CategoriaModel> _categoriasFiltradas = [];
   bool _loading = true;
@@ -29,6 +31,12 @@ class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
     _cargarCategorias();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _cargarCategorias() async {
     setState(() {
       _loading = true;
@@ -36,10 +44,9 @@ class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
     });
 
     try {
-      // Llamada real al backend
       _categorias = await _productosService.obtenerCategorias();
       _categoriasFiltradas = List.from(_categorias);
-      
+
       setState(() {
         _loading = false;
       });
@@ -64,109 +71,209 @@ class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: JPColors.background,
-      appBar: AppBar(
-        backgroundColor: JPColors.primary,
-        foregroundColor: Colors.white,
-        title: const Text('Todas las Categorías'),
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          _buildSearchBar(),
-          Expanded(child: _buildBody()),
-        ],
-      ),
-    );
+  void _limpiarBusqueda() {
+    _searchController.clear();
+    _aplicarBusqueda('');
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Buscar categoría...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _busqueda.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () => _aplicarBusqueda(''),
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      backgroundColor: JPCupertinoColors.background(context),
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        slivers: [
+          // AppBar iOS
+          CupertinoSliverNavigationBar(
+            backgroundColor: JPCupertinoColors.surface(context),
+            largeTitle: const Text('Categorías'),
+            border: Border(
+              bottom: BorderSide(
+                color: JPCupertinoColors.separator(context),
+                width: 0.5,
+              ),
+            ),
           ),
-          filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-        onChanged: _aplicarBusqueda,
+
+          // Refresh Control iOS
+          CupertinoSliverRefreshControl(
+            onRefresh: _cargarCategorias,
+          ),
+
+          // Barra de búsqueda pegajosa
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _SearchBarDelegate(
+              child: Container(
+                color: JPCupertinoColors.background(context),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: CupertinoTextField(
+                  controller: _searchController,
+                  placeholder: 'Buscar categoría...',
+                  prefix: Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: Icon(
+                      CupertinoIcons.search,
+                      size: 20,
+                      color: JPCupertinoColors.systemGrey(context),
+                    ),
+                  ),
+                  suffix: _busqueda.isNotEmpty
+                      ? CupertinoButton(
+                          padding: const EdgeInsets.only(right: 8),
+                          minimumSize: Size.zero,
+                          onPressed: _limpiarBusqueda,
+                          child: Icon(
+                            CupertinoIcons.clear_circled_solid,
+                            size: 20,
+                            color: JPCupertinoColors.systemGrey(context),
+                          ),
+                        )
+                      : null,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: JPCupertinoColors.systemGrey6(context),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  onChanged: _aplicarBusqueda,
+                ),
+              ),
+            ),
+          ),
+
+          // Contenido
+          _buildBody(),
+        ],
       ),
     );
   }
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return SliverFillRemaining(
+        child: Center(
+          child: CupertinoActivityIndicator(
+            radius: 14,
+            color: JPCupertinoColors.systemGrey(context),
+          ),
+        ),
+      );
     }
 
     if (_error.isNotEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(_error, style: const TextStyle(color: JPColors.textSecondary)),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _cargarCategorias,
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
+      return SliverFillRemaining(
+        child: _buildEstadoError(),
       );
     }
 
     if (_categoriasFiltradas.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            const Text(
-              'No se encontraron categorías',
-              style: TextStyle(color: JPColors.textSecondary),
-            ),
-          ],
-        ),
+      return SliverFillRemaining(
+        child: _buildSinResultados(),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _cargarCategorias,
-      child: GridView.builder(
-        padding: const EdgeInsets.all(16),
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           childAspectRatio: 0.85,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
-        itemCount: _categoriasFiltradas.length,
-        itemBuilder: (context, index) {
-          return _CategoriaCard(categoria: _categoriasFiltradas[index]);
-        },
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return _CategoriaCard(categoria: _categoriasFiltradas[index]);
+          },
+          childCount: _categoriasFiltradas.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEstadoError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              CupertinoIcons.exclamationmark_triangle,
+              size: 64,
+              color: JPCupertinoColors.systemRed(context),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _error,
+              style: TextStyle(
+                color: JPCupertinoColors.secondaryLabel(context),
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            CupertinoButton.filled(
+              onPressed: _cargarCategorias,
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSinResultados() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            CupertinoIcons.search_circle,
+            size: 64,
+            color: JPCupertinoColors.systemGrey3(context),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No se encontraron categorías',
+            style: TextStyle(
+              color: JPCupertinoColors.secondaryLabel(context),
+              fontSize: 15,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// PERSISTENT HEADER DELEGATE PARA SEARCH BAR
+// ══════════════════════════════════════════════════════════════════════════
+
+class _SearchBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _SearchBarDelegate({required this.child});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => 60;
+
+  @override
+  double get minExtent => 60;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CARD DE CATEGORÍA iOS-STYLE
+// ══════════════════════════════════════════════════════════════════════════
 
 class _CategoriaCard extends StatelessWidget {
   final CategoriaModel categoria;
@@ -175,20 +282,16 @@ class _CategoriaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Rutas.irACategoriaDetalle(context, categoria),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: JPConstants.cardShadow(context),
+      ),
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(16),
+        onPressed: () => Rutas.irACategoriaDetalle(context, categoria),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -197,39 +300,36 @@ class _CategoriaCard extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: JPCupertinoColors.systemGrey6(context),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey[300]!),
+                border: Border.all(
+                  color: JPCupertinoColors.separator(context),
+                  width: 0.5,
+                ),
               ),
               child: ClipOval(
                 child: categoria.tieneImagen
-                    ? Image.network(
-                        categoria.imagenUrl!,
+                    ? CachedNetworkImage(
+                        imageUrl: categoria.imagenUrl!,
                         width: 80,
                         height: 80,
                         fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                          );
-                        },
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.image_not_supported_outlined,
+                        placeholder: (context, url) => Center(
+                          child: CupertinoActivityIndicator(
+                            radius: 10,
+                            color: JPCupertinoColors.systemGrey(context),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Icon(
+                          CupertinoIcons.photo,
                           size: 32,
-                          color: Colors.grey[400],
+                          color: JPCupertinoColors.systemGrey3(context),
                         ),
                       )
                     : Icon(
-                        Icons.image_not_supported_outlined,
+                        CupertinoIcons.square_grid_2x2,
                         size: 32,
-                        color: Colors.grey[400],
+                        color: JPCupertinoColors.systemGrey3(context),
                       ),
               ),
             ),
@@ -240,10 +340,10 @@ class _CategoriaCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 categoria.nombre,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: JPColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  color: JPCupertinoColors.label(context),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
@@ -257,15 +357,15 @@ class _CategoriaCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: JPColors.primary.withValues(alpha: 0.1),
+                  color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '${categoria.totalProductos} productos',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: JPColors.primary,
+                    color: JPCupertinoColors.systemBlue(context),
                   ),
                 ),
               ),

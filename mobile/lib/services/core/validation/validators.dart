@@ -1,8 +1,10 @@
-// lib/apis/helpers/api_validators.dart
-import '../../config/api_config.dart';
+// lib/services/core/validation/validators.dart
+import '../../../config/api_config.dart';
 
-class ApiValidators {
-  ApiValidators._();
+/// Validadores de negocio para la aplicación
+/// Incluye validaciones de email, passwords, datos Ecuador, etc.
+class Validators {
+  Validators._();
 
   // --------------------------------------------------------------------------
   // Expresiones Regulares

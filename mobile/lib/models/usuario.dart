@@ -11,7 +11,7 @@ class PerfilModel {
   final int id;
   final String usuarioEmail;
   final String usuarioNombre;
-  final String firstName; 
+  final String firstName;
   final String lastName;
   final String? fotoPerfil;
   final String? telefono;
@@ -35,7 +35,7 @@ class PerfilModel {
     required this.usuarioEmail,
     required this.usuarioNombre,
     required this.firstName, // Nuevo
-    required this.lastName,  // Nuevo
+    required this.lastName, // Nuevo
     this.fotoPerfil,
     this.telefono,
     this.fechaNacimiento,
@@ -59,7 +59,7 @@ class PerfilModel {
   // ──────────────────────────────────────────────────────────────────────────
   factory PerfilModel.fromJson(Map<String, dynamic> json) {
     // Helper para fechas seguras
-    DateTime? parseDate(dynamic v) => 
+    DateTime? parseDate(dynamic v) =>
         (v is String && v.isNotEmpty) ? DateTime.tryParse(v) : null;
 
     // Extraemos teléfono para calcular 'tieneTelefono'
@@ -81,16 +81,17 @@ class PerfilModel {
       totalResenas: json['total_resenas'] as int? ?? 0,
       totalPedidos: json['total_pedidos'] as int? ?? 0,
       pedidosMesActual: json['pedidos_mes_actual'] as int? ?? 0,
-      
+
       esClienteFrecuente: json['es_cliente_frecuente'] as bool? ?? false,
       puedeParticiparRifa: json['puede_participar_rifa'] as bool? ?? false,
-      
+
       // 🛠️ CORRECCIÓN: Calculados localmente (Backend no envía estos booleanos)
       tieneTelefono: (tel != null && tel.isNotEmpty),
-      
+
       notificacionesPedido: json['notificaciones_pedido'] as bool? ?? true,
-      notificacionesPromociones: json['notificaciones_promociones'] as bool? ?? true,
-      
+      notificacionesPromociones:
+          json['notificaciones_promociones'] as bool? ?? true,
+
       // 🛠️ CORRECCIÓN: Si hay fecha de token actualizado, es que tiene token activo
       puedeRecibirNotificaciones: json['fcm_token_actualizado'] != null,
 
@@ -128,7 +129,7 @@ class PerfilModel {
     String? usuarioEmail,
     String? usuarioNombre,
     String? firstName, // Agregado
-    String? lastName,  // Agregado
+    String? lastName, // Agregado
     String? fotoPerfil,
     String? telefono,
     DateTime? fechaNacimiento,
@@ -175,16 +176,20 @@ class PerfilModel {
   }
 
   String? get fotoPerfilUrl {
-    if (fotoPerfil == null || fotoPerfil!.isEmpty) return null;
-    if (fotoPerfil!.startsWith('http')) return fotoPerfil;
-    
+    if (fotoPerfil == null || fotoPerfil!.isEmpty) {
+      return null;
+    }
+    if (fotoPerfil!.startsWith('http')) {
+      return fotoPerfil;
+    }
+
     // Construcción segura de URL
     final baseUrl = ApiConfig.baseUrl.endsWith('/')
         ? ApiConfig.baseUrl.substring(0, ApiConfig.baseUrl.length - 1)
         : ApiConfig.baseUrl;
-        
+
     final path = fotoPerfil!.startsWith('/') ? fotoPerfil! : '/$fotoPerfil';
-    
+
     return '$baseUrl$path';
   }
 
@@ -267,8 +272,11 @@ class DireccionModel {
       latitud: safeDouble(json['latitud']),
       longitud: safeDouble(json['longitud']),
       ciudad: json['ciudad'] as String?,
-      telefonoContacto: json['telefono_contacto'] as String? ?? json['telefono'] as String?,
-      indicaciones: json['indicaciones'] as String? ?? json['indicaciones_entrega'] as String?,
+      telefonoContacto:
+          json['telefono_contacto'] as String? ?? json['telefono'] as String?,
+      indicaciones:
+          json['indicaciones'] as String? ??
+          json['indicaciones_entrega'] as String?,
       esPredeterminada: safeBool(json['es_predeterminada']),
       activa: safeBool(json['activa']),
       vecesUsada: safeInt(json['veces_usada']),
@@ -316,15 +324,21 @@ class DireccionModel {
       'es_predeterminada': esPredeterminada,
     };
 
-    if (etiqueta.isNotEmpty) data['etiqueta'] = etiqueta;
-    if (referencia != null && referencia!.isNotEmpty) data['referencia'] = referencia;
+    if (etiqueta.isNotEmpty) {
+      data['etiqueta'] = etiqueta;
+    }
+    if (referencia != null && referencia!.isNotEmpty) {
+      data['referencia'] = referencia;
+    }
     if (pisoApartamento != null && pisoApartamento!.isNotEmpty) {
       data['piso_apartamento'] = pisoApartamento;
     }
     if (calleSecundaria != null && calleSecundaria!.isNotEmpty) {
       data['calle_secundaria'] = calleSecundaria;
     }
-    if (ciudad != null && ciudad!.isNotEmpty) data['ciudad'] = ciudad;
+    if (ciudad != null && ciudad!.isNotEmpty) {
+      data['ciudad'] = ciudad;
+    }
     if (telefonoContacto != null && telefonoContacto!.isNotEmpty) {
       data['telefono_contacto'] = telefonoContacto;
     }
@@ -383,14 +397,18 @@ class DireccionModel {
 
   String get iconoTipo {
     switch (tipo) {
-      case 'casa': return '🏠';
-      case 'trabajo': return '💼';
-      default: return '📍';
+      case 'casa':
+        return '🏠';
+      case 'trabajo':
+        return '💼';
+      default:
+        return '📍';
     }
   }
 
   @override
-  String toString() => 'DireccionModel(id: $id, etiqueta: $etiqueta, tipo: $tipo)';
+  String toString() =>
+      'DireccionModel(id: $id, etiqueta: $etiqueta, tipo: $tipo)';
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -402,10 +420,10 @@ class MetodoPagoModel {
   final String tipo;
   final String tipoDisplay;
   final String alias;
-  final String? comprobantePago; 
-  final String? observaciones; 
-  final bool tieneComprobante; 
-  final bool requiereVerificacion; 
+  final String? comprobantePago;
+  final String? observaciones;
+  final bool tieneComprobante;
+  final bool requiereVerificacion;
   final bool esPredeterminado;
   final bool activo;
   final DateTime createdAt;
@@ -502,37 +520,51 @@ class MetodoPagoModel {
 
   String get iconoTipo {
     switch (tipo) {
-      case 'efectivo': return '💵';
-      case 'transferencia': return '🏦';
-      case 'tarjeta': return '💳';
-      default: return '💰';
+      case 'efectivo':
+        return '💵';
+      case 'transferencia':
+        return '🏦';
+      case 'tarjeta':
+        return '💳';
+      default:
+        return '💰';
     }
   }
 
   // ✅ CORRECCIÓN: Construcción segura de URL con ApiConfig
   String? get urlComprobante {
-    if (comprobantePago == null || comprobantePago!.isEmpty) return null;
-    if (comprobantePago!.startsWith('http')) return comprobantePago;
+    if (comprobantePago == null || comprobantePago!.isEmpty) {
+      return null;
+    }
+    if (comprobantePago!.startsWith('http')) {
+      return comprobantePago;
+    }
 
     final baseUrl = ApiConfig.baseUrl.endsWith('/')
         ? ApiConfig.baseUrl.substring(0, ApiConfig.baseUrl.length - 1)
         : ApiConfig.baseUrl;
 
-    final path = comprobantePago!.startsWith('/') 
-        ? comprobantePago! 
+    final path = comprobantePago!.startsWith('/')
+        ? comprobantePago!
         : '/$comprobantePago';
 
     return '$baseUrl$path';
   }
 
   bool get esValido {
-    if (tipo == 'efectivo') return true;
-    if (tipo == 'transferencia') return tieneComprobante;
+    if (tipo == 'efectivo') {
+      return true;
+    }
+    if (tipo == 'transferencia') {
+      return tieneComprobante;
+    }
     return true;
   }
 
   String get mensajeComprobante {
-    if (tipo == 'efectivo') return 'No requiere comprobante';
+    if (tipo == 'efectivo') {
+      return 'No requiere comprobante';
+    }
     if (tipo == 'transferencia') {
       if (tieneComprobante) {
         return requiereVerificacion
@@ -545,7 +577,9 @@ class MetodoPagoModel {
   }
 
   Color get colorEstado {
-    if (tipo == 'efectivo') return Colors.grey;
+    if (tipo == 'efectivo') {
+      return Colors.grey;
+    }
     if (tipo == 'transferencia') {
       if (tieneComprobante) {
         return requiereVerificacion ? Colors.orange : Colors.green;
@@ -556,7 +590,9 @@ class MetodoPagoModel {
   }
 
   IconData get iconoEstado {
-    if (tipo == 'efectivo') return Icons.attach_money;
+    if (tipo == 'efectivo') {
+      return Icons.attach_money;
+    }
     if (tipo == 'transferencia') {
       if (tieneComprobante) {
         return requiereVerificacion ? Icons.pending : Icons.check_circle;
@@ -567,9 +603,15 @@ class MetodoPagoModel {
   }
 
   bool get puedeUsarse {
-    if (!activo) return false;
-    if (tipo == 'efectivo') return true;
-    if (tipo == 'transferencia') return tieneComprobante && !requiereVerificacion;
+    if (!activo) {
+      return false;
+    }
+    if (tipo == 'efectivo') {
+      return true;
+    }
+    if (tipo == 'transferencia') {
+      return tieneComprobante && !requiereVerificacion;
+    }
     return true;
   }
 
@@ -579,7 +621,9 @@ class MetodoPagoModel {
     if (observaciones != null && observaciones!.isNotEmpty) {
       buffer.write(' ($observaciones)');
     }
-    if (!puedeUsarse) buffer.write(' [No disponible]');
+    if (!puedeUsarse) {
+      buffer.write(' [No disponible]');
+    }
     return buffer.toString();
   }
 
@@ -641,18 +685,26 @@ class EstadisticasModel {
   }
 
   String get nivelCliente {
-    if (esClienteFrecuente) return 'Cliente VIP';
-    if (totalPedidos >= 5) return 'Cliente Regular';
+    if (esClienteFrecuente) {
+      return 'Cliente VIP';
+    }
+    if (totalPedidos >= 5) {
+      return 'Cliente Regular';
+    }
     return 'Cliente';
   }
 
   double get progresoRifa {
-    if (pedidosMesActual >= 3) return 1.0;
+    if (pedidosMesActual >= 3) {
+      return 1.0;
+    }
     return pedidosMesActual / 3.0;
   }
 
   String get mensajeRifa {
-    if (puedeParticiparRifa) return '🎉 ¡Participas en la rifa!';
+    if (puedeParticiparRifa) {
+      return '¡Participas en la rifa!';
+    }
     final faltantes = 3 - pedidosMesActual;
     return 'Te faltan $faltantes pedido${faltantes == 1 ? '' : 's'} para la rifa';
   }

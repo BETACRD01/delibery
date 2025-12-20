@@ -1,10 +1,13 @@
 // lib/screens/user/super/pantalla_super.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../controllers/user/super_controller.dart';
 import '../../../models/categoria_super_model.dart';
+import '../../../widgets/cards/jp_category_card.dart';
+import '../../../widgets/common/jp_shimmer.dart';
+import '../../../widgets/common/jp_empty_state.dart';
+import '../../../theme/jp_theme.dart';
 import 'pantalla_categoria_detalle.dart';
 
 /// Pantalla Super - Categorías de servicios
@@ -34,9 +37,9 @@ class _PantallaSuperState extends State<PantallaSuper> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: _controller,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
+      child: CupertinoPageScaffold(
+        backgroundColor: JPCupertinoColors.background(context),
+        child: SafeArea(
           child: Consumer<SuperController>(
             builder: (context, controller, _) {
               if (controller.categorias.isEmpty && controller.loading) {
@@ -44,46 +47,40 @@ class _PantallaSuperState extends State<PantallaSuper> {
               }
 
               if (controller.categorias.isEmpty) {
-                return _buildSinCategorias();
+                return _buildSinCategorias(context);
               }
 
-              return RefreshIndicator(
-                onRefresh: controller.refrescar,
-                color: Colors.teal,
-                child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
-                  slivers: [
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(16, 12, 16, 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'JP Súper',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF15212B),
-                              ),
+              return CustomScrollView(
+                physics: const ClampingScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'JP Súper',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: JPCupertinoColors.label(context),
                             ),
-                            SizedBox(height: 6),
-                            Text(
-                              'Farmacia, envíos y súper en un solo lugar',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF6B7A90),
-                              ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Farmacia, envíos y súper en un solo lugar',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: JPCupertinoColors.secondaryLabel(context),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                    _buildGridCategorias(controller),
-                  ],
-                ),
+                  ),
+                  _buildGridCategorias(controller),
+                ],
               );
             },
           ),
@@ -92,32 +89,12 @@ class _PantallaSuperState extends State<PantallaSuper> {
     );
   }
 
-  Widget _buildSinCategorias() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.local_shipping_outlined,
-            size: 100,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'No hay categorías',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Las categorías aparecerán aquí',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-          ),
-        ],
-      ),
+  Widget _buildSinCategorias(BuildContext context) {
+    return JPEmptyState(
+      icon: CupertinoIcons.bag,
+      iconColor: JPCupertinoColors.systemBlue(context),
+      title: 'No hay categorías',
+      message: 'Las categorías de servicios aparecerán aquí cuando estén disponibles',
     );
   }
 
@@ -143,8 +120,13 @@ class _PantallaSuperState extends State<PantallaSuper> {
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
               final categoria = controller.categorias[index];
-              return _CategoriaCard(
-                categoria: categoria,
+              return JPCategoryCard(
+                nombre: categoria.nombre,
+                descripcion: categoria.descripcion,
+                imagenUrl: categoria.imagenUrl,
+                icono: categoria.icono,
+                color: categoria.color,
+                totalItems: categoria.totalProveedores,
                 onTap: () => _onCategoriaPressed(categoria),
               );
             }, childCount: controller.categorias.length),
@@ -160,176 +142,25 @@ class _PantallaSuperState extends State<PantallaSuper> {
     // Navegar a la pantalla de detalle de la categoría
     Navigator.push(
       context,
-      MaterialPageRoute(
+      CupertinoPageRoute(
         builder: (context) => PantallaCategoriaDetalle(categoria: categoria),
       ),
     );
   }
 }
 
-class _CategoriaCard extends StatelessWidget {
-  final CategoriaSuperModel categoria;
-  final VoidCallback? onTap;
-
-  const _CategoriaCard({required this.categoria, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = categoria.color;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(14),
-              ),
-              child: Container(
-                height: 96,
-                width: double.infinity,
-                color: color.withValues(alpha: 0.08),
-                child: CachedNetworkImage(
-                  imageUrl: categoria.imagenUrl ?? '',
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Center(
-                    child: Icon(
-                      categoria.icono,
-                      color: color.withValues(alpha: 0.35),
-                      size: 42,
-                    ),
-                  ),
-                  errorWidget: (_, __, ___) => Center(
-                    child: Icon(
-                      categoria.icono,
-                      color: color.withValues(alpha: 0.35),
-                      size: 42,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(9),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(categoria.icono, color: color, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          categoria.nombre,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF15212B),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          categoria.descripcion,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B7A90),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.store_mall_directory,
-                          size: 14,
-                          color: Color(0xFF45525F),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${categoria.totalProveedores ?? 0} prov.',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF45525F),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 14,
-                    color: Colors.grey[400],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
+/// Skeleton loading con shimmer effect para categorías
 class _SuperSkeleton extends StatelessWidget {
   const _SuperSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
+    return const JPShimmerList(
       itemCount: 6,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (_, __) => Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(14),
-        ),
-      ),
+      itemHeight: 180,
+      spacing: 12,
+      borderRadius: 14,
+      padding: EdgeInsets.all(16),
     );
   }
 }

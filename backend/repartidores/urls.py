@@ -138,6 +138,11 @@ urlpatterns = [
         name="mis_pedidos_activos"
     ),
     path(
+        "mis-pedidos/actualizaciones/",
+        views.obtener_actualizaciones_pedidos,
+        name="actualizaciones_pedidos"
+    ),
+    path(
         "pedidos/<int:pedido_id>/detalle/",
         views.detalle_pedido_repartidor,
         name="detalle_pedido_repartidor"

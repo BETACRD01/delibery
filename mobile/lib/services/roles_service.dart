@@ -52,6 +52,8 @@ class RolesService {
     try {
       final response = await _client.get(ApiConfig.usuariosMisRoles);
 
+      final rolActivoApi = (response['rol_activo'] as String?)?.toUpperCase();
+
       final roles = (response['roles'] as List<dynamic>? ?? [])
           .map((json) => RolUsuario.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -60,16 +62,23 @@ class RolesService {
           .where((r) => r.esAceptado)
           .map((r) => r.nombre)
           .toList();
-      final activo = roles
-          .where((r) => r.activo && r.esAceptado)
-          .map((r) => r.nombre)
-          .firstOrNull;
+      final activo = rolActivoApi ??
+          roles
+              .where((r) => r.activo && r.esAceptado)
+              .map((r) => r.nombre)
+              .firstOrNull;
 
-      return {
+      final result = {
         'roles': roles,
         'roles_disponibles': disponibles,
         'rol_activo': activo,
       };
+
+      if (activo != null && activo.isNotEmpty) {
+        await _client.cacheUserRole(activo);
+      }
+
+      return result;
     } catch (e, stack) {
       _log('Error obteniendo roles', error: e, stack: stack);
       rethrow;
@@ -106,14 +115,19 @@ class RolesService {
 
       if (response.containsKey('tokens')) {
         final tokens = response['tokens'];
+        final rolFinal =
+            (tokens['rol'] as String? ?? nuevoRol).toString().toUpperCase();
         await _client.saveTokens(
           tokens['access'],
           tokens['refresh'],
-          role: tokens['rol'] as String?,
+          role: rolFinal,
           userId: _client.userId,
           lifetime: _tokenDuration,
         );
-        _log('Rol cambiado, tokens actualizados');
+        _log('Rol cambiado, tokens actualizados. Rol final: $rolFinal');
+      } else {
+        await _client.cacheUserRole(nuevoRol);
+        _log('Rol cambiado sin tokens, cache actualizado');
       }
 
       return response;
