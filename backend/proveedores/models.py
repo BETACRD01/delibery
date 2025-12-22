@@ -558,6 +558,22 @@ class Proveedor(models.Model):
         logger.info(f"[RESTORE] Proveedor {self.id} restaurado")
 
     # ============================================
+    # CALIFICACIONES
+    # ============================================
+    calificacion_promedio = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=5.00,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name='Calificación Promedio'
+    )
+
+    total_resenas = models.PositiveIntegerField(
+        default=0,
+        verbose_name='Total de Reseñas'
+    )
+
+    # ============================================
     # VALIDACIONES
     # ============================================
     def clean(self):
@@ -805,18 +821,3 @@ class AccionAdministrativa(models.Model):
             'por_tipo': list(acciones),
             'periodo_dias': dias,
         }
-# ============================================
-# CALIFICACIONES (NUEVO)
-# ============================================
-    calificacion_promedio = models.DecimalField(
-    max_digits=3,
-    decimal_places=2,
-    default=5.00,
-    validators=[MinValueValidator(0), MaxValueValidator(5)],
-    verbose_name='Calificación Promedio'
-    )
-
-    total_resenas = models.PositiveIntegerField(
-    default=0,
-    verbose_name='Total de Reseñas'
-    )

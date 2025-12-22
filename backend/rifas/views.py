@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import Rifa, Participacion, EstadoRifa, Premio
 from .serializers import (
@@ -89,6 +90,7 @@ class RifaViewSet(viewsets.ModelViewSet):
     ✅ CUSTOM ACTIONS:
     - GET    /api/rifas/activa/                  - Rifa activa actual
     - GET    /api/rifas/{id}/elegibilidad/       - Mi elegibilidad
+    - POST   /api/rifas/{id}/participar/         - Registrar participación
     - POST   /api/rifas/{id}/sortear/            - Realizar sorteo (admin)
     - GET    /api/rifas/{id}/participantes/      - Lista participantes (admin)
     - GET    /api/rifas/historial_ganadores/     - Historial
@@ -284,6 +286,67 @@ class RifaViewSet(viewsets.ModelViewSet):
             'elegibilidad': serializer.data
         })
 
+    @action(detail=True, methods=['post'], url_path='participar')
+    def participar(self, request, pk=None):
+        """
+        POST /api/rifas/{id}/participar/
+
+        Registra la participación del usuario autenticado.
+        """
+        rifa = self.get_object()
+        ahora = timezone.now()
+
+        if rifa.estado != EstadoRifa.ACTIVA or rifa.fecha_inicio > ahora or rifa.fecha_fin < ahora:
+            return Response(
+                {
+                    'success': False,
+                    'message': 'La rifa no está disponible para participar',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if Participacion.objects.filter(rifa=rifa, usuario=request.user).exists():
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Ya estás participando en esta rifa',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        elegibilidad = rifa.usuario_es_elegible(request.user)
+        if not elegibilidad.get('elegible'):
+            return Response(
+                {
+                    'success': False,
+                    'message': elegibilidad.get('razon', 'No cumples los requisitos'),
+                    'elegibilidad': elegibilidad,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        participacion = Participacion.objects.create(
+            rifa=rifa,
+            usuario=request.user,
+            pedidos_completados=elegibilidad.get('pedidos', 0),
+        )
+
+        return Response(
+            {
+                'success': True,
+                'message': 'Participación registrada correctamente',
+                'participacion': ParticipacionSerializer(
+                    participacion,
+                    context={'request': request},
+                ).data,
+                'rifa': RifaActivaAppSerializer(
+                    rifa,
+                    context={'request': request},
+                ).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     @action(detail=True, methods=['post'], url_path='sortear', permission_classes=[IsAdmin])
     @transaction.atomic
     def sortear(self, request, pk=None):
@@ -336,7 +399,7 @@ class RifaViewSet(viewsets.ModelViewSet):
             if resultado.get('sin_participantes'):
                 return Response({
                     'success': False,
-                    'message': 'No hay participantes elegibles para sortear',
+                    'message': 'No hay participantes registrados para sortear',
                     'premios_ganados': [],
                     'rifa': RifaListSerializer(rifa, context={'request': request}).data,
                     'total_participantes': 0,
@@ -390,22 +453,19 @@ class RifaViewSet(viewsets.ModelViewSet):
         """
         GET /api/rifas/{id}/participantes/
 
-        Lista todos los participantes elegibles (solo admin)
+        Lista todos los participantes registrados (solo admin)
         """
         rifa = self.get_object()
 
-        # Obtener participantes elegibles
-        participantes_queryset = rifa.obtener_participantes_elegibles()
-
-        # Construir lista con datos
-        participantes_data = []
-        for usuario in participantes_queryset:
-            elegibilidad = rifa.usuario_es_elegible(usuario)
-            participantes_data.append({
-                'usuario': usuario,
-                'pedidos_completados': elegibilidad['pedidos'],
-                'elegible': elegibilidad['elegible']
-            })
+        participaciones = rifa.participaciones.select_related('usuario').order_by('-fecha_registro')
+        participantes_data = [
+            {
+                'usuario': participacion.usuario,
+                'pedidos_completados': participacion.pedidos_completados,
+                'elegible': True
+            }
+            for participacion in participaciones
+        ]
 
         return Response({
             'total': len(participantes_data),

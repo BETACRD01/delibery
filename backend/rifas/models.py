@@ -237,6 +237,15 @@ class Rifa(models.Model):
 
         return usuarios_elegibles
 
+    def obtener_participaciones(self):
+        """
+        Obtiene participaciones registradas para la rifa.
+
+        Returns:
+            QuerySet: Participaciones con datos de usuario.
+        """
+        return self.participaciones.select_related('usuario')
+
     def usuario_es_elegible(self, usuario):
         """
         Verifica si un usuario específico es elegible
@@ -253,6 +262,13 @@ class Rifa(models.Model):
                 'pedidos': 0,
                 'faltantes': self.pedidos_minimos,
                 'razon': 'Solo usuarios regulares pueden participar'
+            }
+        if not usuario.perfil.participa_en_sorteos:
+            return {
+                'elegible': False,
+                'pedidos': 0,
+                'faltantes': self.pedidos_minimos,
+                'razon': 'Tu cuenta no está habilitada para rifas'
             }
 
         # Contar pedidos entregados en el rango
@@ -288,11 +304,11 @@ class Rifa(models.Model):
         if self.premios.filter(ganador__isnull=False).exists():
             raise ValidationError('Esta rifa ya tiene ganadores asignados')
 
-        # Obtener participantes elegibles
-        participantes = list(self.obtener_participantes_elegibles())
+        # Obtener participantes registrados
+        participaciones = list(self.obtener_participaciones())
 
-        if not participantes:
-            logger.warning(f"No hay participantes elegibles para la rifa {self.titulo}")
+        if not participaciones:
+            logger.warning(f"No hay participantes registrados para la rifa {self.titulo}")
             self.estado = EstadoRifa.FINALIZADA
             self.save()
             return {'premios_ganados': [], 'sin_participantes': True}
@@ -304,7 +320,7 @@ class Rifa(models.Model):
             raise ValidationError('Esta rifa no tiene premios configurados')
 
         premios_ganados = []
-        participantes_disponibles = participantes.copy()
+        participantes_disponibles = participaciones.copy()
 
         # Sortear cada premio
         for premio in premios:
@@ -313,12 +329,13 @@ class Rifa(models.Model):
                 break
 
             # Seleccionar ganador aleatorio
-            ganador = random.choice(participantes_disponibles)
+            participacion = random.choice(participantes_disponibles)
+            ganador = participacion.usuario
             premio.ganador = ganador
             premio.save()
 
             # Remover ganador de la lista para que no gane dos veces
-            participantes_disponibles.remove(ganador)
+            participantes_disponibles.remove(participacion)
 
             premios_ganados.append({
                 'posicion': premio.posicion,
@@ -327,12 +344,10 @@ class Rifa(models.Model):
             })
 
             # Crear registro de participación
-            Participacion.objects.create(
-                rifa=self,
-                usuario=ganador,
-                ganador=True,
-                posicion_premio=premio.posicion
-            )
+            if not participacion.ganador:
+                participacion.ganador = True
+                participacion.posicion_premio = premio.posicion
+                participacion.save()
 
             logger.info(
                 f"Premio {premio.posicion} ({premio.descripcion}) ganado por: "
@@ -402,8 +417,8 @@ class Rifa(models.Model):
 
     @property
     def total_participantes(self):
-        """Cuenta participantes elegibles"""
-        return self.obtener_participantes_elegibles().count()
+        """Cuenta participantes registrados"""
+        return self.participaciones.count()
 
     @property
     def mes_nombre(self):

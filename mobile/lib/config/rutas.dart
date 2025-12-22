@@ -183,8 +183,13 @@ class Rutas {
   static Future<T?> irA<T>(BuildContext context, String ruta) =>
       Navigator.pushNamed<T>(context, ruta);
 
-  static Future<T?> irAYLimpiar<T>(BuildContext context, String ruta) =>
-      Navigator.pushNamedAndRemoveUntil<T>(context, ruta, (_) => false);
+  static Future<T?> irAYLimpiar<T>(
+    BuildContext context,
+    String ruta, {
+    bool rootNavigator = true,
+  }) =>
+      Navigator.of(context, rootNavigator: rootNavigator)
+          .pushNamedAndRemoveUntil<T>(ruta, (_) => false);
 
   static Future<T?> reemplazarCon<T>(BuildContext context, String ruta) =>
       Navigator.pushReplacementNamed<T, Object?>(context, ruta);
@@ -334,8 +339,8 @@ class Rutas {
   }) => Navigator.push<T>(
     context,
     PageRouteBuilder(
-      pageBuilder: (_, __, ___) => pantalla,
-      transitionsBuilder: (_, anim, __, child) =>
+      pageBuilder: (_, _, _) => pantalla,
+      transitionsBuilder: (_, anim, _, child) =>
           FadeTransition(opacity: anim, child: child),
       transitionDuration: duracion,
     ),
@@ -345,8 +350,8 @@ class Rutas {
       Navigator.push<T>(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => pantalla,
-          transitionsBuilder: (_, anim, __, child) => SlideTransition(
+          pageBuilder: (_, _, _) => pantalla,
+          transitionsBuilder: (_, anim, _, child) => SlideTransition(
             position: Tween(
               begin: const Offset(0, 1),
               end: Offset.zero,
@@ -360,8 +365,8 @@ class Rutas {
       Navigator.push<T>(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => pantalla,
-          transitionsBuilder: (_, anim, __, child) => ScaleTransition(
+          pageBuilder: (_, _, _) => pantalla,
+          transitionsBuilder: (_, anim, _, child) => ScaleTransition(
             scale: CurvedAnimation(parent: anim, curve: Curves.easeInOut),
             child: child,
           ),

@@ -14,6 +14,7 @@ import '../../../widgets/common/jp_shimmer.dart';
 import '../busqueda/pantalla_busqueda.dart';
 import '../../../providers/notificaciones_provider.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/session_cleanup.dart';
 import '../../../services/toast_service.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 import 'widgets/inicio/home_app_bar.dart';
@@ -102,10 +103,11 @@ class _PantallaHomeState extends State<PantallaHome> {
 
   Future<void> _cerrarSesion(BuildContext ctx) async {
     try {
+      await SessionCleanup.clearProviders(ctx);
       await AuthService().logout();
     } catch (_) {}
     if (!ctx.mounted) return;
-    await Rutas.irAYLimpiar(ctx, Rutas.login);
+    await Rutas.irAYLimpiar(ctx, Rutas.login, rootNavigator: true);
   }
 }
 
@@ -122,8 +124,11 @@ class _HomeBody extends StatelessWidget {
     return Consumer<HomeController>(
       builder: (context, controller, _) {
         return CustomScrollView(
-          physics: const ClampingScrollPhysics(),
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           slivers: [
+            CupertinoSliverRefreshControl(onRefresh: controller.refrescar),
             // AppBar con logo, título, notificaciones y logout
             HomeAppBar(
               unreadCount: inbox.noLeidas.length,
@@ -292,7 +297,7 @@ class _SeccionCategorias extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: categorias.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final cat = categorias[index];
                     return _CategoriaChip(
@@ -356,9 +361,9 @@ class _CategoriaChip extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: imagen,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) =>
+                        placeholder: (_, _) =>
                             const CupertinoActivityIndicator(),
-                        errorWidget: (_, __, ___) =>
+                        errorWidget: (_, _, _) =>
                             _buildIconFallback(context, icono),
                       )
                     : _buildIconFallback(context, icono),
@@ -426,7 +431,7 @@ class _SeccionPromociones extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: promociones.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final promo = promociones[index];
                     return _PromoCard(
@@ -607,7 +612,7 @@ class _SeccionProductos extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: productos.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 14),
+                  separatorBuilder: (_, _) => const SizedBox(width: 14),
                   itemBuilder: (context, index) {
                     final producto = productos[index];
                     final nombre = (producto is ProductoModel)

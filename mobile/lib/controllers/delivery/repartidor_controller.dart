@@ -381,7 +381,12 @@ class RepartidorController extends ChangeNotifier {
   }
 
   /// Lista pedidos disponibles cercanos
-  Future<void> cargarPedidosDisponibles({bool forzarRecarga = true, double? latitud, double? longitud}) async {
+  Future<void> cargarPedidosDisponibles({
+    bool forzarRecarga = true,
+    double? latitud,
+    double? longitud,
+    bool actualizarUbicacionBackend = false,
+  }) async {
     try {
       double? lat = latitud;
       double? lng = longitud;
@@ -389,8 +394,8 @@ class RepartidorController extends ChangeNotifier {
       final ubicacionService = UbicacionService();
 
       if (lat == null || lng == null) {
-        // Obtiene y envía de una vez al backend
-        final posicion = await ubicacionService.obtenerYEnviarUbicacion();
+        // Obtiene ubicación local (sin enviar) para usar en el request
+        final posicion = await ubicacionService.obtenerUbicacionActual();
         if (posicion != null) {
           lat = posicion.latitude;
           lng = posicion.longitude;
@@ -406,10 +411,12 @@ class RepartidorController extends ChangeNotifier {
           _setError('Activa tu ubicación para ver pedidos cercanos.');
           return;
         }
-      } else {
-        // Si viene forzado (ej. reintento), también la subimos
+      } else if (actualizarUbicacionBackend) {
         try {
-          await _repartidorService.actualizarUbicacion(latitud: lat, longitud: lng);
+          await _repartidorService.actualizarUbicacion(
+            latitud: lat,
+            longitud: lng,
+          );
         } catch (e, stackTrace) {
           developer.log(
             'No se pudo actualizar la ubicacion antes de listar pedidos',
@@ -673,6 +680,10 @@ class RepartidorController extends ChangeNotifier {
     }
   }
 
+  void limpiar() {
+    _limpiarEstado();
+  }
+
   // ============================================
   // HELPERS PRIVADOS
   // ============================================
@@ -688,8 +699,14 @@ class RepartidorController extends ChangeNotifier {
   }
 
   void _limpiarEstado() {
+    stopSmartPolling();
+    _ubicacionService.detener();
     _perfil = null;
     _estadisticas = null;
+    _pendientes = null;
+    _pedidosActivos = null;
+    _historialEntregas = null;
+    _loadingHistorial = false;
     _error = null;
     _loading = false;
     _notifySafely();

@@ -15,6 +15,7 @@ import 'widgets/lista_vacia_widget.dart';
 import '../../screens/user/pedidos/pantalla_subir_comprobante.dart';
 import '../../services/pago_service.dart';
 import 'pantalla_ver_comprobante.dart';
+import '../../services/session_cleanup.dart';
 
 /// ✅ REFACTORIZADA: Pantalla principal para REPARTIDORES
 /// UI limpia que delega toda la lógica al controller
@@ -463,10 +464,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     );
 
     if (confirmar == true) {
+      if (!mounted) return;
+      await SessionCleanup.clearProviders(context);
       await _controller.cerrarSesion();
-      if (mounted) {
-        Rutas.irAYLimpiar(context, Rutas.login);
-      }
+      if (!mounted) return;
+      Rutas.irAYLimpiar(context, Rutas.login);
     }
   }
 

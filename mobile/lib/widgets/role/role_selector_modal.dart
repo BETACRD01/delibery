@@ -129,7 +129,9 @@ class _RoleSelectorModalState extends State<_RoleSelectorModal> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: JPCupertinoColors.systemRed(context).withValues(alpha: 0.1),
+                color: JPCupertinoColors.systemRed(
+                  context,
+                ).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -226,7 +228,7 @@ class _RoleSelectorModalState extends State<_RoleSelectorModal> {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: allRoles.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final roleInfo = allRoles[index];
         return _buildRoleTile(roleInfo, roleInfo.role == activeRole);
@@ -386,8 +388,8 @@ class _RoleSelectorModalState extends State<_RoleSelectorModal> {
         _error = roleInfo.isPending
             ? 'Tu solicitud está en revisión'
             : roleInfo.isRejected
-                ? 'Solicitud rechazada: ${roleInfo.rejectionReason ?? "Contacta soporte"}'
-                : 'Este rol no está disponible';
+            ? 'Solicitud rechazada: ${roleInfo.rejectionReason ?? "Contacta soporte"}'
+            : 'Este rol no está disponible';
       });
       return;
     }
@@ -432,9 +434,9 @@ class _RoleSelectorModalState extends State<_RoleSelectorModal> {
   void _navigateToRoleScreen(AppRole role) {
     // Importar RoleRouter para la navegación
     // Por ahora simplemente pop y el router principal debería manejar
-    Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-      '/',
-      (route) => false,
-    );
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).pushNamedAndRemoveUntil('/', (route) => false);
   }
 }

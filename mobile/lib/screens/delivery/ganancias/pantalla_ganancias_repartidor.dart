@@ -242,7 +242,7 @@ class _PantallaGananciasRepartidorState
       child: ListView.separated(
         padding: const EdgeInsets.only(bottom: 12),
         itemBuilder: (_, index) => _buildEntregaCard(_entregas[index]),
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemCount: _entregas.length,
       ),
     );

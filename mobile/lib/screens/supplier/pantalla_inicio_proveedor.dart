@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/rutas.dart';
 import '../../controllers/supplier/supplier_controller.dart';
+import '../../services/session_cleanup.dart';
 import 'widgets/supplier_drawer.dart';
 
 import 'tabs/productos_tab.dart';
@@ -69,6 +70,7 @@ class _PantallaInicioProveedorState extends State<PantallaInicioProveedor>
 
     if (confirmar == true && mounted) {
       final controller = context.read<SupplierController>();
+      await SessionCleanup.clearProviders(context);
       final success = await controller.cerrarSesion();
 
       if (success && mounted) {

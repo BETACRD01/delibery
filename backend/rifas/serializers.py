@@ -162,7 +162,7 @@ class RifaListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_total_participantes(self, obj):
-        """Calcula total de participantes elegibles"""
+        """Calcula total de participantes registrados"""
         # Usamos el método del modelo que ya está optimizado
         return obj.total_participantes
 
@@ -205,7 +205,7 @@ class ElegibilidadSerializer(serializers.Serializer):
 
 class ParticipanteSerializer(serializers.Serializer):
     """
-    Serializer para participantes elegibles de una rifa
+    Serializer para participantes registrados de una rifa
     """
 
     usuario = UsuarioSimpleSerializer()
@@ -284,7 +284,7 @@ class RifaDetailSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_total_participantes(self, obj):
-        """Total de participantes elegibles"""
+        """Total de participantes registrados"""
         return obj.total_participantes
 
     def get_imagen_url(self, obj):
@@ -541,6 +541,7 @@ class ParticipacionSerializer(serializers.ModelSerializer):
             'rifa',
             'usuario',
             'ganador',
+            'posicion_premio',
             'pedidos_completados',
             'fecha_registro'
         ]
@@ -669,7 +670,7 @@ class EstadisticasRifasSerializer(serializers.Serializer):
 
 class ListaParticipantesSerializer(serializers.Serializer):
     """
-    Serializer para lista completa de participantes elegibles
+    Serializer para lista completa de participantes registrados
     Solo accesible por admin
     """
 
@@ -710,6 +711,7 @@ class RifaActivaAppSerializer(serializers.ModelSerializer):
 
     # Elegibilidad del usuario
     puedo_participar = serializers.SerializerMethodField()
+    ya_participa = serializers.SerializerMethodField()
     mis_pedidos = serializers.SerializerMethodField()
     pedidos_faltantes = serializers.SerializerMethodField()
 
@@ -727,6 +729,7 @@ class RifaActivaAppSerializer(serializers.ModelSerializer):
         'total_participantes',
             'pedidos_minimos',
             'puedo_participar',
+            'ya_participa',
             'mis_pedidos',
             'pedidos_faltantes',
             'estado_display'
@@ -748,7 +751,18 @@ class RifaActivaAppSerializer(serializers.ModelSerializer):
             return False
 
         elegibilidad = obj.usuario_es_elegible(request.user)
-        return elegibilidad['elegible']
+        return elegibilidad['elegible'] and not self.get_ya_participa(obj)
+
+    def get_ya_participa(self, obj):
+        """Verifica si el usuario ya participó"""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+
+        return Participacion.objects.filter(
+            rifa=obj,
+            usuario=request.user,
+        ).exists()
 
     def get_mis_pedidos(self, obj):
         """Pedidos completados del usuario"""

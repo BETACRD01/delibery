@@ -33,7 +33,9 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.loading && widget.promociones.isEmpty) return const SizedBox.shrink();
+    if (!widget.loading && widget.promociones.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,7 +80,9 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
                       padding: const EdgeInsets.only(right: 12),
                       child: _PromocionCardImpacto(
                         promocion: widget.promociones[index],
-                        onTap: () => widget.onPromocionPressed?.call(widget.promociones[index]),
+                        onTap: () => widget.onPromocionPressed?.call(
+                          widget.promociones[index],
+                        ),
                       ),
                     );
                   },
@@ -119,8 +123,8 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(width: 14),
-      itemBuilder: (_, __) => Container(
+      separatorBuilder: (_, _) => const SizedBox(width: 14),
+      itemBuilder: (_, _) => Container(
         width: 300,
         decoration: BoxDecoration(
           color: Colors.grey[200],
@@ -136,10 +140,7 @@ class _PromocionCardImpacto extends StatelessWidget {
   final PromocionModel promocion;
   final VoidCallback? onTap;
 
-  const _PromocionCardImpacto({
-    required this.promocion,
-    this.onTap,
-  });
+  const _PromocionCardImpacto({required this.promocion, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +178,9 @@ class _PromocionCardImpacto extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.black.withValues(alpha: 0.05),
-                      Colors.black.withValues(alpha: 0.65), // Negro sólido abajo
+                      Colors.black.withValues(
+                        alpha: 0.65,
+                      ), // Negro sólido abajo
                     ],
                     stops: const [0.35, 1.0],
                   ),
@@ -211,15 +214,15 @@ class _PromocionCardImpacto extends StatelessWidget {
                             color: Colors.black87,
                             blurRadius: 10,
                             offset: Offset(0, 2),
-                          )
+                          ),
                         ],
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
+
                     const SizedBox(height: 6),
-                    
+
                     Text(
                       promocion.descripcion,
                       style: TextStyle(
@@ -231,7 +234,7 @@ class _PromocionCardImpacto extends StatelessWidget {
                             color: Colors.black54,
                             blurRadius: 4,
                             offset: Offset(0, 1),
-                          )
+                          ),
                         ],
                       ),
                       maxLines: 1,
@@ -261,10 +264,12 @@ class _PromocionCardImpacto extends StatelessWidget {
     if (promocion.imagenUrl != null && promocion.imagenUrl!.isNotEmpty) {
       return CachedNetworkImage(
         imageUrl: promocion.imagenUrl!,
-        fit: BoxFit.cover, 
+        fit: BoxFit.cover,
         placeholder: (context, url) => Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withValues(alpha: 0.4)),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Colors.white.withValues(alpha: 0.4),
+            ),
           ),
         ),
         errorWidget: (context, url, error) => _buildFallbackDecoration(),

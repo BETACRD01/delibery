@@ -69,7 +69,9 @@ class SeccionCategorias extends StatelessWidget {
 
   Widget _buildCategoriasList() {
     // Solo mostramos las primeras 5 para no saturar la home; el resto va en "Ver todo"
-    final visibles = categorias.length > 5 ? categorias.take(5).toList() : categorias;
+    final visibles = categorias.length > 5
+        ? categorias.take(5).toList()
+        : categorias;
 
     return SizedBox(
       height: 100,
@@ -144,10 +146,7 @@ class _CategoriaItem extends StatelessWidget {
   final CategoriaModel categoria;
   final VoidCallback? onTap;
 
-  const _CategoriaItem({
-    required this.categoria,
-    this.onTap,
-  });
+  const _CategoriaItem({required this.categoria, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -162,13 +161,13 @@ class _CategoriaItem extends StatelessWidget {
               width: 60,
               decoration: BoxDecoration(
                 // Si tiene foto fondo blanco, si no fondo suave del color
-                color: categoria.tieneImagen 
-                    ? Colors.white 
-                    : (categoria.color ?? JPColors.primary).withValues(alpha: 0.1),
+                color: categoria.tieneImagen
+                    ? Colors.white
+                    : (categoria.color ?? JPColors.primary).withValues(
+                        alpha: 0.1,
+                      ),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.grey.withValues(alpha: 0.2),
-                ),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -177,9 +176,7 @@ class _CategoriaItem extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: _buildContenidoVisual(),
-              ),
+              child: ClipOval(child: _buildContenidoVisual()),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -222,14 +219,14 @@ class _CategoriaItem extends StatelessWidget {
                 color: categoria.color ?? JPColors.primary,
                 value: loadingProgress.expectedTotalBytes != null
                     ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
+                          loadingProgress.expectedTotalBytes!
                     : null,
               ),
             ),
           );
         },
         // Si la imagen falla (404), mostramos el icono como respaldo
-        errorBuilder: (_, __, ___) => _buildIcono(),
+        errorBuilder: (_, _, _) => _buildIcono(),
       );
     }
 

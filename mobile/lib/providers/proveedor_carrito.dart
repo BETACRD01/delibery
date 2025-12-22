@@ -98,6 +98,14 @@ class ProveedorCarrito extends ChangeNotifier {
   /// Obtiene la cantidad de items únicos
   int get cantidadItems => _items.length;
 
+  void limpiar() {
+    _items = [];
+    _promocionesLocales = [];
+    _loading = false;
+    _error = null;
+    notifyListeners();
+  }
+
   // ════════════════════════════════════════════════════════════════
   // MÉTODOS PÚBLICOS - CARGA DE DATOS
   // ════════════════════════════════════════════════════════════════

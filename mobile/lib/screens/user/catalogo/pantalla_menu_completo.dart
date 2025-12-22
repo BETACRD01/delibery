@@ -19,7 +19,6 @@ class PantallaMenuCompleto extends StatefulWidget {
 
 class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
     with SingleTickerProviderStateMixin {
-  
   final _productosService = ProductosService();
   TabController? _tabController;
 
@@ -55,19 +54,18 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
     try {
       // Cargar categorías del backend
       _categorias = await _productosService.obtenerCategorias();
-      
+
       // Cargar productos por cada categoría
       for (var categoria in _categorias) {
-        final productos = await _productosService.obtenerProductosPorCategoria(categoria.id);
+        final productos = await _productosService.obtenerProductosPorCategoria(
+          categoria.id,
+        );
         _productosPorCategoria[categoria.id] = productos;
       }
-      
+
       _tabController?.dispose();
-      _tabController = TabController(
-        length: _categorias.length,
-        vsync: this,
-      );
-      
+      _tabController = TabController(length: _categorias.length, vsync: this);
+
       setState(() {
         _loading = false;
       });
@@ -81,7 +79,7 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
 
   List<ProductoModel> _obtenerProductosFiltrados() {
     if (_categorias.isEmpty || _tabController == null) return [];
-    
+
     final categoriaActual = _categorias[_tabController!.index];
     var productos = _productosPorCategoria[categoriaActual.id] ?? [];
 
@@ -89,21 +87,27 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
     if (_busqueda.isNotEmpty) {
       productos = productos.where((p) {
         return p.nombre.toLowerCase().contains(_busqueda.toLowerCase()) ||
-               p.descripcion.toLowerCase().contains(_busqueda.toLowerCase());
+            p.descripcion.toLowerCase().contains(_busqueda.toLowerCase());
       }).toList();
     }
 
     // Aplicar filtros de precio
     if (_filtroPrecionMin != null) {
-      productos = productos.where((p) => p.precio >= _filtroPrecionMin!).toList();
+      productos = productos
+          .where((p) => p.precio >= _filtroPrecionMin!)
+          .toList();
     }
     if (_filtroPrecioMax != null) {
-      productos = productos.where((p) => p.precio <= _filtroPrecioMax!).toList();
+      productos = productos
+          .where((p) => p.precio <= _filtroPrecioMax!)
+          .toList();
     }
 
     // Aplicar filtro de rating
     if (_filtroRatingMin != null) {
-      productos = productos.where((p) => p.rating >= _filtroRatingMin!).toList();
+      productos = productos
+          .where((p) => p.rating >= _filtroRatingMin!)
+          .toList();
     }
 
     // Aplicar ordenamiento
@@ -168,7 +172,7 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
                               child: Image.network(
                                 categoria.imagenUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
+                                errorBuilder: (_, _, _) => const Icon(
                                   Icons.category,
                                   size: 16,
                                   color: Colors.white70,
@@ -216,9 +220,7 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
     }
 
     if (_categorias.isEmpty) {
-      return const Center(
-        child: Text('No hay categorías disponibles'),
-      );
+      return const Center(child: Text('No hay categorías disponibles'));
     }
 
     return TabBarView(
@@ -243,8 +245,8 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
               'No se encontraron productos',
               style: TextStyle(color: JPColors.textSecondary),
             ),
-            if (_busqueda.isNotEmpty || 
-                _filtroPrecionMin != null || 
+            if (_busqueda.isNotEmpty ||
+                _filtroPrecionMin != null ||
                 _filtroPrecioMax != null ||
                 _filtroRatingMin != null)
               TextButton(
@@ -368,22 +370,28 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
                       _FiltroChip(
                         label: 'Nombre',
                         selected: ordenamientoTemp == 'nombre',
-                        onTap: () => setModalState(() => ordenamientoTemp = 'nombre'),
+                        onTap: () =>
+                            setModalState(() => ordenamientoTemp = 'nombre'),
                       ),
                       _FiltroChip(
                         label: 'Precio ↑',
                         selected: ordenamientoTemp == 'precio_asc',
-                        onTap: () => setModalState(() => ordenamientoTemp = 'precio_asc'),
+                        onTap: () => setModalState(
+                          () => ordenamientoTemp = 'precio_asc',
+                        ),
                       ),
                       _FiltroChip(
                         label: 'Precio ↓',
                         selected: ordenamientoTemp == 'precio_desc',
-                        onTap: () => setModalState(() => ordenamientoTemp = 'precio_desc'),
+                        onTap: () => setModalState(
+                          () => ordenamientoTemp = 'precio_desc',
+                        ),
                       ),
                       _FiltroChip(
                         label: 'Rating',
                         selected: ordenamientoTemp == 'rating',
-                        onTap: () => setModalState(() => ordenamientoTemp = 'rating'),
+                        onTap: () =>
+                            setModalState(() => ordenamientoTemp = 'rating'),
                       ),
                     ],
                   ),
@@ -479,7 +487,10 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
                       ),
                       child: const Text(
                         'Aplicar Filtros',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

@@ -19,4 +19,16 @@ class RifasUsuariosApi {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>> participarEnRifa(String rifaId) async {
+    try {
+      return await _client.post(ApiConfig.rifasParticipar(rifaId), {});
+    } catch (e) {
+      developer.log(
+        'Error participando en rifa $rifaId: $e',
+        name: 'RifasUsuariosApi',
+      );
+      rethrow;
+    }
+  }
 }

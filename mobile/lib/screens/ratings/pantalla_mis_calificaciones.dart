@@ -13,11 +13,7 @@ class PantallaMisCalificaciones extends StatefulWidget {
   final String? entityType;
   final int? entityId;
 
-  const PantallaMisCalificaciones({
-    super.key,
-    this.entityType,
-    this.entityId,
-  });
+  const PantallaMisCalificaciones({super.key, this.entityType, this.entityId});
 
   @override
   State<PantallaMisCalificaciones> createState() =>
@@ -26,10 +22,7 @@ class PantallaMisCalificaciones extends StatefulWidget {
 
 class _PantallaMisCalificacionesState extends State<PantallaMisCalificaciones> {
   final _service = CalificacionesService();
-  final _tabs = const {
-    'recibidas': 'Recibidas',
-    'realizadas': 'Realizadas',
-  };
+  final _tabs = const {'recibidas': 'Recibidas', 'realizadas': 'Realizadas'};
 
   String _tabSeleccionada = 'recibidas';
   bool _cargando = false;
@@ -105,25 +98,24 @@ class _PantallaMisCalificacionesState extends State<PantallaMisCalificaciones> {
               child: _cargando
                   ? const Center(child: CupertinoActivityIndicator())
                   : _error != null
-                      ? _buildEmptyState(_error!)
-                      : _resenas.isEmpty
-                          ? _buildEmptyState('Aún no tienes calificaciones.')
-                          : RefreshIndicator(
-                              onRefresh: _cargar,
-                              child: ListView.separated(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                itemCount: _resenas.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 10),
-                                itemBuilder: (context, index) {
-                                  final resena = _resenas[index];
-                                  return _ResenaTile(resena: resena);
-                                },
-                              ),
-                            ),
+                  ? _buildEmptyState(_error!)
+                  : _resenas.isEmpty
+                  ? _buildEmptyState('Aún no tienes calificaciones.')
+                  : RefreshIndicator(
+                      onRefresh: _cargar,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: _resenas.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final resena = _resenas[index];
+                          return _ResenaTile(resena: resena);
+                        },
+                      ),
+                    ),
             ),
           ],
         ),
@@ -175,8 +167,9 @@ class _ResenaTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor:
-                    CupertinoColors.systemGrey4.resolveFrom(context),
+                backgroundColor: CupertinoColors.systemGrey4.resolveFrom(
+                  context,
+                ),
                 child: Text(
                   resena.iniciales,
                   style: const TextStyle(

@@ -36,22 +36,22 @@ dependencies:
   # ---------------------------------------------------------------------------
   provider: ^6.1.1
   flutter_riverpod: ^2.5.1
-  geocoding: ^3.0.0
+  geocoding: ^4.0.0
 
   # ---------------------------------------------------------------------------
   # 🌐 NETWORKING & STORAGE
   # ---------------------------------------------------------------------------
   http: ^1.2.0
   http_parser: ^4.0.2
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^10.0.0
   shared_preferences: ^2.5.4
 
   # ---------------------------------------------------------------------------
   # 📱 HARDWARE & PERMISOS (Compatibles con Dart 3.10)
   # ---------------------------------------------------------------------------
-  network_info_plus: ^5.0.3
-  geolocator: ^11.0.0
-  permission_handler: ^11.3.0
+  network_info_plus: ^7.0.0
+  geolocator: ^14.0.2
+  permission_handler: ^12.0.1
   image_picker: ^1.0.7
   url_launcher: ^6.2.5
 
@@ -64,9 +64,9 @@ dependencies:
   # ---------------------------------------------------------------------------
   # 🔥 FIREBASE
   # ---------------------------------------------------------------------------
-  firebase_core: ^2.27.0
-  firebase_messaging: ^14.7.19
-  flutter_local_notifications: ^17.0.0
+  firebase_core: ^4.3.0
+  firebase_messaging: ^16.1.0
+  flutter_local_notifications: ^19.5.0
 
   # ---------------------------------------------------------------------------
   # 🎞️ MULTIMEDIA
@@ -87,8 +87,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
   build_runner: ^2.10.4
   freezed: ^3.2.3
   json_serializable: ^6.11.2

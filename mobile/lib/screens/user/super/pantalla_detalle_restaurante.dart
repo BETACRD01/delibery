@@ -13,10 +13,12 @@ class PantallaDetalleRestaurante extends StatefulWidget {
   const PantallaDetalleRestaurante({super.key});
 
   @override
-  State<PantallaDetalleRestaurante> createState() => _PantallaDetalleRestauranteState();
+  State<PantallaDetalleRestaurante> createState() =>
+      _PantallaDetalleRestauranteState();
 }
 
-class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante> {
+class _PantallaDetalleRestauranteState
+    extends State<PantallaDetalleRestaurante> {
   final _productosService = ProductosService();
   List<ProductoModel> _productos = [];
   bool _loading = true;
@@ -103,10 +105,7 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
                   const SizedBox(width: 8),
                   Text(
                     '(${_productos.length} productos)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -137,11 +136,12 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
             // Imagen de portada
             Container(
               color: JPColors.background,
-              child: _proveedor!.logoUrl != null && _proveedor!.logoUrl!.isNotEmpty
+              child:
+                  _proveedor!.logoUrl != null && _proveedor!.logoUrl!.isNotEmpty
                   ? Image.network(
                       _proveedor!.logoUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                      errorBuilder: (_, _, _) => _buildPlaceholder(),
                     )
                   : _buildPlaceholder(),
             ),
@@ -167,11 +167,7 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
             ),
 
             // Badge de estado
-            Positioned(
-              top: 80,
-              right: 16,
-              child: _buildEstadoBadge(),
-            ),
+            Positioned(top: 80, right: 16, child: _buildEstadoBadge()),
           ],
         ),
       ),
@@ -264,7 +260,10 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
               ),
               if (_proveedor!.verificado)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(16),
@@ -310,7 +309,8 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
             ),
           ),
 
-          if (_proveedor!.descripcion != null && _proveedor!.descripcion!.isNotEmpty) ...[
+          if (_proveedor!.descripcion != null &&
+              _proveedor!.descripcion!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
               _proveedor!.descripcion!,
@@ -327,7 +327,8 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
   }
 
   Widget _buildHorarios() {
-    if (_proveedor!.horarioApertura == null || _proveedor!.horarioCierre == null) {
+    if (_proveedor!.horarioApertura == null ||
+        _proveedor!.horarioCierre == null) {
       return const SizedBox.shrink();
     }
 
@@ -408,18 +409,12 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
                   if (_proveedor!.direccion != null)
                     Text(
                       _proveedor!.direccion!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                     ),
                   if (_proveedor!.ciudad != null)
                     Text(
                       _proveedor!.ciudad!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                 ],
               ),
@@ -474,10 +469,7 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
               const SizedBox(height: 16),
               Text(
                 'No hay productos disponibles',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -488,16 +480,13 @@ class _PantallaDetalleRestauranteState extends State<PantallaDetalleRestaurante>
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final producto = _productos[index];
-            return _ProductoCard(
-              producto: producto,
-              estaAbierto: _proveedor!.estaAbierto ?? false,
-            );
-          },
-          childCount: _productos.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final producto = _productos[index];
+          return _ProductoCard(
+            producto: producto,
+            estaAbierto: _proveedor!.estaAbierto ?? false,
+          );
+        }, childCount: _productos.length),
       ),
     );
   }
@@ -523,10 +512,7 @@ class _ProductoCard extends StatelessWidget {
   final ProductoModel producto;
   final bool estaAbierto;
 
-  const _ProductoCard({
-    required this.producto,
-    required this.estaAbierto,
-  });
+  const _ProductoCard({required this.producto, required this.estaAbierto});
 
   @override
   Widget build(BuildContext context) {
@@ -551,11 +537,12 @@ class _ProductoCard extends StatelessWidget {
                 width: 100,
                 height: 100,
                 color: JPColors.background,
-                child: producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
+                child:
+                    producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
                     ? Image.network(
                         producto.imagenUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
+                        errorBuilder: (_, _, _) => const Icon(
                           Icons.fastfood_outlined,
                           color: JPColors.textHint,
                           size: 32,
@@ -590,10 +577,7 @@ class _ProductoCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         producto.descripcion,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),

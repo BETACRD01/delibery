@@ -173,6 +173,10 @@ class Producto(models.Model):
     def incrementar_vendidos(self):
         Producto.objects.filter(pk=self.pk).update(veces_vendido=F('veces_vendido') + 1)
 
+        # Mantener actualizado el rating ponderado del proveedor cuando cambian ventas.
+        from calificaciones.models import _recalcular_rating_proveedor
+        _recalcular_rating_proveedor(self.proveedor)
+
 
 # ═══════════════════════════════════════════════════════════════════════
 # PROMOCIONES (Banners Principales)

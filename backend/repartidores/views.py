@@ -479,12 +479,15 @@ def actualizar_ubicacion(request):
         lon = serializer.validated_data["longitud"]
 
         with transaction.atomic():
-            repartidor.actualizar_ubicacion(lat, lon, save_historial=True)
+            actualizado = repartidor.actualizar_ubicacion(
+                lat, lon, save_historial=True
+            )
 
         logger.debug(f"Ubicación actualizada: {repartidor.user.email} → ({lat}, {lon})")
 
         return Response({
-            "mensaje": "Ubicación actualizada correctamente",
+            "mensaje": "Ubicación actualizada correctamente" if actualizado else "Ubicación sin cambios",
+            "actualizada": actualizado,
             "latitud": lat,
             "longitud": lon,
             "timestamp": repartidor.ultima_localizacion

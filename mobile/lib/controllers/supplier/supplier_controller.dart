@@ -107,8 +107,8 @@ class SupplierController extends ChangeNotifier {
   double get ventasHoy => 0.0;
   double get ventasMes => 0.0;
   int get pedidosCompletados => 0;
-  double get valoracionPromedio => 0.0;
-  int get totalResenas => 0;
+  double get valoracionPromedio => _proveedor?.calificacionPromedio ?? 0.0;
+  int get totalResenas => _proveedor?.totalResenas ?? 0;
 
   // ============================================
   // MÉTODOS - CARGAR DATOS INICIALES
@@ -537,6 +537,7 @@ class SupplierController extends ChangeNotifier {
     try {
       debugPrint('Cerrando sesión...');
       await _authService.logout();
+      limpiar();
       debugPrint('Sesión cerrada');
       return true;
     } catch (e) {
@@ -550,6 +551,23 @@ class SupplierController extends ChangeNotifier {
   /// Limpia el error actual
   void limpiarError() {
     _error = null;
+    notifyListeners();
+  }
+
+  void limpiar() {
+    _proveedor = null;
+    _productos.clear();
+    _pedidosPendientes.clear();
+    _promociones.clear();
+    _logosCaidos.clear();
+    _loading = false;
+    _error = null;
+    _rolIncorrecto = false;
+    _actualizandoPerfil = false;
+    _subiendoLogo = false;
+    _actualizandoContacto = false;
+    _procesandoProducto = false;
+    _procesandoPromocion = false;
     notifyListeners();
   }
 

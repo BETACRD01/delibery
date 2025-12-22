@@ -135,7 +135,9 @@ class _MapaPedidosScreenState extends State<MapaPedidosScreen> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       setState(() => _ubicacionActual = position);

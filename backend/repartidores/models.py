@@ -4,6 +4,7 @@ from django.db.models import Q, F
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from math import radians, sin, cos, sqrt, atan2
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from authentication.models import User
@@ -200,9 +201,26 @@ class Repartidor(TimeStampedModel):
                 "Longitud fuera del territorio ecuatoriano. Usa valores entre -92.0 y -75.0."
             )
 
+        def _distancia_m(lat1, lon1, lat2, lon2):
+            r = 6371000.0
+            dlat = radians(lat2 - lat1)
+            dlon = radians(lon2 - lon1)
+            a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+            c = 2 * atan2(sqrt(a), sqrt(1 - a))
+            return r * c
+
+        ahora = when or timezone.now()
+
+        # Optimización: si la ubicación es casi igual y muy reciente, no actualiza
+        if self.latitud is not None and self.longitud is not None and self.ultima_localizacion:
+            delta = (ahora - self.ultima_localizacion).total_seconds()
+            distancia = _distancia_m(self.latitud, self.longitud, lat, lon)
+            if delta < 15 and distancia < 5:
+                return False
+
         self.latitud = float(lat)
         self.longitud = float(lon)
-        self.ultima_localizacion = when or timezone.now()
+        self.ultima_localizacion = ahora
         self.save(update_fields=['latitud', 'longitud', 'ultima_localizacion', 'actualizado_en'])
 
         if save_historial:
@@ -212,6 +230,8 @@ class Repartidor(TimeStampedModel):
                 longitud=self.longitud,
                 timestamp=self.ultima_localizacion,
             )
+
+        return True
 
     # ---------- Métricas
     def incrementar_entregas(self, unidades=1):

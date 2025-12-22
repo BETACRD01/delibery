@@ -8,7 +8,8 @@ class PantallaConfigEnviosAdmin extends StatefulWidget {
   const PantallaConfigEnviosAdmin({super.key});
 
   @override
-  State<PantallaConfigEnviosAdmin> createState() => _PantallaConfigEnviosAdminState();
+  State<PantallaConfigEnviosAdmin> createState() =>
+      _PantallaConfigEnviosAdminState();
 }
 
 class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
@@ -65,9 +66,9 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
       };
       final data = await _api.actualizarConfiguracion(payload);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configuración guardada')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Configuración guardada')));
       setState(() {
         _recargoCtrl.text = (data['recargo_nocturno'] ?? '').toString();
         _horaInicioCtrl.text = (data['hora_inicio_nocturno'] ?? '').toString();
@@ -75,19 +76,31 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
     }
   }
 
   Future<void> _editarZona(Map<String, dynamic> zona) async {
-    final nombreCtrl = TextEditingController(text: zona['nombre_display']?.toString() ?? '');
-    final baseCtrl = TextEditingController(text: zona['tarifa_base']?.toString() ?? '');
-    final incluidosCtrl = TextEditingController(text: zona['km_incluidos']?.toString() ?? '');
-    final extraCtrl = TextEditingController(text: zona['precio_km_extra']?.toString() ?? '');
-    final maxCtrl = TextEditingController(text: zona['max_distancia_km']?.toString() ?? '');
-    final ordenCtrl = TextEditingController(text: zona['orden']?.toString() ?? '');
+    final nombreCtrl = TextEditingController(
+      text: zona['nombre_display']?.toString() ?? '',
+    );
+    final baseCtrl = TextEditingController(
+      text: zona['tarifa_base']?.toString() ?? '',
+    );
+    final incluidosCtrl = TextEditingController(
+      text: zona['km_incluidos']?.toString() ?? '',
+    );
+    final extraCtrl = TextEditingController(
+      text: zona['precio_km_extra']?.toString() ?? '',
+    );
+    final maxCtrl = TextEditingController(
+      text: zona['max_distancia_km']?.toString() ?? '',
+    );
+    final ordenCtrl = TextEditingController(
+      text: zona['orden']?.toString() ?? '',
+    );
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -107,8 +120,14 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Guardar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Guardar'),
+          ),
         ],
       ),
     );
@@ -120,7 +139,9 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
       'tarifa_base': double.tryParse(baseCtrl.text) ?? 0,
       'km_incluidos': double.tryParse(incluidosCtrl.text) ?? 0,
       'precio_km_extra': double.tryParse(extraCtrl.text) ?? 0,
-      'max_distancia_km': maxCtrl.text.isEmpty ? null : double.tryParse(maxCtrl.text),
+      'max_distancia_km': maxCtrl.text.isEmpty
+          ? null
+          : double.tryParse(maxCtrl.text),
       'orden': int.tryParse(ordenCtrl.text) ?? 0,
     };
 
@@ -129,10 +150,18 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
   }
 
   Future<void> _editarCiudad(Map<String, dynamic> ciudad) async {
-    final nombreCtrl = TextEditingController(text: ciudad['nombre']?.toString() ?? '');
-    final latCtrl = TextEditingController(text: ciudad['lat']?.toString() ?? '');
-    final lngCtrl = TextEditingController(text: ciudad['lng']?.toString() ?? '');
-    final radioCtrl = TextEditingController(text: ciudad['radio_max_cobertura_km']?.toString() ?? '');
+    final nombreCtrl = TextEditingController(
+      text: ciudad['nombre']?.toString() ?? '',
+    );
+    final latCtrl = TextEditingController(
+      text: ciudad['lat']?.toString() ?? '',
+    );
+    final lngCtrl = TextEditingController(
+      text: ciudad['lng']?.toString() ?? '',
+    );
+    final radioCtrl = TextEditingController(
+      text: ciudad['radio_max_cobertura_km']?.toString() ?? '',
+    );
     final activo = ValueNotifier<bool>(ciudad['activo'] == true);
 
     final confirmed = await showDialog<bool>(
@@ -149,7 +178,7 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
               _buildField(radioCtrl, 'Radio cobertura (km)'),
               ValueListenableBuilder<bool>(
                 valueListenable: activo,
-                builder: (_, value, __) => SwitchListTile(
+                builder: (_, value, _) => SwitchListTile(
                   title: const Text('Activo'),
                   value: value,
                   onChanged: (v) => activo.value = v,
@@ -159,8 +188,14 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Guardar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Guardar'),
+          ),
         ],
       ),
     );
@@ -179,11 +214,17 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
     await _cargar();
   }
 
-  TextField _buildField(TextEditingController controller, String label, {bool isNumber = true}) {
+  TextField _buildField(
+    TextEditingController controller,
+    String label, {
+    bool isNumber = true,
+  }) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(labelText: label),
-      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      keyboardType: isNumber
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
     );
   }
 
@@ -198,20 +239,20 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
       body: _loading
           ? const LoadingWidget()
           : _error != null
-              ? Center(child: Text(_error!))
-              : RefreshIndicator(
-                  onRefresh: _cargar,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _buildConfigCard(),
-                      const SizedBox(height: 12),
-                      _buildZonas(),
-                      const SizedBox(height: 12),
-                      _buildCiudades(),
-                    ],
-                  ),
-                ),
+          ? Center(child: Text(_error!))
+          : RefreshIndicator(
+              onRefresh: _cargar,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildConfigCard(),
+                  const SizedBox(height: 12),
+                  _buildZonas(),
+                  const SizedBox(height: 12),
+                  _buildCiudades(),
+                ],
+              ),
+            ),
     );
   }
 
@@ -222,11 +263,16 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Recargo nocturno', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Recargo nocturno',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _recargoCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(labelText: 'Valor en USD'),
             ),
             const SizedBox(height: 8),
@@ -236,7 +282,9 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
                   child: TextField(
                     controller: _horaInicioCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Hora inicio (0-23)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Hora inicio (0-23)',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -244,7 +292,9 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
                   child: TextField(
                     controller: _horaFinCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Hora fin (0-23)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Hora fin (0-23)',
+                    ),
                   ),
                 ),
               ],
@@ -271,19 +321,24 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Zonas tarifarias', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Zonas tarifarias',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            ..._zonas.map((z) => ListTile(
-                  title: Text('${z['codigo']} • ${z['nombre_display']}'),
-                  subtitle: Text(
-                    'Base ${z['tarifa_base']} | Incluye ${z['km_incluidos']} km | Extra ${z['precio_km_extra']}/km '
-                    '| Máx ${z['max_distancia_km'] ?? '∞'} km | Orden ${z['orden']}',
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => _editarZona(Map<String, dynamic>.from(z)),
-                  ),
-                )),
+            ..._zonas.map(
+              (z) => ListTile(
+                title: Text('${z['codigo']} • ${z['nombre_display']}'),
+                subtitle: Text(
+                  'Base ${z['tarifa_base']} | Incluye ${z['km_incluidos']} km | Extra ${z['precio_km_extra']}/km '
+                  '| Máx ${z['max_distancia_km'] ?? '∞'} km | Orden ${z['orden']}',
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _editarZona(Map<String, dynamic>.from(z)),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -297,19 +352,24 @@ class _PantallaConfigEnviosAdminState extends State<PantallaConfigEnviosAdmin> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Hubs / Ciudades', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Hubs / Ciudades',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            ..._ciudades.map((c) => ListTile(
-                  title: Text('${c['codigo']} • ${c['nombre']}'),
-                  subtitle: Text(
-                    'Lat ${c['lat']}, Lng ${c['lng']} | Radio ${c['radio_max_cobertura_km']} km | '
-                    'Activo: ${c['activo'] == true ? 'Sí' : 'No'}',
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => _editarCiudad(Map<String, dynamic>.from(c)),
-                  ),
-                )),
+            ..._ciudades.map(
+              (c) => ListTile(
+                title: Text('${c['codigo']} • ${c['nombre']}'),
+                subtitle: Text(
+                  'Lat ${c['lat']}, Lng ${c['lng']} | Radio ${c['radio_max_cobertura_km']} km | '
+                  'Activo: ${c['activo'] == true ? 'Sí' : 'No'}',
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _editarCiudad(Map<String, dynamic>.from(c)),
+                ),
+              ),
+            ),
           ],
         ),
       ),

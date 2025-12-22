@@ -5,7 +5,6 @@ import 'package:flutter/cupertino.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../controllers/user/perfil_controller.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/roles_service.dart';
 import '../../../services/role_manager.dart';
 import '../../../services/toast_service.dart';
 import '../../../config/rutas.dart';
@@ -36,7 +35,6 @@ class _PantallaPerfilState extends State<PantallaPerfil>
     with WidgetsBindingObserver {
   late final PerfilController _controller;
   final _authService = AuthService();
-  final _rolesService = RolesService();
   List<String> _rolesActivos = [];
   String? _rolActual;
   bool _rolesCargando = false;
@@ -48,7 +46,9 @@ class _PantallaPerfilState extends State<PantallaPerfil>
     WidgetsBinding.instance.addObserver(this);
     _controller = PerfilController();
     _cargarDatos();
-    _cargarRoles();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _cargarRoles();
+    });
   }
 
   @override
@@ -70,10 +70,40 @@ class _PantallaPerfilState extends State<PantallaPerfil>
   Future<void> _cargarRoles() async {
     setState(() => _rolesCargando = true);
     try {
-      final rolesResponse = await _rolesService.obtenerRolesDisponibles();
-      if (mounted) _actualizarRolesLocales(rolesResponse);
+      final roleManager = context.read<RoleManager>();
+      await roleManager.refresh();
+      final rolesAprobados = roleManager.approvedRoles
+          .map((info) => roleToApi(info.role).toUpperCase())
+          .where((r) => r == 'PROVEEDOR' || r == 'REPARTIDOR')
+          .toList();
+      final rolActivo = roleToApi(roleManager.activeRole).toUpperCase();
+
+      if ((rolActivo == 'PROVEEDOR' || rolActivo == 'REPARTIDOR') &&
+          !rolesAprobados.contains(rolActivo)) {
+        rolesAprobados.add(rolActivo);
+      }
+
+      if (mounted) {
+        setState(() {
+          _rolesActivos = rolesAprobados;
+          _rolActual = rolActivo;
+          _rolesCargando = false;
+        });
+      }
     } catch (_) {
-      if (mounted) setState(() => _rolesCargando = false);
+      if (mounted) {
+        final rolCacheado = _authService.getRolCacheado()?.toUpperCase();
+        final fallbackRoles = List<String>.from(_rolesActivos);
+        if (fallbackRoles.isEmpty &&
+            (rolCacheado == 'PROVEEDOR' || rolCacheado == 'REPARTIDOR')) {
+          fallbackRoles.add(rolCacheado!);
+        }
+        setState(() {
+          _rolesActivos = fallbackRoles;
+          _rolActual = rolCacheado ?? _rolActual;
+          _rolesCargando = false;
+        });
+      }
     }
   }
 
@@ -340,7 +370,7 @@ class _PantallaPerfilState extends State<PantallaPerfil>
       child: CompactRatingSummaryCard(
         averageRating: estadisticas.calificacion,
         totalReviews: estadisticas.totalResenas,
-        subtitle: 'Calificación promedio de repartidores',
+        subtitle: 'Calificación promedio recibida',
         // onTap: () {
         //   // TODO: Navegar a pantalla de todas las reseñas
         //   // Rutas.irAMisCalificaciones(context);
@@ -579,24 +609,6 @@ class _PantallaPerfilState extends State<PantallaPerfil>
         _rolesActivos.contains('REPARTIDOR');
   }
 
-  void _actualizarRolesLocales(Map<String, dynamic> rolesResponse) {
-    final disponiblesRaw =
-        (rolesResponse['roles_disponibles'] as List<dynamic>? ?? []);
-    final rolActivoRaw = (rolesResponse['rol_activo'] as String?)
-        ?.toUpperCase();
-
-    final roles = disponiblesRaw
-        .map((r) => r.toString().toUpperCase())
-        .where((r) => r == 'PROVEEDOR' || r == 'REPARTIDOR')
-        .toList();
-
-    setState(() {
-      _rolesActivos = roles;
-      _rolActual = rolActivoRaw;
-      _rolesCargando = false;
-    });
-  }
-
   Widget _buildRoleSwitcher() {
     if (_rolesCargando) {
       return const Padding(
@@ -757,11 +769,35 @@ class _PantallaPerfilState extends State<PantallaPerfil>
 
     try {
       final roleManager = context.read<RoleManager>();
+      await roleManager.refresh();
       final destino = parseRole(rolDestino);
+      final roleInfo = roleManager.getRoleInfo(destino);
+
+      if (roleInfo == null || !roleInfo.canActivate) {
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+        if (mounted) {
+          final mensaje = roleManager.getStatusMessage(destino);
+          showCupertinoDialog(
+            context: context,
+            builder: (dialogContext) => CupertinoAlertDialog(
+              title: const Text('Rol no disponible'),
+              content: Text(mensaje),
+              actions: [
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () => Navigator.pop(dialogContext),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
       final exito = await roleManager.switchRole(destino);
 
       if (!exito) {
-        throw Exception('No se pudo cambiar al rol $rolDestino');
+        final errorRol = roleManager.error ?? 'No se pudo cambiar al rol $rolDestino';
+        throw Exception(errorRol);
       }
 
       final rolCacheado =
@@ -796,6 +832,9 @@ class _PantallaPerfilState extends State<PantallaPerfil>
       }
     } finally {
       _cambiandoRol = false;
+      if (mounted) {
+        await _cargarRoles();
+      }
     }
   }
 }

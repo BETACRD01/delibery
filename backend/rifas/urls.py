@@ -18,6 +18,7 @@ RIFAS - ACCIONES CUSTOM:
 - GET    /api/rifas/historial-ganadores/    - Historial de ganadores
 - GET    /api/rifas/estadisticas/           - Estadísticas generales
 - GET    /api/rifas/{id}/elegibilidad/      - Verificar mi elegibilidad
+- POST   /api/rifas/{id}/participar/        - Registrar participación
 - GET    /api/rifas/{id}/participantes/     - Lista participantes (admin)
 - POST   /api/rifas/{id}/sortear/           - Realizar sorteo (admin)
 - POST   /api/rifas/{id}/cancelar/          - Cancelar rifa (admin)
@@ -61,4 +62,3 @@ urlpatterns = [
     # Incluir todas las rutas del router
     path('', include(router.urls)),
 ]
-

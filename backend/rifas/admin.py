@@ -6,7 +6,7 @@ Django Admin para Sistema de Rifas
  FUNCIONALIDADES:
 - Gestión completa de rifas desde el admin
 - Botón para realizar sorteo manual
-- Vista de participantes elegibles
+    - Vista de participantes registrados
 - Historial de ganadores
 - Filtros avanzados
 - Acciones masivas
@@ -49,7 +49,7 @@ class RifaAdmin(admin.ModelAdmin):
     Admin personalizado para Rifas
 
      CARACTERÍSTICAS:
-    - Ver participantes elegibles
+    - Ver participantes registrados
     - Realizar sorteo con un clic
     - Filtros por estado, mes, año
     - Campos calculados (participantes, días restantes)
@@ -287,7 +287,7 @@ class RifaAdmin(admin.ModelAdmin):
 
             <table style="width: 100%;">
                 <tr>
-                    <td><strong> Participantes Elegibles:</strong></td>
+                    <td><strong> Participantes Registrados:</strong></td>
                     <td style="text-align: right;">{total_participantes}</td>
                 </tr>
                 <tr>
@@ -314,18 +314,18 @@ class RifaAdmin(admin.ModelAdmin):
     mostrar_estadisticas.short_description = 'Estadísticas'
 
     def mostrar_participantes_elegibles(self, obj):
-        """Muestra lista de participantes elegibles"""
+        """Muestra lista de participantes registrados"""
         if not obj.pk:
             return "Guarda la rifa para ver participantes"
 
-        participantes = obj.obtener_participantes_elegibles()
-        total = participantes.count()
+        participaciones = obj.participaciones.select_related('usuario').order_by('-fecha_registro')
+        total = participaciones.count()
 
         if total == 0:
             return format_html(
                 '<div style="background: #fff3cd; padding: 15px; border-radius: 5px; '
                 'border-left: 4px solid #ffc107;">'
-                '<strong>No hay participantes elegibles aún</strong><br>'
+                '<strong>No hay participantes registrados aún</strong><br>'
                 '<small>Los usuarios deben completar al menos {} pedidos durante el período de la rifa.</small>'
                 '</div>',
                 obj.pedidos_minimos
@@ -334,9 +334,9 @@ class RifaAdmin(admin.ModelAdmin):
         # Mostrar primeros 10 participantes
         lista_html = "<ul style='margin: 10px 0; padding-left: 20px;'>"
 
-        for participante in participantes[:10]:
-            elegibilidad = obj.usuario_es_elegible(participante)
-            pedidos = elegibilidad['pedidos']
+        for participacion in participaciones[:10]:
+            participante = participacion.usuario
+            pedidos = participacion.pedidos_completados
 
             lista_html += f"""
             <li style="margin: 5px 0;">
@@ -357,13 +357,13 @@ class RifaAdmin(admin.ModelAdmin):
         html = f"""
         <div style="background: #d4edda; padding: 15px; border-radius: 5px;
                     border-left: 4px solid #28a745;">
-            <h3 style="margin-top: 0;">👥 Participantes Elegibles ({total})</h3>
+            <h3 style="margin-top: 0;">👥 Participantes Registrados ({total})</h3>
             {lista_html}
         </div>
         """
 
         return format_html(html)
-    mostrar_participantes_elegibles.short_description = 'Participantes Elegibles'
+    mostrar_participantes_elegibles.short_description = 'Participantes Registrados'
 
     # ============================================
     #  SORTEO MANUAL
@@ -447,7 +447,7 @@ class RifaAdmin(admin.ModelAdmin):
                 else:
                     self.message_user(
                         request,
-                        "No hay participantes elegibles para sortear",
+                        "No hay participantes registrados para sortear",
                         level=messages.WARNING
                     )
 
@@ -463,14 +463,14 @@ class RifaAdmin(admin.ModelAdmin):
                 return redirect('admin:rifas_rifa_change', rifa_id)
 
         # Mostrar página de confirmación
-        participantes = rifa.obtener_participantes_elegibles()
+        participantes = rifa.participaciones.select_related('usuario').order_by('-fecha_registro')
 
         context = {
             **self.admin_site.each_context(request),
             'title': f'Realizar Sorteo: {rifa.titulo}',
             'rifa': rifa,
             'total_participantes': participantes.count(),
-            'participantes': participantes[:20],  # Primeros 20
+            'participantes': [p.usuario for p in participantes[:20]],
             'opts': self.model._meta,
         }
 

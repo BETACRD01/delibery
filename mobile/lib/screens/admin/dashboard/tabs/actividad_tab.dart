@@ -72,17 +72,20 @@ class _ActividadTabState extends State<ActividadTab> {
       child: ListView.separated(
         padding: const EdgeInsets.all(12),
         itemCount: _acciones.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
+        separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final a = _acciones[index] as Map<String, dynamic>;
-          final titulo = a['tipo_accion_display'] ?? a['tipo_accion'] ?? 'Acción';
+          final titulo =
+              a['tipo_accion_display'] ?? a['tipo_accion'] ?? 'Acción';
           final desc = a['descripcion'] ?? a['resumen'] ?? '';
           final admin = a['admin_email'] ?? 'Admin';
           final fecha = a['fecha_accion']?.toString() ?? '';
           final exitosa = a['exitosa'] != false;
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: exitosa ? DashboardColors.verde.withValues(alpha: 0.2) : DashboardColors.rojo.withValues(alpha: 0.2),
+              backgroundColor: exitosa
+                  ? DashboardColors.verde.withValues(alpha: 0.2)
+                  : DashboardColors.rojo.withValues(alpha: 0.2),
               child: Icon(
                 exitosa ? Icons.check : Icons.error_outline,
                 color: exitosa ? DashboardColors.verde : DashboardColors.rojo,
@@ -93,7 +96,10 @@ class _ActividadTabState extends State<ActividadTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(desc, maxLines: 2, overflow: TextOverflow.ellipsis),
-                Text('$admin • $fecha', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                Text(
+                  '$admin • $fecha',
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
               ],
             ),
           );

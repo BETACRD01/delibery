@@ -112,6 +112,11 @@ class RifaModelTest(APITestCase):
                     total=5,
                 )
             participantes.append(u)
+            Participacion.objects.create(
+                rifa=rifa,
+                usuario=u,
+                pedidos_completados=3,
+            )
 
         resultado = rifa.realizar_sorteo()
         self.assertFalse(resultado["sin_participantes"])
@@ -155,6 +160,14 @@ class RifaAPIViewTest(APITestCase):
         )
         self.premio = Premio.objects.create(rifa=self.rifa, posicion=1, descripcion="Premio API")
 
+    def _crear_pedido_entregado(self, usuario):
+        Pedido.objects.create(
+            cliente=usuario.perfil,
+            estado=EstadoPedido.ENTREGADO,
+            fecha_entregado=self.fecha_inicio + timedelta(hours=1),
+            total=10,
+        )
+
     def test_listado_requiere_auth(self):
         anon = self.client.__class__()
         url = reverse("rifas:rifa-list")
@@ -184,3 +197,17 @@ class RifaAPIViewTest(APITestCase):
         self.assertEqual(res_admin.status_code, status.HTTP_200_OK)
         self.rifa.refresh_from_db()
         self.assertEqual(self.rifa.estado, EstadoRifa.FINALIZADA)
+
+    def test_participar_rifa(self):
+        url = reverse("rifas:rifa-participar", args=[self.rifa.id])
+
+        res_no = self.client.post(url, {}, format="json")
+        self.assertEqual(res_no.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self._crear_pedido_entregado(self.user)
+        res_ok = self.client.post(url, {}, format="json")
+        self.assertEqual(res_ok.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(res_ok.data.get("success"))
+
+        res_dup = self.client.post(url, {}, format="json")
+        self.assertEqual(res_dup.status_code, status.HTTP_400_BAD_REQUEST)

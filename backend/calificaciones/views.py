@@ -1,6 +1,9 @@
 # calificaciones/views.py
 
 import logging
+from django.apps import apps
+from django.db.models import Avg, Count, Q
+from django.core.cache import cache
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -20,6 +23,16 @@ from .serializers import (
 from .services import CalificacionService
 
 logger = logging.getLogger('calificaciones')
+
+CACHE_TTL_SECONDS = 300
+
+
+def _cache_version_key(entity_type, entity_id):
+    return f"ratings:v:{entity_type}:{entity_id}"
+
+
+def _get_cache_version(entity_type, entity_id):
+    return cache.get(_cache_version_key(entity_type, entity_id), 1)
 
 
 class CalificacionViewSet(viewsets.ModelViewSet):
@@ -42,6 +55,95 @@ class CalificacionViewSet(viewsets.ModelViewSet):
     """
     
     permission_classes = [permissions.IsAuthenticated]
+
+    def _obtener_queryset_entidad(self, entity_type, entity_id):
+        entity_type = (entity_type or '').lower()
+
+        if entity_type == 'producto':
+            Producto = apps.get_model('productos', 'Producto')
+            producto = get_object_or_404(Producto, id=entity_id)
+            queryset = CalificacionProducto.objects.filter(
+                producto=producto
+            ).select_related('cliente').order_by('-creado_en')
+            return queryset, producto
+
+        if entity_type == 'repartidor':
+            Repartidor = apps.get_model('repartidores', 'Repartidor')
+            repartidor = get_object_or_404(Repartidor, id=entity_id)
+            tipos = [
+                TipoCalificacion.CLIENTE_A_REPARTIDOR,
+                TipoCalificacion.PROVEEDOR_A_REPARTIDOR,
+            ]
+            queryset = Calificacion.objects.filter(
+                calificado=repartidor.user,
+                tipo__in=tipos,
+            ).select_related('calificador', 'calificado', 'pedido').order_by('-created_at')
+            return queryset, repartidor
+
+        if entity_type == 'proveedor':
+            Proveedor = apps.get_model('proveedores', 'Proveedor')
+            proveedor = get_object_or_404(Proveedor, id=entity_id)
+            tipos = [
+                TipoCalificacion.CLIENTE_A_PROVEEDOR,
+                TipoCalificacion.REPARTIDOR_A_PROVEEDOR,
+            ]
+            queryset = Calificacion.objects.filter(
+                calificado=proveedor.user,
+                tipo__in=tipos,
+            ).select_related('calificador', 'calificado', 'pedido').order_by('-created_at')
+            return queryset, proveedor
+
+        if entity_type == 'cliente':
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            usuario = get_object_or_404(User, id=entity_id)
+            queryset = Calificacion.objects.filter(
+                calificado=usuario,
+                tipo=TipoCalificacion.REPARTIDOR_A_CLIENTE,
+            ).select_related('calificador', 'calificado', 'pedido').order_by('-created_at')
+            return queryset, usuario
+
+        return None, None
+
+    def _foto_usuario(self, usuario):
+        if not usuario:
+            return None
+
+        perfil = getattr(usuario, 'perfil', None)
+        if perfil and getattr(perfil, 'foto_perfil', None):
+            return perfil.foto_perfil.url
+
+        repartidor = getattr(usuario, 'repartidor', None)
+        if repartidor and getattr(repartidor, 'foto_perfil', None):
+            return repartidor.foto_perfil.url
+
+        return None
+
+    def _serializar_resena(self, obj, entity_type, entity_id):
+        if isinstance(obj, CalificacionProducto):
+            autor = obj.cliente
+            fecha = obj.creado_en
+            estrellas = obj.estrellas
+            comentario = obj.comentario
+        else:
+            autor = obj.calificador
+            fecha = obj.created_at
+            estrellas = obj.estrellas
+            comentario = obj.comentario
+
+        autor_nombre = autor.get_full_name() or autor.email or 'Usuario'
+
+        return {
+            'id': obj.id,
+            'entity_type': entity_type,
+            'entity_id': entity_id,
+            'autor_nombre': autor_nombre,
+            'autor_email': getattr(autor, 'email', None),
+            'autor_foto': self._foto_usuario(autor),
+            'puntuacion': float(estrellas),
+            'comentario': comentario,
+            'fecha': fecha.isoformat(),
+        }
     
     def get_queryset(self):
         """Retorna calificaciones según el contexto"""
@@ -333,6 +435,88 @@ class CalificacionViewSet(viewsets.ModelViewSet):
             'resumen': ResumenCalificacionSerializer(resumen).data,
             'ultimas_calificaciones': CalificacionListSerializer(calificaciones, many=True).data,
         })
+
+    def por_entidad(self, request, entity_type=None, entity_id=None):
+        """Lista calificaciones de una entidad (producto/cliente/repartidor/proveedor)."""
+        queryset, _ = self._obtener_queryset_entidad(entity_type, entity_id)
+        if queryset is None:
+            return Response(
+                {'error': 'Tipo de entidad inválido.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        page_number = request.query_params.get('page', '1')
+        page_size = request.query_params.get('page_size', '100')
+        version = _get_cache_version(entity_type, entity_id)
+        cache_key = (
+            f"ratings:{entity_type}:{entity_id}:list:v{version}:p{page_number}:s{page_size}"
+        )
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            data = [
+                self._serializar_resena(item, entity_type, int(entity_id))
+                for item in page
+            ]
+            response = self.get_paginated_response(data)
+            cache.set(cache_key, response.data, CACHE_TTL_SECONDS)
+            return response
+
+        data = [
+            self._serializar_resena(item, entity_type, int(entity_id))
+            for item in queryset
+        ]
+        cache.set(cache_key, data, CACHE_TTL_SECONDS)
+        return Response(data)
+
+    def resumen_entidad(self, request, entity_type=None, entity_id=None):
+        """Resumen de calificaciones de una entidad."""
+        queryset, _ = self._obtener_queryset_entidad(entity_type, entity_id)
+        if queryset is None:
+            return Response(
+                {'error': 'Tipo de entidad inválido.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        version = _get_cache_version(entity_type, entity_id)
+        cache_key = f"ratings:{entity_type}:{entity_id}:summary:v{version}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        agregados = queryset.aggregate(
+            promedio=Avg('estrellas'),
+            total=Count('id'),
+            total_5=Count('id', filter=Q(estrellas=5)),
+            total_4=Count('id', filter=Q(estrellas=4)),
+            total_3=Count('id', filter=Q(estrellas=3)),
+            total_2=Count('id', filter=Q(estrellas=2)),
+            total_1=Count('id', filter=Q(estrellas=1)),
+        )
+
+        total = agregados['total'] or 0
+        promedio = round(float(agregados['promedio'] or 0.0), 2)
+        porcentaje_5 = round((agregados['total_5'] / total) * 100, 2) if total else 0.0
+
+        payload = {
+            'entity_type': entity_type,
+            'entity_id': int(entity_id),
+            'promedio_calificacion': promedio,
+            'total_calificaciones': total,
+            'desglose_calificaciones': {
+                '5': agregados['total_5'] or 0,
+                '4': agregados['total_4'] or 0,
+                '3': agregados['total_3'] or 0,
+                '2': agregados['total_2'] or 0,
+                '1': agregados['total_1'] or 0,
+            },
+            'porcentaje_5_estrellas': porcentaje_5,
+        }
+        cache.set(cache_key, payload, CACHE_TTL_SECONDS)
+        return Response(payload)
 
 
 # ============================================

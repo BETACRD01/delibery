@@ -3,7 +3,8 @@
 import logging
 from django.apps import apps
 from django.db import models, transaction
-from django.db.models import Avg, Count, Q
+from django.core.cache import cache
+from django.db.models import Avg, Count, Q, Sum, F, FloatField, ExpressionWrapper
 from django.db.models.signals import post_delete, post_save
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
@@ -12,6 +13,48 @@ from django.utils import timezone
 from authentication.models import User
 
 logger = logging.getLogger('calificaciones')
+
+
+def _cache_version_key(entity_type, entity_id):
+    return f"ratings:v:{entity_type}:{entity_id}"
+
+
+def _bump_cache_version(entity_type, entity_id):
+    if entity_type is None or entity_id is None:
+        return
+    key = _cache_version_key(entity_type, entity_id)
+    try:
+        cache.incr(key)
+    except ValueError:
+        cache.set(key, 2, None)
+
+
+def _invalidate_cache_for_calificacion(calificacion):
+    tipo = calificacion.tipo
+    calificado = calificacion.calificado
+
+    if tipo == TipoCalificacion.REPARTIDOR_A_CLIENTE:
+        _bump_cache_version('cliente', calificado.id)
+        return
+
+    if tipo in (
+        TipoCalificacion.CLIENTE_A_REPARTIDOR,
+        TipoCalificacion.PROVEEDOR_A_REPARTIDOR,
+    ):
+        Repartidor = apps.get_model('repartidores', 'Repartidor')
+        repartidor = Repartidor.objects.filter(user=calificado).first()
+        if repartidor:
+            _bump_cache_version('repartidor', repartidor.id)
+        return
+
+    if tipo in (
+        TipoCalificacion.CLIENTE_A_PROVEEDOR,
+        TipoCalificacion.REPARTIDOR_A_PROVEEDOR,
+    ):
+        Proveedor = apps.get_model('proveedores', 'Proveedor')
+        proveedor = Proveedor.objects.filter(user=calificado).first()
+        if proveedor:
+            _bump_cache_version('proveedor', proveedor.id)
 
 
 # ============================================
@@ -301,6 +344,7 @@ class Calificacion(models.Model):
 
         # Actualizar promedio del usuario calificado
         self._actualizar_promedio_calificado()
+        _invalidate_cache_for_calificacion(self)
 
         # Log
         accion = "creada" if is_new else "actualizada"
@@ -487,6 +531,49 @@ def _recalcular_rating_producto(producto):
     producto.total_resenas = total_nuevo
     producto.save(update_fields=['rating_promedio', 'total_resenas'])
 
+    _bump_cache_version('producto', producto.id)
+    _recalcular_rating_proveedor(producto.proveedor)
+
+
+def _recalcular_rating_proveedor(proveedor):
+    """
+    Recalcula la calificación del proveedor de forma ponderada por ventas.
+    Formula:
+    - Suma (rating_promedio × veces_vendido) / Suma (veces_vendido)
+    """
+    if proveedor is None:
+        return
+
+    Producto = apps.get_model('productos', 'Producto')
+    suma_ponderada = Sum(
+        ExpressionWrapper(
+            F('rating_promedio') * F('veces_vendido'),
+            output_field=FloatField(),
+        )
+    )
+
+    agregados = Producto.objects.filter(proveedor=proveedor).aggregate(
+        total_ventas=Sum('veces_vendido'),
+        total_resenas=Sum('total_resenas'),
+        suma_ponderada=suma_ponderada,
+        promedio_simple=Avg('rating_promedio'),
+    )
+
+    total_ventas = agregados['total_ventas'] or 0
+    total_resenas = agregados['total_resenas'] or 0
+
+    if total_ventas > 0:
+        promedio = (agregados['suma_ponderada'] or 0.0) / float(total_ventas)
+    elif total_resenas > 0:
+        promedio = float(agregados['promedio_simple'] or 0.0)
+    else:
+        promedio = 0.0
+
+    proveedor.calificacion_promedio = round(promedio, 2)
+    proveedor.total_resenas = total_resenas
+    proveedor.save(update_fields=['calificacion_promedio', 'total_resenas'])
+    _bump_cache_version('proveedor', proveedor.id)
+
 
 class CalificacionProducto(models.Model):
     """Calificación que el cliente deja sobre cada producto entregado."""
@@ -552,3 +639,8 @@ class CalificacionProducto(models.Model):
 @receiver(post_delete, sender=CalificacionProducto)
 def _actualizar_rating_producto(sender, instance, **kwargs):
     _recalcular_rating_producto(instance.producto)
+
+
+@receiver(post_delete, sender=Calificacion)
+def _invalidar_cache_calificacion_eliminada(sender, instance, **kwargs):
+    _invalidate_cache_for_calificacion(instance)

@@ -13,11 +13,7 @@ class JPShimmer extends StatelessWidget {
   final Widget child;
   final bool enabled;
 
-  const JPShimmer({
-    super.key,
-    required this.child,
-    this.enabled = true,
-  });
+  const JPShimmer({super.key, required this.child, this.enabled = true});
 
   @override
   Widget build(BuildContext context) {
@@ -198,10 +194,14 @@ class JPShimmerList extends StatelessWidget {
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           physics: const NeverScrollableScrollPhysics(),
-          padding: padding ?? const EdgeInsets.symmetric(horizontal: JPConstants.spacingHorizontal),
+          padding:
+              padding ??
+              const EdgeInsets.symmetric(
+                horizontal: JPConstants.spacingHorizontal,
+              ),
           itemCount: itemCount,
-          separatorBuilder: (_, __) => SizedBox(width: spacing),
-          itemBuilder: (_, __) => JPShimmerBox(
+          separatorBuilder: (_, _) => SizedBox(width: spacing),
+          itemBuilder: (_, _) => JPShimmerBox(
             width: itemWidth ?? 160,
             height: itemHeight,
             borderRadius: borderRadius,
@@ -216,8 +216,8 @@ class JPShimmerList extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       padding: padding ?? const EdgeInsets.all(JPConstants.spacingHorizontal),
       itemCount: itemCount,
-      separatorBuilder: (_, __) => SizedBox(height: spacing),
-      itemBuilder: (_, __) => JPShimmerBox(
+      separatorBuilder: (_, _) => SizedBox(height: spacing),
+      itemBuilder: (_, _) => JPShimmerBox(
         width: itemWidth ?? double.infinity,
         height: itemHeight,
         borderRadius: borderRadius,
@@ -262,7 +262,7 @@ class JPShimmerGrid extends StatelessWidget {
         childAspectRatio: 1 / (itemHeight / 160), // Aproximado
       ),
       itemCount: itemCount,
-      itemBuilder: (_, __) => JPShimmerBox(
+      itemBuilder: (_, _) => JPShimmerBox(
         width: double.infinity,
         height: itemHeight,
         borderRadius: borderRadius,
@@ -304,7 +304,9 @@ class JPShimmerText extends StatelessWidget {
           return Container(
             width: lineWidth,
             height: lineHeight,
-            margin: index < lines - 1 ? EdgeInsets.only(bottom: spacing) : EdgeInsets.zero,
+            margin: index < lines - 1
+                ? EdgeInsets.only(bottom: spacing)
+                : EdgeInsets.zero,
             decoration: BoxDecoration(
               color: JPCupertinoColors.systemGrey6(context),
               borderRadius: BorderRadius.circular(4),

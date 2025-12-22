@@ -71,28 +71,25 @@ class _PantallaCalificacionesEntidadState
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text(widget.entityNombre),
-      ),
+      navigationBar: CupertinoNavigationBar(middle: Text(widget.entityNombre)),
       child: SafeArea(
         child: _cargando
             ? const Center(child: CupertinoActivityIndicator())
             : _error != null
-                ? _buildEmpty(_error!)
-                : RefreshIndicator(
-                    onRefresh: _cargar,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                      itemCount: 1 + _resenas.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        if (index == 0) return _buildHeader();
-                        final resena = _resenas[index - 1];
-                        return _ResenaTile(resena: resena);
-                      },
-                    ),
-                  ),
+            ? _buildEmpty(_error!)
+            : RefreshIndicator(
+                onRefresh: _cargar,
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  itemCount: 1 + _resenas.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    if (index == 0) return _buildHeader();
+                    final resena = _resenas[index - 1];
+                    return _ResenaTile(resena: resena);
+                  },
+                ),
+              ),
       ),
     );
   }
@@ -152,8 +149,9 @@ class _ResenaTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor:
-                    CupertinoColors.systemGrey4.resolveFrom(context),
+                backgroundColor: CupertinoColors.systemGrey4.resolveFrom(
+                  context,
+                ),
                 child: Text(
                   resena.iniciales,
                   style: const TextStyle(

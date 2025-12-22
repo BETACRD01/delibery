@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:intl/intl.dart';
 import '../../services/usuarios_service.dart';
 import '../../apis/helpers/api_exception.dart';
 
@@ -15,6 +16,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
   final _usuarioService = UsuarioService();
   Map<String, dynamic>? _rifa;
   bool _loading = true;
+  bool _participando = false;
   String? _error;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -67,6 +69,45 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
           _loading = false;
         });
       }
+    }
+  }
+
+  Future<void> _participar() async {
+    final rifaId = _rifa?['id']?.toString();
+    if (rifaId == null) return;
+
+    setState(() => _participando = true);
+    try {
+      await _usuarioService.participarEnRifa(rifaId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Participación registrada')));
+      await _cargar();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo registrar la participación')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _participando = false);
+      }
+    }
+  }
+
+  String _formatFecha(String? fechaIso) {
+    if (fechaIso == null || fechaIso.isEmpty) return '';
+    try {
+      final fecha = DateTime.parse(fechaIso);
+      return DateFormat('dd/MM/yyyy').format(fecha);
+    } catch (_) {
+      return fechaIso;
     }
   }
 
@@ -245,16 +286,23 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
 
   Widget _buildContent() {
     final titulo = _rifa!['titulo'] ?? 'Rifa';
-    final premio = _rifa!['premio'] ?? '';
-    final valor = _rifa!['valor_premio']?.toString() ?? '';
-    final fechaSorteo = _rifa!['fecha_sorteo']?.toString() ?? '';
+    final premios = (_rifa!['premios'] as List<dynamic>?) ?? [];
+    final premiosOrdenados = List<Map<String, dynamic>>.from(premios)
+      ..sort((a, b) => (a['posicion'] ?? 0).compareTo(b['posicion'] ?? 0));
+    final fechaFin = _formatFecha(_rifa!['fecha_fin']?.toString());
     final diasRestantes = _rifa!['dias_restantes']?.toString() ?? '';
-    final totalParticipantes = _rifa!['total_participantes']?.toString() ?? '';
-    final elegibilidad = _rifa!['mi_elegibilidad'] as Map<String, dynamic>?;
-    final elegible = elegibilidad?['elegible'] == true;
-    final pedidosCompletados = elegibilidad?['pedidos_completados'] ?? 0;
+    final totalParticipantes = (_rifa!['total_participantes'] ?? 0).toString();
     final pedidosMinimos =
-        _rifa!['pedidos_minimos'] ?? elegibilidad?['pedidos_minimos'] ?? 3;
+        int.tryParse((_rifa!['pedidos_minimos'] ?? 3).toString()) ?? 3;
+    final pedidosCompletados =
+        int.tryParse((_rifa!['mis_pedidos'] ?? 0).toString()) ?? 0;
+    final pedidosFaltantes =
+        int.tryParse((_rifa!['pedidos_faltantes'] ?? 0).toString()) ?? 0;
+    final puedoParticipar = _rifa!['puedo_participar'] == true;
+    final yaParticipa = _rifa!['ya_participa'] == true;
+    final estadoDisplay = (_rifa!['estado_display'] ?? 'Activa')
+        .toString()
+        .toUpperCase();
     final progreso = (pedidosMinimos > 0)
         ? (pedidosCompletados / pedidosMinimos).clamp(0.0, 1.0)
         : 0.0;
@@ -271,17 +319,19 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
             children: [
               _buildHeroCard(
                 titulo: titulo,
-                premio: premio,
-                valor: valor,
-                fechaSorteo: fechaSorteo,
+                premios: premiosOrdenados,
+                fechaFin: fechaFin,
                 diasRestantes: diasRestantes,
                 totalParticipantes: totalParticipantes,
+                estadoDisplay: estadoDisplay,
               ),
               const SizedBox(height: 16),
               _buildElegibilityCard(
-                elegible: elegible,
+                puedoParticipar: puedoParticipar,
+                yaParticipa: yaParticipa,
                 pedidosCompletados: pedidosCompletados,
                 pedidosMinimos: pedidosMinimos,
+                pedidosFaltantes: pedidosFaltantes,
                 progreso: progreso,
               ),
               const SizedBox(height: 16),
@@ -296,11 +346,11 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
 
   Widget _buildHeroCard({
     required String titulo,
-    required String premio,
-    required String valor,
-    required String fechaSorteo,
+    required List<Map<String, dynamic>> premios,
+    required String fechaFin,
     required String diasRestantes,
     required String totalParticipantes,
+    required String estadoDisplay,
   }) {
     return Container(
       width: double.infinity,
@@ -349,18 +399,18 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.auto_awesome,
                             color: Colors.white,
                             size: 14,
                           ),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
-                            'ACTIVA',
-                            style: TextStyle(
+                            estadoDisplay,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -414,20 +464,30 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
                     height: 1.1,
                   ),
                 ),
-                if (premio.isNotEmpty) ...[
+                if (premios.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(
-                    premio,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      height: 1.3,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: premios
+                        .map(
+                          (premio) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              '${premio['posicion_display'] ?? 'Premio'}: ${premio['descripcion'] ?? ''}',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
                 const SizedBox(height: 24),
-                _buildInfoGrid(valor, fechaSorteo, totalParticipantes),
+                _buildInfoGrid(fechaFin, totalParticipantes, premios.length),
               ],
             ),
           ),
@@ -437,20 +497,31 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
   }
 
   Widget _buildInfoGrid(
-    String valor,
-    String fechaSorteo,
+    String fechaFin,
     String participantes,
+    int totalPremios,
   ) {
-    return Row(
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
       children: [
-        if (valor.isNotEmpty)
-          Expanded(child: _buildInfoItem(Icons.card_giftcard, 'Premio', valor)),
-        if (valor.isNotEmpty && fechaSorteo.isNotEmpty)
-          const SizedBox(width: 12),
-        if (fechaSorteo.isNotEmpty)
-          Expanded(
-            child: _buildInfoItem(Icons.calendar_today, 'Sorteo', fechaSorteo),
+        if (fechaFin.isNotEmpty)
+          SizedBox(
+            width: 150,
+            child: _buildInfoItem(Icons.calendar_today, 'Finaliza', fechaFin),
           ),
+        SizedBox(
+          width: 150,
+          child: _buildInfoItem(Icons.groups, 'Participantes', participantes),
+        ),
+        SizedBox(
+          width: 150,
+          child: _buildInfoItem(
+            Icons.card_giftcard,
+            'Premios',
+            totalPremios.toString(),
+          ),
+        ),
       ],
     );
   }
@@ -494,11 +565,26 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
   }
 
   Widget _buildElegibilityCard({
-    required bool elegible,
+    required bool puedoParticipar,
+    required bool yaParticipa,
     required int pedidosCompletados,
     required int pedidosMinimos,
+    required int pedidosFaltantes,
     required double progreso,
   }) {
+    final estadoColor = (yaParticipa || puedoParticipar)
+        ? const Color(0xFF34C759)
+        : const Color(0xFFFF9500);
+    final estadoIcon = (yaParticipa || puedoParticipar)
+        ? Icons.check_circle
+        : Icons.hourglass_empty;
+    final estadoTitulo = yaParticipa
+        ? 'Ya estás participando'
+        : (puedoParticipar ? '¡Cumples los requisitos!' : 'En progreso');
+    final estadoSubtitulo = yaParticipa
+        ? 'Tu participación está registrada'
+        : (puedoParticipar ? 'Ya puedes participar' : 'Completa más pedidos');
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -523,18 +609,10 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: elegible
-                        ? const Color(0xFF34C759).withValues(alpha: 0.1)
-                        : const Color(0xFFFF9500).withValues(alpha: 0.1),
+                    color: estadoColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    elegible ? Icons.check_circle : Icons.hourglass_empty,
-                    color: elegible
-                        ? const Color(0xFF34C759)
-                        : const Color(0xFFFF9500),
-                    size: 24,
-                  ),
+                  child: Icon(estadoIcon, color: estadoColor, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -542,7 +620,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        elegible ? '¡Estás participando!' : 'En progreso',
+                        estadoTitulo,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -552,9 +630,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        elegible
-                            ? 'Ya cumpliste los requisitos'
-                            : 'Completa más pedidos',
+                        estadoSubtitulo,
                         style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF8E8E93),
@@ -608,7 +684,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
                           minHeight: 8,
                           backgroundColor: Colors.white,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            elegible
+                            (yaParticipa || puedoParticipar)
                                 ? const Color(0xFF34C759)
                                 : const Color(0xFF007AFF),
                           ),
@@ -628,6 +704,35 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
                 ],
               ),
             ),
+            if (!yaParticipa && puedoParticipar) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _participando ? null : _participar,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF34C759),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(_participando ? 'Registrando...' : 'Participar'),
+                ),
+              ),
+            ],
+            if (!puedoParticipar && pedidosFaltantes > 0) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Te faltan $pedidosFaltantes pedido(s) para participar',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF8E8E93),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -690,7 +795,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
             const _IOSListItem(
               number: 2,
               text:
-                  'Una vez cumplido, quedas inscrito automáticamente en la rifa',
+                  'Una vez cumplido, presiona el botón Participar para registrarte',
             ),
             const SizedBox(height: 12),
             const _IOSListItem(

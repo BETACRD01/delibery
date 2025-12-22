@@ -144,7 +144,9 @@ class RastreoInteligenteService {
   Future<void> _obtenerYEnviarUbicacion() async {
     try {
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () => throw TimeoutException('Timeout obteniendo ubicación'),
@@ -173,7 +175,9 @@ class RastreoInteligenteService {
       if (!await _verificarPermisos()) return null;
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       ).timeout(const Duration(seconds: 10));
 
       _ultimaUbicacion = position;

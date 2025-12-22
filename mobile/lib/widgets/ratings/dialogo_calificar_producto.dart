@@ -31,7 +31,8 @@ class DialogoCalificarProducto extends StatefulWidget {
   });
 
   @override
-  State<DialogoCalificarProducto> createState() => _DialogoCalificarProductoState();
+  State<DialogoCalificarProducto> createState() =>
+      _DialogoCalificarProductoState();
 }
 
 class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
@@ -82,7 +83,8 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
         productoId: _itemActual.producto,
         itemId: _itemActual.id,
         estrellas: rating,
-        comentario: _comentarios[_itemActual.producto]?.text.trim().isEmpty ?? true
+        comentario:
+            _comentarios[_itemActual.producto]?.text.trim().isEmpty ?? true
             ? null
             : _comentarios[_itemActual.producto]!.text.trim(),
       );
@@ -141,7 +143,11 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
         title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(CupertinoIcons.checkmark_circle_fill, color: Color(0xFF38A169), size: 24),
+            Icon(
+              CupertinoIcons.checkmark_circle_fill,
+              color: Color(0xFF38A169),
+              size: 24,
+            ),
             SizedBox(width: 8),
             Text('Gracias'),
           ],
@@ -215,7 +221,8 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
                               progreso,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                                color: CupertinoColors.secondaryLabel
+                                    .resolveFrom(context),
                               ),
                             ),
                         ],
@@ -241,10 +248,12 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
                             width: 60,
                             height: 60,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorBuilder: (_, _, _) => Container(
                               width: 60,
                               height: 60,
-                              color: CupertinoColors.systemGrey5.resolveFrom(context),
+                              color: CupertinoColors.systemGrey5.resolveFrom(
+                                context,
+                              ),
                               child: const Icon(CupertinoIcons.cube_box),
                             ),
                           ),
@@ -254,7 +263,9 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
                           width: 60,
                           height: 60,
                           decoration: BoxDecoration(
-                            color: CupertinoColors.systemGrey5.resolveFrom(context),
+                            color: CupertinoColors.systemGrey5.resolveFrom(
+                              context,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(CupertinoIcons.cube_box),
@@ -277,7 +288,8 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
                               'Cantidad: ${item.cantidad}',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                                color: CupertinoColors.secondaryLabel
+                                    .resolveFrom(context),
                               ),
                             ),
                           ],
@@ -301,7 +313,8 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
                       const SizedBox(height: 12),
                       StarRatingInput(
                         initialValue: _ratings[item.producto] ?? 0,
-                        onChanged: (rating) => setState(() => _ratings[item.producto] = rating),
+                        onChanged: (rating) =>
+                            setState(() => _ratings[item.producto] = rating),
                         size: 40,
                       ),
                       const SizedBox(height: 8),
@@ -309,7 +322,9 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
                         _getRatingText(_ratings[item.producto] ?? 0),
                         style: TextStyle(
                           fontSize: 13,
-                          color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                          color: CupertinoColors.secondaryLabel.resolveFrom(
+                            context,
+                          ),
                         ),
                       ),
                     ],
@@ -320,9 +335,12 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
                   // Campo de comentario
                   CupertinoTextField(
                     controller: _comentarios[item.producto],
-                    placeholder: 'Cuéntanos tu experiencia con este producto (opcional)',
+                    placeholder:
+                        'Cuéntanos tu experiencia con este producto (opcional)',
                     placeholderStyle: TextStyle(
-                      color: CupertinoColors.placeholderText.resolveFrom(context),
+                      color: CupertinoColors.placeholderText.resolveFrom(
+                        context,
+                      ),
                     ),
                     maxLines: 4,
                     maxLength: 500,
@@ -348,14 +366,17 @@ class _DialogoCalificarProductoState extends State<DialogoCalificarProducto> {
                             child: const Text('Saltar'),
                           ),
                         ),
-                      if (_itemsCalificables.length > 1) const SizedBox(width: 12),
+                      if (_itemsCalificables.length > 1)
+                        const SizedBox(width: 12),
                       Expanded(
                         flex: 2,
                         child: CupertinoButton(
                           color: CupertinoColors.activeBlue,
                           onPressed: _enviando ? null : _enviarCalificacion,
                           child: _enviando
-                              ? const CupertinoActivityIndicator(color: CupertinoColors.white)
+                              ? const CupertinoActivityIndicator(
+                                  color: CupertinoColors.white,
+                                )
                               : Text(
                                   _indiceActual < _itemsCalificables.length - 1
                                       ? 'Siguiente'

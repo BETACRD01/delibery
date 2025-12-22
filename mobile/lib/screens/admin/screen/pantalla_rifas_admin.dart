@@ -158,49 +158,61 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
             child: _cargando
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, size: 48, color: DashboardColors.rojo),
-                            const SizedBox(height: 16),
-                            Text(_error!, style: const TextStyle(fontSize: 16)),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _cargarRifas,
-                              child: const Text('Reintentar'),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: DashboardColors.rojo,
                         ),
-                      )
-                    : _rifas.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No hay rifas',
-                                  style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Crea tu primera rifa',
-                                  style: TextStyle(color: Colors.grey[500]),
-                                ),
-                              ],
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: _cargarRifas,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _rifas.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
-                              itemBuilder: (context, index) => _buildRifaCard(_rifas[index]),
-                            ),
+                        const SizedBox(height: 16),
+                        Text(_error!, style: const TextStyle(fontSize: 16)),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _cargarRifas,
+                          child: const Text('Reintentar'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _rifas.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No hay rifas',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Crea tu primera rifa',
+                          style: TextStyle(color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _cargarRifas,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _rifas.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) =>
+                          _buildRifaCard(_rifas[index]),
+                    ),
+                  ),
           ),
 
           // Paginación
@@ -221,7 +233,9 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    onPressed: _paginaActual > 1 ? () => _cambiarPagina(_paginaActual - 1) : null,
+                    onPressed: _paginaActual > 1
+                        ? () => _cambiarPagina(_paginaActual - 1)
+                        : null,
                     icon: const Icon(Icons.chevron_left),
                   ),
                   Text(
@@ -229,7 +243,9 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   IconButton(
-                    onPressed: _paginaActual < _totalPaginas ? () => _cambiarPagina(_paginaActual + 1) : null,
+                    onPressed: _paginaActual < _totalPaginas
+                        ? () => _cambiarPagina(_paginaActual + 1)
+                        : null,
                     icon: const Icon(Icons.chevron_right),
                   ),
                 ],
@@ -283,9 +299,13 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
             // Imagen
             if (imagen != null && imagen.toString().isNotEmpty)
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
                 child: Image.network(
-                  imagen.toString().startsWith('http') ? imagen.toString() : '${ApiConfig.baseUrl}$imagen',
+                  imagen.toString().startsWith('http')
+                      ? imagen.toString()
+                      : '${ApiConfig.baseUrl}$imagen',
                   height: 150,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -303,9 +323,16 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                        Icon(
+                          Icons.image_not_supported,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
                         SizedBox(height: 8),
-                        Text('Imagen no disponible', style: TextStyle(color: Colors.grey)),
+                        Text(
+                          'Imagen no disponible',
+                          style: TextStyle(color: Colors.grey),
+                        ),
                       ],
                     ),
                   ),
@@ -320,7 +347,10 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
                 children: [
                   // Estado
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _colorEstado(estado),
                       borderRadius: BorderRadius.circular(12),
@@ -350,31 +380,49 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
                   if (premios.isNotEmpty) ...[
                     Row(
                       children: [
-                        const Icon(Icons.card_giftcard, size: 16, color: Colors.orange),
+                        const Icon(
+                          Icons.card_giftcard,
+                          size: 16,
+                          color: Colors.orange,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '${premios.length} premio${premios.length > 1 ? 's' : ''}',
-                          style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    ...premios.take(2).map((p) => Padding(
-                          padding: const EdgeInsets.only(left: 20, top: 2),
-                          child: Text(
-                            '${_getNombrePosicion(p['posicion'])}: ${p['descripcion']}',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    ...premios
+                        .take(2)
+                        .map(
+                          (p) => Padding(
+                            padding: const EdgeInsets.only(left: 20, top: 2),
+                            child: Text(
+                              '${_getNombrePosicion(p['posicion'])}: ${p['descripcion']}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        )),
+                        ),
                   ],
                   const SizedBox(height: 8),
 
                   // Participantes
                   Row(
                     children: [
-                      const Icon(Icons.people, size: 16, color: DashboardColors.azul),
+                      const Icon(
+                        Icons.people,
+                        size: 16,
+                        color: DashboardColors.azul,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '$participantes participantes',
@@ -388,7 +436,11 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.emoji_events, size: 16, color: Colors.amber),
+                        const Icon(
+                          Icons.emoji_events,
+                          size: 16,
+                          color: Colors.amber,
+                        ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(

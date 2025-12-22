@@ -19,6 +19,16 @@ class HomeController extends ChangeNotifier {
   static List<ProductoModel>? _cachePopulares;
   static DateTime? _cacheTimestamp;
 
+  static void limpiarCacheMemoria() {
+    _cacheCategorias = null;
+    _cachePromos = null;
+    _cacheDestacados = null;
+    _cacheOfertas = null;
+    _cacheNovedades = null;
+    _cachePopulares = null;
+    _cacheTimestamp = null;
+  }
+
   // ════════════════════════════════════════════════════════════════
   // SERVICIOS
   // ════════════════════════════════════════════════════════════════

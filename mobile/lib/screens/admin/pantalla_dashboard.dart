@@ -8,6 +8,7 @@ import 'dashboard/widgets/dashboard_drawer.dart';
 import 'dashboard/tabs/resumen_tab.dart';
 import 'dashboard/tabs/actividad_tab.dart';
 import 'dashboard/constants/dashboard_colors.dart';
+import '../../services/session_cleanup.dart';
 
 class PantallaDashboard extends StatefulWidget {
   const PantallaDashboard({super.key});
@@ -151,10 +152,11 @@ class _PantallaDashboardState extends State<PantallaDashboard>
     );
 
     if (confirmar == true) {
+      if (!mounted) return;
+      await SessionCleanup.clearProviders(context);
       await _controller.cerrarSesion();
-      if (mounted) {
-        Rutas.irAYLimpiar(context, Rutas.login);
-      }
+      if (!mounted) return;
+      Rutas.irAYLimpiar(context, Rutas.login);
     }
   }
 }

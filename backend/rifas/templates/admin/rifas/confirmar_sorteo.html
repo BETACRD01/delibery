@@ -20,7 +20,7 @@
     <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h2 style="margin-top: 0;">⚠️ ¿Estás seguro?</h2>
         <p><strong>Esta acción no se puede deshacer.</strong></p>
-        <p>Se seleccionará aleatoriamente un ganador entre los participantes elegibles.</p>
+        <p>Se seleccionará aleatoriamente un ganador entre los participantes registrados.</p>
     </div>
 
     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -35,7 +35,7 @@
                 <td>{{ rifa.fecha_inicio|date:"d/m/Y" }} - {{ rifa.fecha_fin|date:"d/m/Y" }}</td>
             </tr>
             <tr>
-                <td><strong>Participantes Elegibles:</strong></td>
+                <td><strong>Participantes Registrados:</strong></td>
                 <td><strong style="color: #28a745; font-size: 1.2em;">{{ total_participantes }}</strong></td>
             </tr>
             <tr>
@@ -96,7 +96,7 @@
     {% else %}
     <div style="background: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
         <h3 style="color: #721c24;">⚠️ No se puede realizar el sorteo</h3>
-        <p>No hay participantes elegibles para esta rifa.</p>
+        <p>No hay participantes registrados para esta rifa.</p>
         <a href="{% url 'admin:rifas_rifa_change' rifa.id %}"
            class="button"
            style="background-color: #6c757d; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">

@@ -62,10 +62,12 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
       );
       _productosFiltrados = List.from(_productos);
 
+      if (!mounted) return;
       setState(() {
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Error al cargar productos: $e';
         _loading = false;

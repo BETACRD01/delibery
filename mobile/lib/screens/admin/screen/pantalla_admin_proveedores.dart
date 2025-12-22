@@ -7,7 +7,8 @@ class PantallaAdminProveedores extends StatefulWidget {
   const PantallaAdminProveedores({super.key});
 
   @override
-  State<PantallaAdminProveedores> createState() => _PantallaAdminProveedoresState();
+  State<PantallaAdminProveedores> createState() =>
+      _PantallaAdminProveedoresState();
 }
 
 class _PantallaAdminProveedoresState extends State<PantallaAdminProveedores> {
@@ -101,40 +102,49 @@ class _PantallaAdminProveedoresState extends State<PantallaAdminProveedores> {
             child: _cargando
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(child: Text(_error!))
-                    : RefreshIndicator(
-                        onRefresh: _cargar,
-                        child: ListView.separated(
-                          itemCount: _items.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final p = _items[index] as Map<String, dynamic>;
-                            final nombre = p['nombre'] ?? p['usuario_nombre'] ?? 'Proveedor';
-                            final email = p['usuario_email'] ?? 'Sin email';
-                            final verificado = p['verificado'] == true;
-                            final activo = p['activo'] != false;
-                            return ListTile(
-                              title: Text(nombre),
-                              subtitle: Text(email),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(verificado ? 'Verificado' : 'Pendiente',
-                                      style: TextStyle(
-                                        color: verificado ? DashboardColors.verde : DashboardColors.naranja,
-                                        fontWeight: FontWeight.bold,
-                                      )),
-                                  Text(activo ? 'Activo' : 'Inactivo',
-                                      style: TextStyle(
-                                        color: activo ? DashboardColors.azul : DashboardColors.rojo,
-                                      )),
-                                ],
+                ? Center(child: Text(_error!))
+                : RefreshIndicator(
+                    onRefresh: _cargar,
+                    child: ListView.separated(
+                      itemCount: _items.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final p = _items[index] as Map<String, dynamic>;
+                        final nombre =
+                            p['nombre'] ?? p['usuario_nombre'] ?? 'Proveedor';
+                        final email = p['usuario_email'] ?? 'Sin email';
+                        final verificado = p['verificado'] == true;
+                        final activo = p['activo'] != false;
+                        return ListTile(
+                          title: Text(nombre),
+                          subtitle: Text(email),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                verificado ? 'Verificado' : 'Pendiente',
+                                style: TextStyle(
+                                  color: verificado
+                                      ? DashboardColors.verde
+                                      : DashboardColors.naranja,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
+                              Text(
+                                activo ? 'Activo' : 'Inactivo',
+                                style: TextStyle(
+                                  color: activo
+                                      ? DashboardColors.azul
+                                      : DashboardColors.rojo,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),

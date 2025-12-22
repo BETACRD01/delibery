@@ -175,12 +175,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
           const SizedBox(height: 12),
 
           // Rating y reseñas
-          StarRatingDisplay(
-            rating: producto.rating,
-            reviewCount: producto.totalResenas,
-            size: 20,
-            showCount: true,
-          ),
+          _buildRatingSummary(producto),
           const SizedBox(height: 16),
 
           // Precio
@@ -240,6 +235,50 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildRatingSummary(ProductoModel producto) {
+    final rating = producto.rating;
+    final totalResenas = producto.totalResenas;
+    final hasResenas = totalResenas > 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: JPColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          StarRatingDisplay(
+            rating: rating,
+            reviewCount: totalResenas,
+            size: 18,
+            showCount: false,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            rating.toStringAsFixed(1),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: JPColors.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            hasResenas ? '$totalResenas resenas' : 'Sin resenas',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: JPColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -341,8 +380,8 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: 3,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, __) => Container(
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (_, _) => Container(
                   width: 140,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
@@ -377,7 +416,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _sugeridos.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final prod = _sugeridos[index];
                 return Container(
@@ -419,9 +458,9 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                                 ? CachedNetworkImage(
                                     imageUrl: prod.imagenUrl!,
                                     fit: BoxFit.cover,
-                                    placeholder: (_, __) =>
+                                    placeholder: (_, _) =>
                                         Container(color: Colors.grey.shade200),
-                                    errorWidget: (_, __, ___) => Container(
+                                    errorWidget: (_, _, _) => Container(
                                       color: Colors.grey.shade200,
                                       child: const Icon(
                                         Icons.fastfood,

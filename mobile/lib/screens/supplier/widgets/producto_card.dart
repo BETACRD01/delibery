@@ -60,7 +60,8 @@ class ProductoCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '\$${_formatPrecio(precio)}',
-                      style: const TextStyle(          // ✅ AHORA ES const
+                      style: const TextStyle(
+                        // ✅ AHORA ES const
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: _exito,
@@ -72,7 +73,8 @@ class ProductoCard extends StatelessWidget {
                         if (stock != null) ...[
                           Text(
                             'Stock: $stock',
-                            style: const TextStyle(     // ✅ AHORA ES const
+                            style: const TextStyle(
+                              // ✅ AHORA ES const
                               fontSize: 12,
                               color: _textoSecundario,
                             ),
@@ -86,7 +88,11 @@ class ProductoCard extends StatelessWidget {
                 ),
               ),
               if (onTap != null)
-                Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey.shade400,
+                  size: 20,
+                ),
             ],
           ),
         ),
@@ -97,7 +103,9 @@ class ProductoCard extends StatelessWidget {
   Widget _buildImagen(String? imagen) {
     String? urlCompleta;
     if (imagen != null && imagen.isNotEmpty) {
-      urlCompleta = imagen.startsWith('http') ? imagen : '${ApiConfig.baseUrl}$imagen';
+      urlCompleta = imagen.startsWith('http')
+          ? imagen
+          : '${ApiConfig.baseUrl}$imagen';
     }
 
     return Container(
@@ -113,7 +121,7 @@ class ProductoCard extends StatelessWidget {
             ? Image.network(
                 urlCompleta,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _placeholder(),
+                errorBuilder: (_, _, _) => _placeholder(),
               )
             : _placeholder(),
       ),
@@ -122,11 +130,7 @@ class ProductoCard extends StatelessWidget {
 
   Widget _placeholder() {
     return Center(
-      child: Icon(
-        Icons.image_outlined,
-        color: Colors.grey.shade400,
-        size: 24,
-      ),
+      child: Icon(Icons.image_outlined, color: Colors.grey.shade400, size: 24),
     );
   }
 

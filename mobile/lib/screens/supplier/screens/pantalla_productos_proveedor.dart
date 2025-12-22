@@ -423,7 +423,8 @@ class _FormularioProductoState extends State<_FormularioProducto> {
                             ? Image.network(
                                 widget.producto!.imagenUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 32),
+                                errorBuilder: (_, _, _) =>
+                                    const Icon(Icons.image_not_supported, size: 32),
                               )
                             : Center(
                                 child: Icon(Icons.add_a_photo_outlined, size: 32, color: Colors.grey.shade400),

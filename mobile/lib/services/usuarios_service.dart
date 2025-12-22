@@ -254,6 +254,25 @@ class UsuarioService {
     }
   }
 
+  Future<Map<String, dynamic>> participarEnRifa(String rifaId) async {
+    try {
+      final data = await _rifasUsuariosApi.participarEnRifa(rifaId);
+      _rifaActivaCache = null;
+      _rifasCache = null;
+      return data;
+    } on ApiException {
+      rethrow;
+    } catch (e, stackTrace) {
+      _log('Error participando en rifa', error: e, stackTrace: stackTrace);
+      throw ApiException(
+        statusCode: 0,
+        message: 'Error al participar en rifa',
+        errors: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // GESTION DE DIRECCIONES
   // ---------------------------------------------------------------------------

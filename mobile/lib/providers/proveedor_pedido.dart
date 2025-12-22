@@ -25,6 +25,16 @@ class PedidoProvider extends ChangeNotifier {
   String? get error => _error;
   bool get hasMore => _hasMore;
 
+  void limpiar() {
+    _pedidos.clear();
+    _pedidoActual = null;
+    _isLoading = false;
+    _error = null;
+    _currentPage = 1;
+    _hasMore = true;
+    notifyListeners();
+  }
+
   // ───────────────────────────────────────────────────────────────
   // Cargar lista de pedidos
   // ───────────────────────────────────────────────────────────────

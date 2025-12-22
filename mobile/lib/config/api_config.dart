@@ -242,6 +242,8 @@ class ApiConfig {
   static String get rifasActiva => '$apiUrl/rifas/rifas/activa/';
   static String get rifasEstadisticas => '$apiUrl/rifas/rifas/estadisticas/';
   static String get rifasAdminBase => '$apiUrl/rifas/rifas/';
+  static String rifasParticipar(String rifaId) =>
+      '$apiUrl/rifas/rifas/$rifaId/participar/';
 
   // ============================================================================
   // PRODUCTOS Y CARRITO

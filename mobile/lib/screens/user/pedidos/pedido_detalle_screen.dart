@@ -210,7 +210,8 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                       context: context,
                       builder: (context) => DialogoCalificarRepartidor(
                         pedidoId: pedido.id,
-                        repartidorNombre: pedido.repartidor?.nombre ?? 'Repartidor',
+                        repartidorNombre:
+                            pedido.repartidor?.nombre ?? 'Repartidor',
                         repartidorFoto: pedido.repartidor?.fotoPerfil,
                       ),
                     );
@@ -653,7 +654,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
               height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 height: 200,
                 color: Colors.grey[200],
                 child: const Center(
@@ -915,7 +916,6 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   // Obsoleto: reemplazado por DialogoCalificarRepartidor
   // Future<void> _mostrarSheetCalificacion(Pedido pedido) async {}
 
-
   Future<void> _mostrarSheetCalificacionProveedor(Pedido pedido) async {
     double rating = 5;
     _comentarioProveedorCtrl.clear();
@@ -1018,7 +1018,6 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   //   Pedido pedido,
   //   ItemPedido item,
   // ) async {}
-
 
   Future<void> _enviarCalificacionProveedor(
     Pedido pedido,

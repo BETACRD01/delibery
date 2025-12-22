@@ -7,7 +7,8 @@ class PantallaAdminRepartidores extends StatefulWidget {
   const PantallaAdminRepartidores({super.key});
 
   @override
-  State<PantallaAdminRepartidores> createState() => _PantallaAdminRepartidoresState();
+  State<PantallaAdminRepartidores> createState() =>
+      _PantallaAdminRepartidoresState();
 }
 
 class _PantallaAdminRepartidoresState extends State<PantallaAdminRepartidores> {
@@ -45,7 +46,9 @@ class _PantallaAdminRepartidoresState extends State<PantallaAdminRepartidores> {
 
   List<dynamic> _extraerLista(dynamic data) {
     if (data is Map<String, dynamic>) {
-      if (data['results'] is List<dynamic>) return data['results'] as List<dynamic>;
+      if (data['results'] is List<dynamic>) {
+        return data['results'] as List<dynamic>;
+      }
       final firstList = data.values.firstWhere(
         (v) => v is List<dynamic>,
         orElse: () => <dynamic>[],
@@ -62,8 +65,9 @@ class _PantallaAdminRepartidoresState extends State<PantallaAdminRepartidores> {
       _error = null;
     });
     try {
-      final Map<String, dynamic> data =
-          await _api.listar(search: _searchController.text.trim());
+      final Map<String, dynamic> data = await _api.listar(
+        search: _searchController.text.trim(),
+      );
       final lista = _extraerLista(data);
       setState(() {
         _items = lista;
@@ -122,47 +126,53 @@ class _PantallaAdminRepartidoresState extends State<PantallaAdminRepartidores> {
             child: _cargando
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(child: Text(_error!))
-                    : RefreshIndicator(
-                      onRefresh: _cargar,
-                      child: _items.isEmpty
-                          ? const Center(child: Text('No hay repartidores'))
-                          : ListView.separated(
-                                itemCount: _items.length,
-                                separatorBuilder: (_, __) => const Divider(height: 1),
-                                itemBuilder: (context, index) {
-                                  final r = _items[index] as Map<String, dynamic>;
-                                  final nombre = r['usuario_nombre'] ?? 'Repartidor';
-                                  final email = r['usuario_email'] ?? 'Sin email';
-                                  final verificado = r['verificado'] == true;
-                                  final activo = r['activo'] != false;
-                                  final estado = r['estado'] ?? 'N/A';
-                                  return ListTile(
-                                    title: Text(nombre),
-                                    subtitle: Text('$email • Estado: $estado'),
-                                    trailing: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          verificado ? 'Verificado' : 'Pendiente',
-                                          style: TextStyle(
-                                            color: verificado ? DashboardColors.verde : DashboardColors.naranja,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          activo ? 'Activo' : 'Inactivo',
-                                          style: TextStyle(
-                                            color: activo ? DashboardColors.azul : DashboardColors.rojo,
-                                          ),
-                                        ),
-                                      ],
+                ? Center(child: Text(_error!))
+                : RefreshIndicator(
+                    onRefresh: _cargar,
+                    child: _items.isEmpty
+                        ? const Center(child: Text('No hay repartidores'))
+                        : ListView.separated(
+                            itemCount: _items.length,
+                            separatorBuilder: (_, _) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final r = _items[index] as Map<String, dynamic>;
+                              final nombre =
+                                  r['usuario_nombre'] ?? 'Repartidor';
+                              final email = r['usuario_email'] ?? 'Sin email';
+                              final verificado = r['verificado'] == true;
+                              final activo = r['activo'] != false;
+                              final estado = r['estado'] ?? 'N/A';
+                              return ListTile(
+                                title: Text(nombre),
+                                subtitle: Text('$email • Estado: $estado'),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      verificado ? 'Verificado' : 'Pendiente',
+                                      style: TextStyle(
+                                        color: verificado
+                                            ? DashboardColors.verde
+                                            : DashboardColors.naranja,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  );
-                                },
-                              ),
-                      ),
+                                    Text(
+                                      activo ? 'Activo' : 'Inactivo',
+                                      style: TextStyle(
+                                        color: activo
+                                            ? DashboardColors.azul
+                                            : DashboardColors.rojo,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
           ),
         ],
       ),

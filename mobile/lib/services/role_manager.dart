@@ -13,11 +13,11 @@ export 'roles_service.dart' show RolUsuario;
 
 /// Estados posibles de un rol
 enum RoleStatus {
-  active,      // Rol activo actualmente
-  approved,    // Aprobado pero no activo
-  pending,     // Solicitud en revisión
-  rejected,    // Solicitud rechazada
-  notRequested // No se ha solicitado
+  active, // Rol activo actualmente
+  approved, // Aprobado pero no activo
+  pending, // Solicitud en revisión
+  rejected, // Solicitud rechazada
+  notRequested, // No se ha solicitado
 }
 
 /// Información completa de un rol
@@ -36,7 +36,8 @@ class RoleInfo {
     this.statusDate,
   });
 
-  bool get canActivate => status == RoleStatus.approved || status == RoleStatus.active;
+  bool get canActivate =>
+      status == RoleStatus.approved || status == RoleStatus.active;
   bool get isActive => status == RoleStatus.active;
   bool get isPending => status == RoleStatus.pending;
   bool get isRejected => status == RoleStatus.rejected;
@@ -79,6 +80,7 @@ class RoleManager extends ChangeNotifier {
   bool _isChangingRole = false;
   String? _error;
   DateTime? _lastSync;
+  Future<void>? _initFuture;
 
   // Getters
   AppRole get activeRole => _activeRole;
@@ -90,18 +92,28 @@ class RoleManager extends ChangeNotifier {
   bool get isChangingRole => _isChangingRole;
   String? get error => _error;
   DateTime? get lastSync => _lastSync;
-  bool get needsSync => _lastSync == null ||
-      DateTime.now().difference(_lastSync!).inMinutes > 5;
+  bool get needsSync =>
+      _lastSync == null || DateTime.now().difference(_lastSync!).inMinutes > 5;
 
   /// Inicializa el gestor de roles
   /// Debe llamarse al inicio de la app
   Future<void> initialize() async {
-    if (_isLoading) return;
+    if (_isLoading && _initFuture != null) {
+      return _initFuture!;
+    }
+    if (_lastSync != null && !needsSync) {
+      return;
+    }
 
     _isLoading = true;
     _error = null;
     notifyListeners();
 
+    _initFuture = _initializeInternal();
+    return _initFuture!;
+  }
+
+  Future<void> _initializeInternal() async {
     try {
       // 1. Cargar rol activo del caché local
       final cachedRole = await _roleStorage.getRole();
@@ -111,16 +123,15 @@ class RoleManager extends ChangeNotifier {
 
       // 2. Sincronizar con el servidor
       await _syncWithServer();
-
-      _isLoading = false;
-      notifyListeners();
     } catch (e) {
       _error = 'Error al inicializar roles: $e';
-      _isLoading = false;
-      notifyListeners();
 
       // Fallback: usar rol del caché aunque haya error de red
-      debugPrint('⚠️ RoleManager: Error en inicialización, usando caché local');
+      debugPrint('RoleManager: Error en inicialización, usando caché local');
+    } finally {
+      _isLoading = false;
+      _initFuture = null;
+      notifyListeners();
     }
   }
 
@@ -146,7 +157,7 @@ class RoleManager extends ChangeNotifier {
       _lastSync = DateTime.now();
       _error = null;
     } catch (e) {
-      debugPrint('⚠️ RoleManager: Error sincronizando con servidor: $e');
+      debugPrint('RoleManager: Error sincronizando con servidor: $e');
       rethrow;
     }
   }
@@ -179,8 +190,9 @@ class RoleManager extends ChangeNotifier {
           estado = roleData.estado;
         } else if (roleData is Map) {
           // roleData es un Map (fallback para compatibilidad)
-          roleName = roleData['nombre']?.toString().toUpperCase() ??
-                     roleData.toString().toUpperCase();
+          roleName =
+              roleData['nombre']?.toString().toUpperCase() ??
+              roleData.toString().toUpperCase();
           estado = roleData['estado']?.toString();
         } else {
           // Fallback: convertir a string
@@ -217,7 +229,9 @@ class RoleManager extends ChangeNotifier {
     // El rol de usuario siempre está aprobado
     _roles[AppRole.user] = RoleInfo(
       role: AppRole.user,
-      status: _activeRole == AppRole.user ? RoleStatus.active : RoleStatus.approved,
+      status: _activeRole == AppRole.user
+          ? RoleStatus.active
+          : RoleStatus.approved,
       displayName: roleToDisplay(AppRole.user),
     );
   }
@@ -226,12 +240,12 @@ class RoleManager extends ChangeNotifier {
   /// Retorna true si el cambio fue exitoso
   Future<bool> switchRole(AppRole newRole) async {
     if (_isChangingRole) {
-      debugPrint('⚠️ RoleManager: Cambio de rol ya en progreso');
+      debugPrint('RoleManager: Cambio de rol ya en progreso');
       return false;
     }
 
     if (newRole == _activeRole) {
-      debugPrint('ℹ️ RoleManager: Ya estás en el rol ${roleToDisplay(newRole)}');
+      debugPrint('RoleManager: Ya estás en el rol ${roleToDisplay(newRole)}');
       return true; // No es error, simplemente ya está activo
     }
 
@@ -251,7 +265,9 @@ class RoleManager extends ChangeNotifier {
     final previousRole = _activeRole;
 
     try {
-      debugPrint('🔄 RoleManager: Cambiando rol de ${roleToDisplay(previousRole)} a ${roleToDisplay(newRole)}');
+      debugPrint(
+        'RoleManager: Cambiando rol de ${roleToDisplay(previousRole)} a ${roleToDisplay(newRole)}',
+      );
 
       // 1. Cambiar rol en el servidor
       final response = await _rolesService.cambiarRolActivo(roleToApi(newRole));
@@ -282,20 +298,17 @@ class RoleManager extends ChangeNotifier {
         );
       }
       if (_roles[newRole] != null) {
-        _roles[newRole] = _roles[newRole]!.copyWith(
-          status: RoleStatus.active,
-        );
+        _roles[newRole] = _roles[newRole]!.copyWith(status: RoleStatus.active);
       }
 
       _lastSync = DateTime.now();
       _isChangingRole = false;
       notifyListeners();
 
-      debugPrint('✅ RoleManager: Cambio de rol exitoso');
+      debugPrint('RoleManager: Cambio de rol exitoso');
       return true;
-
     } catch (e) {
-      debugPrint('❌ RoleManager: Error cambiando rol: $e');
+      debugPrint('RoleManager: Error cambiando rol: $e');
 
       // Rollback: restaurar rol anterior
       _activeRole = previousRole;
@@ -309,7 +322,12 @@ class RoleManager extends ChangeNotifier {
 
   /// Recarga el estado de roles desde el servidor
   Future<void> refresh() async {
-    if (_isLoading) return;
+    if (_isLoading) {
+      if (_initFuture != null) {
+        await _initFuture!;
+      }
+      return;
+    }
 
     _isLoading = true;
     _error = null;
@@ -338,6 +356,7 @@ class RoleManager extends ChangeNotifier {
     _roles.clear();
     _lastSync = null;
     _error = null;
+    _initFuture = null;
     await _roleStorage.clearRole();
     notifyListeners();
   }

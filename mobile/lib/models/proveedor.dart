@@ -50,6 +50,12 @@ class ProveedorModel {
   final double comisionPorcentaje;
 
   // ════════════════════════════════════════════════════════════════════════
+  // CALIFICACIONES
+  // ════════════════════════════════════════════════════════════════════════
+  final double calificacionPromedio;
+  final int totalResenas;
+
+  // ════════════════════════════════════════════════════════════════════════
   // HORARIOS
   // ════════════════════════════════════════════════════════════════════════
   final String? horarioApertura;
@@ -95,6 +101,8 @@ class ProveedorModel {
     this.longitud,
     required this.activo,
     this.comisionPorcentaje = 0.0,
+    this.calificacionPromedio = 0.0,
+    this.totalResenas = 0,
     this.horarioApertura,
     this.horarioCierre,
     this.estaAbierto,
@@ -160,6 +168,11 @@ class ProveedorModel {
         // Configuración
         activo: _toBool(json['activo']) ?? true,
         comisionPorcentaje: _parseDouble(json['comision_porcentaje']) ?? 0.0,
+        calificacionPromedio:
+            _parseDouble(json['calificacion_promedio']) ??
+                _parseDouble(json['rating_promedio']) ??
+                0.0,
+        totalResenas: _toInt(json['total_resenas']) ?? 0,
 
         // Horarios
         horarioApertura: _toString(json['horario_apertura']),
@@ -205,6 +218,8 @@ class ProveedorModel {
       'longitud': longitud,
       'activo': activo,
       // comision_porcentaje omitido: proveedor ya no maneja comisiones desde app
+      'calificacion_promedio': calificacionPromedio,
+      'total_resenas': totalResenas,
       'horario_apertura': horarioApertura,
       'horario_cierre': horarioCierre,
       'logo': logo,
@@ -274,6 +289,8 @@ class ProveedorModel {
     double? longitud,
     bool? activo,
     double? comisionPorcentaje,
+    double? calificacionPromedio,
+    int? totalResenas,
     String? horarioApertura,
     String? horarioCierre,
     bool? estaAbierto,
@@ -302,6 +319,8 @@ class ProveedorModel {
       longitud: longitud ?? this.longitud,
       activo: activo ?? this.activo,
       comisionPorcentaje: comisionPorcentaje ?? this.comisionPorcentaje,
+      calificacionPromedio: calificacionPromedio ?? this.calificacionPromedio,
+      totalResenas: totalResenas ?? this.totalResenas,
       horarioApertura: horarioApertura ?? this.horarioApertura,
       horarioCierre: horarioCierre ?? this.horarioCierre,
       estaAbierto: estaAbierto ?? this.estaAbierto,
@@ -451,6 +470,8 @@ class ProveedorListModel {
   final String? ciudad;
   final bool activo;
   final bool verificado;
+  final double calificacionPromedio;
+  final int totalResenas;
   final bool? estaAbierto;
   final String? logo;
   final String? horarioApertura;
@@ -469,6 +490,8 @@ class ProveedorListModel {
     this.ciudad,
     required this.activo,
     required this.verificado,
+    this.calificacionPromedio = 0.0,
+    this.totalResenas = 0,
     this.estaAbierto,
     this.logo,
     this.horarioApertura,
@@ -491,6 +514,9 @@ class ProveedorListModel {
         ciudad: ProveedorModel._toString(json['ciudad']),
         activo: ProveedorModel._toBool(json['activo']) ?? true,
         verificado: ProveedorModel._toBool(json['verificado']) ?? false,
+        calificacionPromedio:
+            ProveedorModel._parseDouble(json['calificacion_promedio']) ?? 0.0,
+        totalResenas: ProveedorModel._toInt(json['total_resenas']) ?? 0,
         estaAbierto: ProveedorModel._toBool(json['esta_abierto']),
         logo: ProveedorModel._toString(json['logo']),
         horarioApertura: ProveedorModel._toString(json['horario_apertura']),

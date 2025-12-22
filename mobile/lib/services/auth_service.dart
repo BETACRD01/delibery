@@ -3,6 +3,12 @@ import 'dart:developer' as developer;
 import '../apis/subapis/http_client.dart';
 import '../config/api_config.dart';
 import '../apis/helpers/api_exception.dart';
+import '../controllers/user/home_controller.dart';
+import 'core/cache/cache_manager.dart';
+import 'repartidor_service.dart';
+import 'usuarios_service.dart';
+import 'role_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ============================================================================
 // USER INFO MODEL
@@ -147,6 +153,18 @@ class AuthService {
       _log('Advertencia logout: $e');
     } finally {
       await _client.clearTokens();
+      try {
+        CacheManager.instance.clear();
+        UsuarioService().limpiarCache();
+        RepartidorService().limpiarCache();
+        HomeController.limpiarCacheMemoria();
+        await RoleManager().logout();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('historial_busqueda');
+        await prefs.remove('inbox_notificaciones');
+      } catch (e) {
+        _log('Advertencia limpiando cache local: $e');
+      }
     }
   }
 

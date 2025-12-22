@@ -49,14 +49,16 @@ class _PantallaAdminUsuariosState extends State<PantallaAdminUsuarios> {
       _error = null;
     });
     try {
-      final data = await _api.buscarUsuarios(search: _searchController.text.trim());
+      final data = await _api.buscarUsuarios(
+        search: _searchController.text.trim(),
+      );
       final results = data['results'] as List? ?? [];
       final rawCount = data['count'];
       final parsedCount = rawCount is num
           ? rawCount.toInt()
           : rawCount is String
-              ? int.tryParse(rawCount)
-              : null;
+          ? int.tryParse(rawCount)
+          : null;
       final total = parsedCount ?? results.length;
       setState(() {
         _usuarios = results;
@@ -108,25 +110,27 @@ class _PantallaAdminUsuariosState extends State<PantallaAdminUsuarios> {
             child: _cargando
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(child: Text(_error!))
-                    : RefreshIndicator(
-                        onRefresh: _cargar,
-                        child: ListView.separated(
-                          itemCount: _usuarios.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final u = _usuarios[index] as Map<String, dynamic>;
-                            final email = u['email'] ?? u['usuario_email'] ?? 'Sin email';
-                            final nombre = u['nombre'] ?? u['usuario_nombre'] ?? 'Usuario';
-                            final rol = u['rol_activo'] ?? u['rol'] ?? 'SIN ROL';
-                            return ListTile(
-                              title: Text(nombre),
-                              subtitle: Text('$email • Rol: $rol'),
-                              trailing: Text('ID: ${u['id']}'),
-                            );
-                          },
-                        ),
-                      ),
+                ? Center(child: Text(_error!))
+                : RefreshIndicator(
+                    onRefresh: _cargar,
+                    child: ListView.separated(
+                      itemCount: _usuarios.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final u = _usuarios[index] as Map<String, dynamic>;
+                        final email =
+                            u['email'] ?? u['usuario_email'] ?? 'Sin email';
+                        final nombre =
+                            u['nombre'] ?? u['usuario_nombre'] ?? 'Usuario';
+                        final rol = u['rol_activo'] ?? u['rol'] ?? 'SIN ROL';
+                        return ListTile(
+                          title: Text(nombre),
+                          subtitle: Text('$email • Rol: $rol'),
+                          trailing: Text('ID: ${u['id']}'),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),

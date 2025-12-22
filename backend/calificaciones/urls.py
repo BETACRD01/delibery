@@ -1,6 +1,6 @@
 # calificaciones/urls.py
 
-from django.urls import path, include
+from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 from .views import CalificacionViewSet, TipoCalificacionView
 
@@ -10,6 +10,18 @@ router.register(r'', CalificacionViewSet, basename='calificacion')
 urlpatterns = [
     # Tipos de calificación (antes del router para evitar conflictos)
     path('tipos/', TipoCalificacionView.as_view({'get': 'list'}), name='tipos-calificacion'),
+
+    # Calificaciones por entidad (producto/cliente/repartidor/proveedor)
+    re_path(
+        r'^(?P<entity_type>producto|cliente|repartidor|proveedor)/(?P<entity_id>\d+)/resumen/$',
+        CalificacionViewSet.as_view({'get': 'resumen_entidad'}),
+        name='calificaciones-resumen-entidad',
+    ),
+    re_path(
+        r'^(?P<entity_type>producto|cliente|repartidor|proveedor)/(?P<entity_id>\d+)/$',
+        CalificacionViewSet.as_view({'get': 'por_entidad'}),
+        name='calificaciones-entidad',
+    ),
     
     # Router principal
     path('', include(router.urls)),

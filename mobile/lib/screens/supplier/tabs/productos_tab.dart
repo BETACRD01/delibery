@@ -38,7 +38,9 @@ class _ProductosTabState extends State<ProductosTab> {
       if (query.isNotEmpty && !nombre.contains(query)) return false;
       if (_statusFilter == 'activos' && !producto.disponible) return false;
       if (_statusFilter == 'agotados' && producto.disponible) return false;
-      if (_stockBajo && (producto.stock == null || producto.stock! > 5)) return false;
+      if (_stockBajo && (producto.stock == null || producto.stock! > 5)) {
+        return false;
+      }
       return true;
     }).toList();
     return filtrados;
@@ -80,7 +82,7 @@ class _ProductosTabState extends State<ProductosTab> {
         final productosFiltrados = _filtrarProductos(controller.productos);
 
         if (productosFiltrados.isEmpty) {
-        return _buildEmpty(context, controller);
+          return _buildEmpty(context, controller);
         }
 
         return Stack(
@@ -94,7 +96,10 @@ class _ProductosTabState extends State<ProductosTab> {
                   const SizedBox(height: 12),
                   _buildFiltros(),
                   const SizedBox(height: 16),
-                  ...productosFiltrados.map((producto) => _buildProductoCard(context, controller, producto)),
+                  ...productosFiltrados.map(
+                    (producto) =>
+                        _buildProductoCard(context, controller, producto),
+                  ),
                   const SizedBox(height: 80),
                 ],
               ),
@@ -105,7 +110,7 @@ class _ProductosTabState extends State<ProductosTab> {
                 left: 16,
                 right: 16,
                 child: _buildAccionesMasivas(controller),
-              )
+              ),
           ],
         );
       },
@@ -121,7 +126,9 @@ class _ProductosTabState extends State<ProductosTab> {
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
               hintText: 'Buscar productos',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               contentPadding: const EdgeInsets.symmetric(vertical: 0),
             ),
             onChanged: (_) => setState(() {}),
@@ -137,7 +144,7 @@ class _ProductosTabState extends State<ProductosTab> {
               color: _exito,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
-            BoxShadow(color: _exito.withValues(alpha: 0.3), blurRadius: 8),
+                BoxShadow(color: _exito.withValues(alpha: 0.3), blurRadius: 8),
               ],
             ),
             child: const Icon(Icons.add, color: Colors.white),
@@ -197,12 +204,19 @@ class _ProductosTabState extends State<ProductosTab> {
         background: Container(
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20),
-          decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: Colors.red.shade400,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: const Icon(Icons.delete_outline, color: Colors.white),
         ),
         onDismissed: (_) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Producto "${producto.nombre}" eliminado temporalmente')),
+            SnackBar(
+              content: Text(
+                'Producto "${producto.nombre}" eliminado temporalmente',
+              ),
+            ),
           );
         },
         child: Container(
@@ -224,43 +238,67 @@ class _ProductosTabState extends State<ProductosTab> {
           ),
           child: ListTile(
             leading: _buildImagenProducto(producto.imagenUrl),
-            title: Text(producto.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
+            title: Text(
+              producto.nombre,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('\$${_formatPrecio(producto.precio)}', style: const TextStyle(fontWeight: FontWeight.w700, color: _exito)),
+                Text(
+                  '\$${_formatPrecio(producto.precio)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: _exito,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Row(
-                    children: [
-                      if (producto.stock != null)
-                        Text('Stock: ${producto.stock}', style: const TextStyle(color: _textoSecundario, fontSize: 12)),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: producto.disponible
-                              ? _exito.withValues(alpha: 0.12)
-                              : Colors.red.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          producto.disponible ? 'Publicado' : 'Pausado',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: producto.disponible ? _exito : Colors.red,
-                          ),
+                  children: [
+                    if (producto.stock != null)
+                      Text(
+                        'Stock: ${producto.stock}',
+                        style: const TextStyle(
+                          color: _textoSecundario,
+                          fontSize: 12,
                         ),
                       ),
-                    ],
-                  ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: producto.disponible
+                            ? _exito.withValues(alpha: 0.12)
+                            : Colors.red.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        producto.disponible ? 'Publicado' : 'Pausado',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: producto.disponible ? _exito : Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             trailing: Switch(
               value: producto.disponible,
               onChanged: (_) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(producto.disponible ? 'Producto pausado' : 'Producto publicado')),
+                  SnackBar(
+                    content: Text(
+                      producto.disponible
+                          ? 'Producto pausado'
+                          : 'Producto publicado',
+                    ),
+                  ),
                 );
               },
             ),
@@ -269,7 +307,6 @@ class _ProductosTabState extends State<ProductosTab> {
       ),
     );
   }
-
 
   Widget _buildImagenProducto(String? imagen) {
     String? urlCompleta;
@@ -292,7 +329,7 @@ class _ProductosTabState extends State<ProductosTab> {
             ? Image.network(
                 urlCompleta,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                errorBuilder: (_, _, _) => _buildPlaceholder(),
               )
             : _buildPlaceholder(),
       ),
@@ -301,11 +338,7 @@ class _ProductosTabState extends State<ProductosTab> {
 
   Widget _buildPlaceholder() {
     return Center(
-      child: Icon(
-        Icons.image_outlined,
-        color: Colors.grey.shade400,
-        size: 24,
-      ),
+      child: Icon(Icons.image_outlined, color: Colors.grey.shade400, size: 24),
     );
   }
 
@@ -357,10 +390,7 @@ class _ProductosTabState extends State<ProductosTab> {
             const SizedBox(height: 20),
             Text(
               titulo,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -372,10 +402,7 @@ class _ProductosTabState extends State<ProductosTab> {
                 height: 1.4,
               ),
             ),
-            if (accion != null) ...[
-              const SizedBox(height: 24),
-              accion,
-            ],
+            if (accion != null) ...[const SizedBox(height: 24), accion],
           ],
         ),
       ),
@@ -407,10 +434,16 @@ class _ProductosTabState extends State<ProductosTab> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('${_seleccionados.length} seleccionados', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              '${_seleccionados.length} seleccionados',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             Row(
               children: [
-                TextButton(onPressed: _limpiarSeleccion, child: const Text('Limpiar')),
+                TextButton(
+                  onPressed: _limpiarSeleccion,
+                  child: const Text('Limpiar'),
+                ),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: () {

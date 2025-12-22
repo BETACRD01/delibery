@@ -26,6 +26,8 @@ class UbicacionService {
   Timer? _timer;
   StreamSubscription<Position>? _streamSubscription;
   Position? _ultimaUbicacion;
+  Position? _ultimaUbicacionEnviada;
+  DateTime? _ultimoEnvio;
   bool _estaActivo = false;
   ModoUbicacion _modoActual = ModoUbicacion.ninguno;
 
@@ -34,6 +36,7 @@ class UbicacionService {
   // ---------------------------------------------------------------------------
 
   Duration intervaloPeriodico = const Duration(seconds: 30);
+  Duration intervaloMinimoEnvio = const Duration(seconds: 20);
   int distanciaMinima = 5; // Metros
   LocationAccuracy precision = LocationAccuracy.high;
 
@@ -142,9 +145,20 @@ class UbicacionService {
       _log('Obteniendo ubicacion actual...');
       Position? position;
 
+      // Reusar ubicación reciente si fue obtenida hace poco.
+      if (_ultimaUbicacion?.timestamp != null) {
+        final age = DateTime.now().difference(_ultimaUbicacion!.timestamp);
+        if (age.inSeconds <= 10) {
+          _log('Usando ubicacion cacheada (${age.inSeconds}s)');
+          return _ultimaUbicacion;
+        }
+      }
+
       try {
         position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: precision,
+          locationSettings: LocationSettings(
+            accuracy: precision,
+          ),
         ).timeout(const Duration(seconds: 10), onTimeout: () {
           throw TimeoutException('Timeout obteniendo ubicacion');
         });
@@ -220,7 +234,9 @@ class UbicacionService {
   Future<void> _enviarUbicacionPeriodica() async {
     try {
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: precision,
+        locationSettings: LocationSettings(
+          accuracy: precision,
+        ),
       ).timeout(const Duration(seconds: 10), onTimeout: () {
         throw TimeoutException('Timeout en ubicacion periodica');
       });
@@ -291,6 +307,11 @@ class UbicacionService {
     try {
       if (!await _verificarAutenticacion()) return;
 
+      if (!_debeEnviarUbicacion(position)) {
+        _log('[DEBUG] Ubicacion ignorada (muy frecuente o sin cambio)');
+        return;
+      }
+
       _log('[DEBUG] Enviando ubicacion al backend: ${position.latitude}, ${position.longitude}');
 
       if (!_latitudEnEcuador(position.latitude)) {
@@ -303,6 +324,8 @@ class UbicacionService {
         longitud: position.longitude,
       );
 
+      _ultimaUbicacionEnviada = position;
+      _ultimoEnvio = DateTime.now();
       _log('[DEBUG] Ubicacion enviada exitosamente al backend');
       onUbicacionActualizada?.call(position);
     } on ApiException catch (e) {
@@ -323,6 +346,29 @@ class UbicacionService {
   }
 
   bool _latitudEnEcuador(double lat) => lat >= -5.0 && lat <= 2.0;
+
+  bool _debeEnviarUbicacion(Position position) {
+    if (_ultimoEnvio == null || _ultimaUbicacionEnviada == null) {
+      return true;
+    }
+
+    final elapsed = DateTime.now().difference(_ultimoEnvio!);
+    if (elapsed < intervaloMinimoEnvio) {
+      final last = _ultimaUbicacionEnviada!;
+      final distance = Geolocator.distanceBetween(
+        last.latitude,
+        last.longitude,
+        position.latitude,
+        position.longitude,
+      );
+
+      if (distance < distanciaMinima.toDouble()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   // ---------------------------------------------------------------------------
   // CONTROL Y GESTION

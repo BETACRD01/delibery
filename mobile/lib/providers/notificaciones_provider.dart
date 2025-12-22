@@ -6,7 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 /// Store unificado de notificaciones (push + internas)
 class NotificacionesProvider extends ChangeNotifier {
-  static const _storageKey = 'inbox_notificaciones';
+  static const storageKey = 'inbox_notificaciones';
 
   final List<NotificacionModel> _notificaciones = [];
   bool _cargando = false;
@@ -27,7 +27,7 @@ class NotificacionesProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getStringList(_storageKey) ?? [];
+      final stored = prefs.getStringList(storageKey) ?? [];
       _notificaciones
         ..clear()
         ..addAll(stored.map((s) => NotificacionModel.fromJson(jsonDecode(s))));
@@ -49,7 +49,16 @@ class NotificacionesProvider extends ChangeNotifier {
     final data = _notificaciones
         .map((n) => jsonEncode(n.toJson()))
         .toList(growable: false);
-    await prefs.setStringList(_storageKey, data);
+    await prefs.setStringList(storageKey, data);
+  }
+
+  Future<void> limpiar() async {
+    _notificaciones.clear();
+    _cargando = false;
+    _error = null;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(storageKey);
   }
 
   void agregar(NotificacionModel notificacion, {bool persistir = true}) {
