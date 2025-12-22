@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "com.deliber.app"
     compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.deliber.app"
@@ -15,7 +16,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
-        
         multiDexEnabled = true
     }
 
@@ -42,15 +42,28 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
-    
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
-
-    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
-
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    implementation("com.google.firebase:firebase-messaging-ktx:24.0.3")
+    implementation("com.google.firebase:firebase-analytics-ktx:22.1.2")
     implementation("androidx.multidex:multidex:2.0.1")
+}
+
+flutter {
+    source = "../.."
+}
+
+val flutterApkOut = rootProject.projectDir.parentFile
+    .resolve("build/app/outputs/flutter-apk")
+
+tasks.register<Copy>("copyFlutterDebugApk") {
+    from(layout.buildDirectory.dir("outputs/flutter-apk"))
+    into(flutterApkOut)
+    include("app-debug.apk")
+}
+
+tasks.matching { it.name == "assembleDebug" }.configureEach {
+    finalizedBy("copyFlutterDebugApk")
 }
