@@ -135,6 +135,12 @@ class DashboardController extends ChangeNotifier {
     }
   }
 
+  void marcarSolicitudesPendientesVistas() {
+    _solicitudesPendientesCount = 0;
+    _solicitudesPendientes = [];
+    notifyListeners();
+  }
+
   // ============================================
   // ACCIONES DE SOLICITUDES
   // ============================================

@@ -211,3 +211,26 @@ class RifaAPIViewTest(APITestCase):
 
         res_dup = self.client.post(url, {}, format="json")
         self.assertEqual(res_dup.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_crear_rifa_multipart_premios(self):
+        self.client.force_authenticate(self.admin)
+        url = reverse("rifas:rifa-list")
+        fecha_inicio = timezone.now() + timedelta(days=40)
+        fecha_fin = fecha_inicio + timedelta(days=15)
+
+        data = {
+            "titulo": "Rifa Multipart",
+            "descripcion": "Rifa con premios multipart",
+            "fecha_inicio": fecha_inicio.isoformat(),
+            "fecha_fin": fecha_fin.isoformat(),
+            "pedidos_minimos": 1,
+            "estado": EstadoRifa.CANCELADA,
+            "premios[0][posicion]": "1",
+            "premios[0][descripcion]": "Premio 1",
+            "premios[1][posicion]": "2",
+            "premios[1][descripcion]": "Premio 2",
+        }
+
+        res = self.client.post(url, data, format="multipart")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        self.assertEqual(res.data.get("titulo"), "Rifa Multipart")

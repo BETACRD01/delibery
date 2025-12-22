@@ -39,6 +39,38 @@ import '../screens/ratings/pantalla_calificaciones_entidad.dart';
 class Rutas {
   Rutas._();
 
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
+  static NavigatorState? get _nav => navigatorKey.currentState;
+
+  static Future<T?> _pushNamedFallback<T>(
+    String ruta, {
+    Object? arguments,
+  }) {
+    final nav = _nav;
+    if (nav == null) return Future.value(null);
+    return nav.pushNamed<T>(ruta, arguments: arguments);
+  }
+
+  static Future<T?> _pushReplacementNamedFallback<T>(
+    String ruta, {
+    Object? arguments,
+  }) {
+    final nav = _nav;
+    if (nav == null) return Future.value(null);
+    return nav.pushReplacementNamed<T, Object?>(ruta, arguments: arguments);
+  }
+
+  static Future<T?> _pushNamedAndRemoveUntilFallback<T>(
+    String ruta, {
+    bool rootNavigator = true,
+  }) {
+    final nav = _nav;
+    if (nav == null) return Future.value(null);
+    return nav.pushNamedAndRemoveUntil<T>(ruta, (_) => false);
+  }
+
   // ============================================================================
   // RUTAS - AUTH
   // ============================================================================
@@ -181,30 +213,47 @@ class Rutas {
   // ============================================================================
 
   static Future<T?> irA<T>(BuildContext context, String ruta) =>
-      Navigator.pushNamed<T>(context, ruta);
+      context.mounted ? Navigator.pushNamed<T>(context, ruta) : _pushNamedFallback<T>(ruta);
 
   static Future<T?> irAYLimpiar<T>(
     BuildContext context,
     String ruta, {
     bool rootNavigator = true,
   }) =>
-      Navigator.of(context, rootNavigator: rootNavigator)
-          .pushNamedAndRemoveUntil<T>(ruta, (_) => false);
+      context.mounted
+          ? Navigator.of(context, rootNavigator: rootNavigator)
+              .pushNamedAndRemoveUntil<T>(ruta, (_) => false)
+          : _pushNamedAndRemoveUntilFallback<T>(
+              ruta,
+              rootNavigator: rootNavigator,
+            );
 
   static Future<T?> reemplazarCon<T>(BuildContext context, String ruta) =>
-      Navigator.pushReplacementNamed<T, Object?>(context, ruta);
+      context.mounted
+          ? Navigator.pushReplacementNamed<T, Object?>(context, ruta)
+          : _pushReplacementNamedFallback<T>(ruta);
 
   static void volver(BuildContext context, [dynamic resultado]) {
-    if (Navigator.canPop(context)) Navigator.pop(context, resultado);
+    if (context.mounted && Navigator.canPop(context)) {
+      Navigator.pop(context, resultado);
+      return;
+    }
+    if (_nav?.canPop() ?? false) {
+      _nav?.pop(resultado);
+    }
   }
 
-  static bool puedeVolver(BuildContext context) => Navigator.canPop(context);
+  static bool puedeVolver(BuildContext context) =>
+      context.mounted ? Navigator.canPop(context) : (_nav?.canPop() ?? false);
 
   static Future<T?> irAConArgumentos<T>(
     BuildContext context,
     String ruta,
     Object args,
-  ) => Navigator.pushNamed<T>(context, ruta, arguments: args);
+  ) =>
+      context.mounted
+          ? Navigator.pushNamed<T>(context, ruta, arguments: args)
+          : _pushNamedFallback<T>(ruta, arguments: args);
 
   static T? obtenerArgumentos<T>(BuildContext context) =>
       ModalRoute.of(context)?.settings.arguments as T?;
@@ -266,12 +315,19 @@ class Rutas {
       irA(context, misPedidos);
 
   static Future<void> irAPedidoDetalle(BuildContext context, int pedidoId) =>
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PedidoDetalleScreen(pedidoId: pedidoId),
-        ),
-      );
+      context.mounted
+          ? Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PedidoDetalleScreen(pedidoId: pedidoId),
+              ),
+            )
+          : _nav?.push(
+              MaterialPageRoute(
+                builder: (_) => PedidoDetalleScreen(pedidoId: pedidoId),
+              ),
+            ) ??
+              Future.value(null);
 
   // Calificaciones
   static Future<void> irAMisCalificaciones(
@@ -279,16 +335,26 @@ class Rutas {
     String? entityType,
     int? entityId,
   }) =>
-      Navigator.pushNamed(
-        context,
-        ratingsMisCalificaciones,
-        arguments: entityType != null && entityId != null
-            ? {
-                'type': entityType,
-                'id': entityId,
-              }
-            : null,
-      );
+      context.mounted
+          ? Navigator.pushNamed(
+              context,
+              ratingsMisCalificaciones,
+              arguments: entityType != null && entityId != null
+                  ? {
+                      'type': entityType,
+                      'id': entityId,
+                    }
+                  : null,
+            )
+          : _pushNamedFallback(
+              ratingsMisCalificaciones,
+              arguments: entityType != null && entityId != null
+                  ? {
+                      'type': entityType,
+                      'id': entityId,
+                    }
+                  : null,
+            );
 
   static Future<void> irACalificacionesEntidad(
     BuildContext context, {
@@ -296,15 +362,24 @@ class Rutas {
     required int entityId,
     required String entityNombre,
   }) =>
-      Navigator.pushNamed(
-        context,
-        ratingsEntidad,
-        arguments: {
-          'type': entityType,
-          'id': entityId,
-          'nombre': entityNombre,
-        },
-      );
+      context.mounted
+          ? Navigator.pushNamed(
+              context,
+              ratingsEntidad,
+              arguments: {
+                'type': entityType,
+                'id': entityId,
+                'nombre': entityNombre,
+              },
+            )
+          : _pushNamedFallback(
+              ratingsEntidad,
+              arguments: {
+                'type': entityType,
+                'id': entityId,
+                'nombre': entityNombre,
+              },
+            );
 
   // ============================================================================
   // FLUJO RECUPERACIÓN PASSWORD
@@ -336,42 +411,79 @@ class Rutas {
     BuildContext context,
     Widget pantalla, {
     Duration duracion = const Duration(milliseconds: 300),
-  }) => Navigator.push<T>(
-    context,
-    PageRouteBuilder(
-      pageBuilder: (_, _, _) => pantalla,
-      transitionsBuilder: (_, anim, _, child) =>
-          FadeTransition(opacity: anim, child: child),
-      transitionDuration: duracion,
-    ),
-  );
+  }) =>
+      context.mounted
+          ? Navigator.push<T>(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, _, _) => pantalla,
+                transitionsBuilder: (_, anim, _, child) =>
+                    FadeTransition(opacity: anim, child: child),
+                transitionDuration: duracion,
+              ),
+            )
+          : _nav?.push<T>(
+                PageRouteBuilder(
+                  pageBuilder: (_, _, _) => pantalla,
+                  transitionsBuilder: (_, anim, _, child) =>
+                      FadeTransition(opacity: anim, child: child),
+                  transitionDuration: duracion,
+                ),
+              ) ??
+              Future.value(null);
 
   static Future<T?> irAConSlide<T>(BuildContext context, Widget pantalla) =>
-      Navigator.push<T>(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, _, _) => pantalla,
-          transitionsBuilder: (_, anim, _, child) => SlideTransition(
-            position: Tween(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(anim),
-            child: child,
-          ),
-        ),
-      );
+      context.mounted
+          ? Navigator.push<T>(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, _, _) => pantalla,
+                transitionsBuilder: (_, anim, _, child) => SlideTransition(
+                  position: Tween(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  ).animate(anim),
+                  child: child,
+                ),
+              ),
+            )
+          : _nav?.push<T>(
+                PageRouteBuilder(
+                  pageBuilder: (_, _, _) => pantalla,
+                  transitionsBuilder: (_, anim, _, child) => SlideTransition(
+                    position: Tween(
+                      begin: const Offset(0, 1),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                ),
+              ) ??
+              Future.value(null);
 
   static Future<T?> irAConScale<T>(BuildContext context, Widget pantalla) =>
-      Navigator.push<T>(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, _, _) => pantalla,
-          transitionsBuilder: (_, anim, _, child) => ScaleTransition(
-            scale: CurvedAnimation(parent: anim, curve: Curves.easeInOut),
-            child: child,
-          ),
-        ),
-      );
+      context.mounted
+          ? Navigator.push<T>(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, _, _) => pantalla,
+                transitionsBuilder: (_, anim, _, child) => ScaleTransition(
+                  scale: CurvedAnimation(parent: anim, curve: Curves.easeInOut),
+                  child: child,
+                ),
+              ),
+            )
+          : _nav?.push<T>(
+                PageRouteBuilder(
+                  pageBuilder: (_, _, _) => pantalla,
+                  transitionsBuilder: (_, anim, _, child) => ScaleTransition(
+                    scale:
+                        CurvedAnimation(parent: anim, curve: Curves.easeInOut),
+                    child: child,
+                  ),
+                ),
+              ) ??
+              Future.value(null);
 
   // ============================================================================
   // DIÁLOGOS Y MODALES
@@ -381,21 +493,40 @@ class Rutas {
     BuildContext context,
     Widget dialogo, {
     bool barrierDismissible = true,
-  }) => showDialog<T>(
-    context: context,
-    barrierDismissible: barrierDismissible,
-    builder: (_) => dialogo,
-  );
+  }) =>
+      context.mounted
+          ? showDialog<T>(
+              context: context,
+              barrierDismissible: barrierDismissible,
+              builder: (_) => dialogo,
+            )
+          : (navigatorKey.currentContext != null
+              ? showDialog<T>(
+                  context: navigatorKey.currentContext!,
+                  barrierDismissible: barrierDismissible,
+                  builder: (_) => dialogo,
+                )
+              : Future.value(null));
 
   static Future<T?> mostrarBottomSheet<T>(
     BuildContext context,
     Widget contenido,
-  ) => showModalBottomSheet<T>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => contenido,
-  );
+  ) =>
+      context.mounted
+          ? showModalBottomSheet<T>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => contenido,
+            )
+          : (navigatorKey.currentContext != null
+              ? showModalBottomSheet<T>(
+                  context: navigatorKey.currentContext!,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => contenido,
+                )
+              : Future.value(null));
 
   // ============================================================================
   // PERMISOS Y VALIDACIÓN

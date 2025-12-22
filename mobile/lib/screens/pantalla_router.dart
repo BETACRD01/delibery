@@ -46,7 +46,7 @@ class _PantallaRouterState extends State<PantallaRouter> {
         debugPrint('No autenticado - Redirigiendo a login');
         if (mounted) {
           // Usamos pushReplacementNamed para ir al login y evitar volver atrás
-          Navigator.pushReplacementNamed(context, '/login');
+          await Navigator.pushReplacementNamed(context, '/login');
         }
         return;
       }
@@ -155,7 +155,7 @@ class _PantallaRouterState extends State<PantallaRouter> {
     if (!mounted) return;
 
     // Navegación instantánea (sin animación de transición)
-    Navigator.pushReplacement(
+    await Navigator.pushReplacement(
       context,
       PageRouteBuilder(
         pageBuilder: (_, _, _) => destino,

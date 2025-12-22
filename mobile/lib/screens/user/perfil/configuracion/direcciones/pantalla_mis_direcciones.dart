@@ -411,9 +411,9 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
             children: [
               GooglePlaceAutoCompleteTextField(
                 textEditingController: _direccionController,
-                googleAPIKey: "AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA",
+                googleAPIKey: 'AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA',
                 debounceTime: 300,
-                countries: const ["ec"],
+                countries: const ['ec'],
                 isLatLngRequired: true,
                 inputDecoration: InputDecoration(
                   hintText: 'Ej: Av. Amazonas y 10 de Agosto',
@@ -492,7 +492,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
                       size: 18,
                     ),
                     title: Text(
-                      prediction.description ?? "",
+                      prediction.description ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

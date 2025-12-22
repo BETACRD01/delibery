@@ -64,7 +64,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
     // Pequeña pausa para que el usuario vea el éxito antes de cambiar
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
-      Rutas.irAVerificarCodigo(context, _emailController.text.trim());
+      await Rutas.irAVerificarCodigo(context, _emailController.text.trim());
     }
   }
 } on ApiException catch (e) {

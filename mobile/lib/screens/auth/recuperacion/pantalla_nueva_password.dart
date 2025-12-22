@@ -109,7 +109,7 @@ Future<void> _cambiarPassword() async {
       // Esperar 2 segundos y volver al login
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
-        Rutas.completarRecuperacionPassword(context);
+        await Rutas.completarRecuperacionPassword(context);
       }
     }
   } on ApiException catch (e) {

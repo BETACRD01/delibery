@@ -48,12 +48,20 @@ class _PantallaDashboardState extends State<PantallaDashboard>
               tabController: _tabController,
               solicitudesPendientesCount: controller.solicitudesPendientesCount,
               onRefresh: () => controller.cargarDatos(),
+              onSolicitudesTap: () async {
+                controller.marcarSolicitudesPendientesVistas();
+                await Rutas.irA(context, Rutas.adminSolicitudesRol);
+              },
             ),
             drawer: DashboardDrawer(
               usuario: controller.usuario,
               solicitudesPendientesCount: controller.solicitudesPendientesCount,
               onSeccionNoDisponible: _mostrarSeccionNoDisponible,
               onCerrarSesion: _cerrarSesion,
+              onSolicitudesTap: () async {
+                controller.marcarSolicitudesPendientesVistas();
+                await Rutas.irA(context, Rutas.adminSolicitudesRol);
+              },
             ),
             body: controller.loading
                 ? _buildCargando()
@@ -156,7 +164,7 @@ class _PantallaDashboardState extends State<PantallaDashboard>
       await SessionCleanup.clearProviders(context);
       await _controller.cerrarSesion();
       if (!mounted) return;
-      Rutas.irAYLimpiar(context, Rutas.login);
+      await Rutas.irAYLimpiar(context, Rutas.login);
     }
   }
 }

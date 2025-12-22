@@ -1,5 +1,6 @@
 // lib/screens/user/perfil/pantalla_perfil.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../../theme/jp_theme.dart';
@@ -138,7 +139,7 @@ class _PantallaPerfilState extends State<PantallaPerfil>
             PantallaEditarInformacion(perfil: _controller.perfil!),
       ),
     );
-    if (resultado == true) _recargarDatos();
+    if (resultado == true) await _recargarDatos();
   }
 
   void _editarFoto() async {
@@ -149,7 +150,7 @@ class _PantallaPerfilState extends State<PantallaPerfil>
             PantallaEditarFoto(fotoActual: _controller.perfil?.fotoPerfilUrl),
       ),
     );
-    if (resultado == true) _recargarDatos();
+    if (resultado == true) await _recargarDatos();
   }
 
   @override
@@ -760,15 +761,17 @@ class _PantallaPerfilState extends State<PantallaPerfil>
       '[Perfil][Rol] Solicitud de cambio: ${rolAnterior ?? "N/A"} -> $rolDestino',
     );
 
+    final roleManager = context.read<RoleManager>();
     _cambiandoRol = true;
-    showCupertinoDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CupertinoActivityIndicator()),
+    unawaited(
+      showCupertinoDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CupertinoActivityIndicator()),
+      ),
     );
 
     try {
-      final roleManager = context.read<RoleManager>();
       await roleManager.refresh();
       final destino = parseRole(rolDestino);
       final roleInfo = roleManager.getRoleInfo(destino);
@@ -777,7 +780,7 @@ class _PantallaPerfilState extends State<PantallaPerfil>
         if (mounted) Navigator.of(context, rootNavigator: true).pop();
         if (mounted) {
           final mensaje = roleManager.getStatusMessage(destino);
-          showCupertinoDialog(
+          await showCupertinoDialog(
             context: context,
             builder: (dialogContext) => CupertinoAlertDialog(
               title: const Text('Rol no disponible'),
@@ -816,7 +819,7 @@ class _PantallaPerfilState extends State<PantallaPerfil>
       debugPrint('[Perfil][Rol] Error al cambiar a $rolDestino: $e');
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
       if (mounted) {
-        showCupertinoDialog(
+        await showCupertinoDialog(
           context: context,
           builder: (dialogContext) => CupertinoAlertDialog(
             title: const Text('Error'),

@@ -37,7 +37,10 @@ class EstadisticasGrid extends StatelessWidget {
           '${controller.proveedoresPendientes} pendientes',
         ),
         InkWell(
-          onTap: () => Rutas.irA(context, Rutas.adminSolicitudesRol),
+          onTap: () {
+            controller.marcarSolicitudesPendientesVistas();
+            Rutas.irA(context, Rutas.adminSolicitudesRol);
+          },
           borderRadius: BorderRadius.circular(16),
           child: _buildCardEstadistica(
             'Solicitudes',

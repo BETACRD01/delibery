@@ -550,6 +550,8 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
             return False
         if not obj.repartidor:
             return False
+        if getattr(obj.repartidor, 'user_id', None) == getattr(user, 'id', None):
+            return False
 
         try:
           from calificaciones.models import Calificacion, TipoCalificacion
@@ -600,6 +602,8 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
         if obj.estado != EstadoPedido.ENTREGADO:
             return False
         if not obj.proveedor:
+            return False
+        if getattr(obj.proveedor, 'user_id', None) == getattr(user, 'id', None):
             return False
 
         try:

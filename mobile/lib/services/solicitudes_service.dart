@@ -139,16 +139,16 @@ class SolicitudesService {
         // Tomar el primer error de campo disponible
         final primerKey = e.errors.keys.first;
         final primerValor = e.errors[primerKey];
-        mensajeLimpio = "$primerKey: $primerValor";
+        mensajeLimpio = '$primerKey: $primerValor';
       }
     }
 
     // Limpieza de formato de lista Python ['...']
     mensajeLimpio = mensajeLimpio
-        .replaceAll("['", "")
-        .replaceAll("']", "")
-        .replaceAll('["', "")
-        .replaceAll('"]', "");
+        .replaceAll("['", '')
+        .replaceAll("']", '')
+        .replaceAll('["', '')
+        .replaceAll('"]', '');
 
     throw Exception(mensajeLimpio);
   }

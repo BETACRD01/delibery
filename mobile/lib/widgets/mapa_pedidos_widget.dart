@@ -362,12 +362,15 @@ class _MapaPedidosScreenState extends State<MapaPedidosScreen> {
   }
 
   Future<void> _aceptarPedido(int pedidoId) async {
-    try {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+      try {
+        if (!mounted) return;
+      unawaited(
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
+        ),
       );
 
       await _service.aceptarPedido(pedidoId);

@@ -723,7 +723,7 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
       if (!mounted) return;
 
       String errorMsg = e.toString();
-      if (errorMsg.startsWith("Exception: ")) {
+      if (errorMsg.startsWith('Exception: ')) {
         errorMsg = errorMsg.substring(11);
       }
 

@@ -598,7 +598,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
         _mensajeController.clear();
       });
 
-      showCupertinoDialog(
+      await showCupertinoDialog(
         context: context,
         barrierDismissible: true,
         builder: (ctx) => CupertinoAlertDialog(

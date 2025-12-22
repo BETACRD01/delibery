@@ -191,7 +191,7 @@ class _PantallaSolicitudesRolState extends State<PantallaSolicitudesRol>
           setState(() {
             _solicitudSeleccionada = null;
           });
-          _cargarSolicitudes();
+          await _cargarSolicitudes();
         }
       } catch (e) {
         if (mounted) {
@@ -275,7 +275,7 @@ class _PantallaSolicitudesRolState extends State<PantallaSolicitudesRol>
           setState(() {
             _solicitudSeleccionada = null;
           });
-          _cargarSolicitudes();
+          await _cargarSolicitudes();
         }
       } catch (e) {
         if (mounted) {
@@ -364,7 +364,7 @@ class _PantallaSolicitudesRolState extends State<PantallaSolicitudesRol>
           setState(() {
             _solicitudSeleccionada = null;
           });
-          _cargarSolicitudes();
+          await _cargarSolicitudes();
         }
       } catch (e) {
         if (mounted) {
@@ -447,7 +447,7 @@ class _PantallaSolicitudesRolState extends State<PantallaSolicitudesRol>
           setState(() {
             _solicitudSeleccionada = null;
           });
-          _cargarSolicitudes();
+          await _cargarSolicitudes();
         }
       } catch (e) {
         if (mounted) {

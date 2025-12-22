@@ -60,6 +60,8 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
       final rifa = await _api.obtenerRifa(widget.rifaId);
       final participantes = await _api.obtenerParticipantes(widget.rifaId);
 
+      if (!mounted) return;
+
       setState(() {
         _rifa = rifa;
         _participantes = participantes['participantes'] ?? [];
@@ -71,6 +73,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
         _pedidosMinCtrl.text = (rifa['pedidos_minimos'] ?? 3).toString();
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Error al cargar detalles';
         _cargando = false;
@@ -79,10 +82,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
   }
 
   Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
+    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
       setState(() => _nuevaImagen = File(picked.path));
     }
@@ -102,24 +102,18 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Rifa actualizada correctamente'),
-            backgroundColor: DashboardColors.verde,
-          ),
+          const SnackBar(content: Text('Rifa actualizada correctamente'), backgroundColor: DashboardColors.verde),
         );
         setState(() {
           _editando = false;
           _nuevaImagen = null;
         });
-        _cargarDetalle();
+        await _cargarDetalle();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error al actualizar rifa'),
-            backgroundColor: DashboardColors.rojo,
-          ),
+          const SnackBar(content: Text('Error al actualizar rifa'), backgroundColor: DashboardColors.rojo),
         );
       }
     }
@@ -130,19 +124,12 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Realizar sorteo'),
-        content: const Text(
-          '¿Estás seguro de realizar el sorteo ahora? Esta acción no se puede deshacer.',
-        ),
+        content: const Text('¿Estás seguro de realizar el sorteo ahora? Esta acción no se puede deshacer.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DashboardColors.verde,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: DashboardColors.verde),
             child: const Text('Realizar sorteo'),
           ),
         ],
@@ -156,10 +143,9 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
 
       if (mounted) {
         final premiosGanados = resultado['premios_ganados'] as List<dynamic>?;
-        final ganadores =
-            premiosGanados?.where((p) => p['ganador'] != null).toList() ?? [];
+        final ganadores = premiosGanados?.where((p) => p['ganador'] != null).toList() ?? [];
 
-        showDialog(
+        await showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Row(
@@ -185,22 +171,9 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _getNombrePosicion(posicion),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '${ganador['first_name']} ${ganador['last_name']}',
-                            ),
-                            Text(
-                              ganador['email'],
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
-                            ),
+                            Text(_getNombrePosicion(posicion), style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text('${ganador['first_name']} ${ganador['last_name']}'),
+                            Text(ganador['email'], style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                           ],
                         ),
                       );
@@ -208,23 +181,15 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                 ],
               ),
             ),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cerrar'),
-              ),
-            ],
+            actions: [ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar'))],
           ),
         );
-        _cargarDetalle();
+        await _cargarDetalle();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al realizar sorteo: ${e.toString()}'),
-            backgroundColor: DashboardColors.rojo,
-          ),
+          SnackBar(content: Text('Error al realizar sorteo: ${e.toString()}'), backgroundColor: DashboardColors.rojo),
         );
       }
     }
@@ -291,14 +256,8 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'editar',
-                  child: Text('Editar información básica'),
-                ),
-                const PopupMenuItem(
-                  value: 'sortear',
-                  child: Text('Realizar sorteo'),
-                ),
+                const PopupMenuItem(value: 'editar', child: Text('Editar información básica')),
+                const PopupMenuItem(value: 'sortear', child: Text('Realizar sorteo')),
               ],
             ),
         ],
@@ -310,18 +269,11 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: DashboardColors.rojo,
-                  ),
+                  const Icon(Icons.error_outline, size: 48, color: DashboardColors.rojo),
                   const SizedBox(height: 16),
                   Text(_error!, style: const TextStyle(fontSize: 16)),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _cargarDetalle,
-                    child: const Text('Reintentar'),
-                  ),
+                  ElevatedButton(onPressed: _cargarDetalle, child: const Text('Reintentar')),
                 ],
               ),
             )
@@ -341,11 +293,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                   const SizedBox(height: 16),
 
                   // Información básica
-                  if (_editando) ...[
-                    _buildFormularioEdicion(),
-                  ] else ...[
-                    _buildInformacionBasica(),
-                  ],
+                  if (_editando) ...[_buildFormularioEdicion()] else ...[_buildInformacionBasica()],
 
                   const SizedBox(height: 24),
 
@@ -374,17 +322,10 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: _nuevaImagen != null
-              ? Image.file(
-                  _nuevaImagen!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                )
+              ? Image.file(_nuevaImagen!, height: 200, width: double.infinity, fit: BoxFit.cover)
               : imagen != null && imagen.toString().isNotEmpty
               ? Image.network(
-                  imagen.toString().startsWith('http')
-                      ? imagen.toString()
-                      : '${ApiConfig.baseUrl}$imagen',
+                  imagen.toString().startsWith('http') ? imagen.toString() : '${ApiConfig.baseUrl}$imagen',
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -402,16 +343,9 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.image_not_supported,
-                          size: 48,
-                          color: Colors.grey,
-                        ),
+                        Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
                         SizedBox(height: 8),
-                        Text(
-                          'Imagen no disponible',
-                          style: TextStyle(color: Colors.grey),
-                        ),
+                        Text('Imagen no disponible', style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   ),
@@ -428,10 +362,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
             onPressed: _pickImage,
             icon: const Icon(Icons.image),
             label: const Text('Cambiar imagen'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DashboardColors.azul,
-              foregroundColor: Colors.white,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: DashboardColors.azul, foregroundColor: Colors.white),
           ),
         ],
       ],
@@ -443,16 +374,10 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: _colorEstado(estado),
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: BoxDecoration(color: _colorEstado(estado), borderRadius: BorderRadius.circular(20)),
       child: Text(
         _nombreEstado(estado),
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -461,31 +386,13 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _rifa!['titulo'] ?? 'Sin título',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
+        Text(_rifa!['titulo'] ?? 'Sin título', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        Text(
-          _rifa!['descripcion'] ?? 'Sin descripción',
-          style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-        ),
+        Text(_rifa!['descripcion'] ?? 'Sin descripción', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
         const SizedBox(height: 16),
-        _buildInfoRow(
-          Icons.checklist,
-          'Pedidos mínimos',
-          '${_rifa!['pedidos_minimos'] ?? 3}',
-        ),
-        _buildInfoRow(
-          Icons.calendar_today,
-          'Fecha inicio',
-          _formatFecha(_rifa!['fecha_inicio']),
-        ),
-        _buildInfoRow(
-          Icons.event,
-          'Fecha fin',
-          _formatFecha(_rifa!['fecha_fin']),
-        ),
+        _buildInfoRow(Icons.checklist, 'Pedidos mínimos', '${_rifa!['pedidos_minimos'] ?? 3}'),
+        _buildInfoRow(Icons.calendar_today, 'Fecha inicio', _formatFecha(_rifa!['fecha_inicio'])),
+        _buildInfoRow(Icons.event, 'Fecha fin', _formatFecha(_rifa!['fecha_fin'])),
       ],
     );
   }
@@ -586,25 +493,16 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Premios',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('Premios', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: DashboardColors.morado.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${premios.length} premio${premios.length != 1 ? 's' : ''}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: DashboardColors.morado,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: DashboardColors.morado),
                   ),
                 ),
               ],
@@ -632,17 +530,12 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                   color: ganador != null ? Colors.amber[50] : null,
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: ganador != null
-                          ? Colors.amber
-                          : DashboardColors.morado,
+                      backgroundColor: ganador != null ? Colors.amber : DashboardColors.morado,
                       child: ganador != null
                           ? const Icon(Icons.emoji_events, color: Colors.white)
                           : Text(
                               posicion.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
                     ),
                     title: Text(_getNombrePosicion(posicion)),
@@ -654,10 +547,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                           const SizedBox(height: 4),
                           Text(
                             'Ganador: ${ganador['first_name']} ${ganador['last_name']}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber),
                           ),
                         ],
                       ],
@@ -681,20 +571,12 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Estadísticas',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            const Text('Estadísticas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildEstadistica(
-                  Icons.people,
-                  'Participantes',
-                  totalParticipantes.toString(),
-                  DashboardColors.azul,
-                ),
+                _buildEstadistica(Icons.people, 'Participantes', totalParticipantes.toString(), DashboardColors.azul),
                 _buildEstadistica(
                   Icons.checklist,
                   'Pedidos mínimos',
@@ -709,23 +591,14 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
     );
   }
 
-  Widget _buildEstadistica(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
+  Widget _buildEstadistica(IconData icon, String label, String value, Color color) {
     return Column(
       children: [
         Icon(icon, size: 32, color: color),
         const SizedBox(height: 4),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
         ),
         Text(label, style: TextStyle(color: Colors.grey[600])),
       ],
@@ -749,10 +622,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text(
-                    'No hay participantes aún',
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  child: Text('No hay participantes aún', style: TextStyle(color: Colors.grey)),
                 ),
               )
             else
@@ -771,30 +641,21 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                     leading: CircleAvatar(
                       backgroundColor: DashboardColors.azul,
                       child: Text(
-                        '${usuario['first_name'][0]}${usuario['last_name'][0]}'
-                            .toUpperCase(),
+                        '${usuario['first_name'][0]}${usuario['last_name'][0]}'.toUpperCase(),
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
-                    title: Text(
-                      '${usuario['first_name']} ${usuario['last_name']}',
-                    ),
+                    title: Text('${usuario['first_name']} ${usuario['last_name']}'),
                     subtitle: Text(usuario['email']),
                     trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: DashboardColors.verde.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '$pedidos pedidos',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: DashboardColors.verde,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: DashboardColors.verde),
                       ),
                     ),
                   );

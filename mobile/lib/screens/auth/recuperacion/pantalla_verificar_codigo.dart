@@ -115,7 +115,7 @@ Future<void> _verificarCodigo() async {
 
     if (mounted) {
       // ✅ Código válido, ir a pantalla de nueva contraseña
-      Rutas.irANuevaPassword(context, email: _email!, codigo: codigo);
+      await Rutas.irANuevaPassword(context, email: _email!, codigo: codigo);
     }
   } on ApiException catch (e) {
     if (mounted) {

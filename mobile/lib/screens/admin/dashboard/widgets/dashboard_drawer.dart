@@ -8,6 +8,7 @@ class DashboardDrawer extends StatelessWidget {
   final int solicitudesPendientesCount;
   final Function(String) onSeccionNoDisponible;
   final VoidCallback onCerrarSesion;
+  final VoidCallback onSolicitudesTap;
 
   const DashboardDrawer({
     super.key,
@@ -15,6 +16,7 @@ class DashboardDrawer extends StatelessWidget {
     required this.solicitudesPendientesCount,
     required this.onSeccionNoDisponible,
     required this.onCerrarSesion,
+    required this.onSolicitudesTap,
   });
 
   @override
@@ -175,7 +177,7 @@ class DashboardDrawer extends StatelessWidget {
           : null,
       onTap: () {
         Navigator.pop(context);
-        Rutas.irA(context, Rutas.adminSolicitudesRol);
+        onSolicitudesTap();
       },
     );
   }

@@ -21,7 +21,7 @@ class RoleRouter {
     AppRole role,
   ) async {
     final ruta = routeForRole(role);
-    Navigator.of(context, rootNavigator: true)
+    await Navigator.of(context, rootNavigator: true)
         .pushNamedAndRemoveUntil(ruta, (route) => false);
   }
 }

@@ -70,7 +70,7 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
       await _usuarioService.eliminarDireccion(dir.id);
       if (mounted) {
         ToastService().showSuccess(context, 'Dirección eliminada correctamente');
-        _cargarDirecciones();
+        await _cargarDirecciones();
       }
     } catch (e) {
       if (!mounted) return;

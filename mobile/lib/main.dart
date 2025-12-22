@@ -43,13 +43,16 @@ void main() async {
   }());
 
   await _initFirebase();
-  await [Permission.location, Permission.notification].request();
-  await ApiConfig.initialize().catchError((e) => debugPrint('Error red: $e'));
 
   final apiClient = ApiClient();
-  await apiClient.loadTokens().catchError(
-    (e) => debugPrint('Error tokens: $e'),
-  );
+  final initFutures = <Future<void>>[
+    [Permission.location, Permission.notification]
+        .request()
+        .then((_) {}),
+    ApiConfig.initialize().catchError((e) => debugPrint('Error red: $e')),
+    apiClient.loadTokens().catchError((e) => debugPrint('Error tokens: $e')),
+  ];
+  await Future.wait(initFutures);
 
   if (apiClient.isAuthenticated && apiClient.accessToken != null) {
     await NotificationService().initialize().catchError(
@@ -86,14 +89,12 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final _navigatorKey = GlobalKey<NavigatorState>();
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_navigatorKey.currentContext != null) {
-        NotificationHandler().initialize(_navigatorKey.currentContext!);
+      if (Rutas.navigatorKey.currentContext != null) {
+        NotificationHandler().initialize(Rutas.navigatorKey.currentContext!);
       }
     });
   }
@@ -124,7 +125,7 @@ class _MyAppState extends State<MyApp> {
           supportedLocales: AppLocalizations.supportedLocales,
           locale: localeProvider.locale ?? const Locale('es'),
           theme: _buildTheme(),
-          navigatorKey: _navigatorKey,
+          navigatorKey: Rutas.navigatorKey,
           initialRoute: widget.initialRoute,
           routes: Rutas.obtenerRutas(),
           onGenerateRoute: _onGenerateRoute,

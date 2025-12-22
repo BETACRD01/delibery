@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +7,7 @@ import '../../../models/pedido_model.dart';
 import '../../../providers/proveedor_pedido.dart';
 import '../../../services/pago_service.dart';
 import 'pantalla_subir_comprobante.dart';
+import 'pantalla_ver_comprobante_usuario.dart';
 import '../../../widgets/ratings/dialogo_calificar_repartidor.dart';
 import '../../../widgets/ratings/dialogo_calificar_producto.dart';
 
@@ -54,14 +56,23 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final groupedBackground =
+        CupertinoColors.systemGroupedBackground.resolveFrom(context);
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: groupedBackground,
       appBar: AppBar(
-        title: Text('Pedido #${widget.pedidoId}'),
+        title: Text(
+          'Detalle del pedido',
+          style: TextStyle(
+            color: CupertinoColors.label.resolveFrom(context),
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: groupedBackground,
+        foregroundColor: CupertinoColors.label.resolveFrom(context),
       ),
       body: Consumer<PedidoProvider>(
         builder: (context, provider, child) {
@@ -334,27 +345,19 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
         : 0;
     final tiempoEstimado = envio?.tiempoEstimadoMins;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return _buildSurfaceCard(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Estado Actual',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -362,7 +365,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -384,9 +387,12 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
           // Resumen tipo factura: items + desglose
           if (pedido.items.isNotEmpty) ...[
             const Divider(height: 24),
-            const Text(
+            Text(
               'Productos',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.label.resolveFrom(context),
+              ),
             ),
             const SizedBox(height: 8),
             ...pedido.items.map((item) {
@@ -400,9 +406,10 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                       padding: const EdgeInsets.only(left: 8, bottom: 6),
                       child: Text(
                         comentario,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: CupertinoColors.secondaryLabel
+                              .resolveFrom(context),
                           fontStyle: FontStyle.italic,
                         ),
                       ),
@@ -436,24 +443,19 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   }
 
   Widget _buildDireccionesCard(Pedido pedido) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            if (pedido.direccionOrigen != null) ...[
-              _buildRowIcon(Icons.store, 'Retiro', pedido.direccionOrigen!),
-              const SizedBox(height: 12),
-            ],
-            _buildRowIcon(
-              Icons.location_on,
-              'Entrega',
-              pedido.direccionEntrega,
-            ),
+    return _buildSurfaceCard(
+      child: Column(
+        children: [
+          if (pedido.direccionOrigen != null) ...[
+            _buildRowIcon(Icons.store, 'Retiro', pedido.direccionOrigen!),
+            const SizedBox(height: 12),
           ],
-        ),
+          _buildRowIcon(
+            Icons.location_on,
+            'Entrega',
+            pedido.direccionEntrega,
+          ),
+        ],
       ),
     );
   }
@@ -462,7 +464,11 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
+        Icon(
+          icon,
+          size: 20,
+          color: CupertinoColors.secondaryLabel.resolveFrom(context),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -470,7 +476,10 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
             children: [
               Text(
                 label,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                ),
               ),
               Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
             ],
@@ -591,63 +600,81 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     VoidCallback? onWhatsapp,
     VoidCallback? onCall,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.1),
-          child: Icon(icono, color: color),
-        ),
-        title: Text(
-          titulo,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        subtitle: Text(
-          nombre,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+    return _buildSurfaceCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: 0.12),
+            child: Icon(icono, color: color),
           ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (onWhatsapp != null)
-              IconButton(
-                icon: const Icon(Icons.chat, color: Colors.green),
-                onPressed: onWhatsapp,
-                tooltip: 'Contactar por WhatsApp',
-              ),
-            if (onCall != null)
-              IconButton(
-                icon: const Icon(Icons.phone, color: Colors.blueGrey),
-                onPressed: onCall,
-                tooltip: 'Llamar',
-              ),
-          ],
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  nombre,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: CupertinoColors.label.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detalle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onWhatsapp != null)
+            IconButton(
+              icon: const Icon(FontAwesomeIcons.whatsapp, color: Colors.green),
+              onPressed: onWhatsapp,
+              tooltip: 'Contactar por WhatsApp',
+            ),
+          if (onCall != null)
+            IconButton(
+              icon: const Icon(FontAwesomeIcons.phone, color: Colors.blueGrey),
+              onPressed: onCall,
+              tooltip: 'Llamar',
+            ),
+        ],
       ),
     );
   }
 
   Widget _buildEvidenciaCard(Pedido pedido) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return _buildSurfaceCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
+          Padding(
+            padding: const EdgeInsets.all(16),
             child: Text(
               'Foto de Entrega',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.label.resolveFrom(context),
+              ),
             ),
           ),
           ClipRRect(
             borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(12),
+              bottom: Radius.circular(14),
             ),
             child: Image.network(
               pedido.imagenEvidencia!,
@@ -669,36 +696,31 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   }
 
   Widget _buildCancelacionCard(Pedido pedido) {
-    return Card(
-      color: Colors.red[50],
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Icon(Icons.cancel, color: Colors.red[700]),
-                const SizedBox(width: 8),
-                Text(
-                  'Pedido Cancelado',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red[900],
-                    fontSize: 16,
-                  ),
+    return _buildSurfaceCard(
+      backgroundColor: Colors.red[50],
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cancel, color: Colors.red[700]),
+              const SizedBox(width: 8),
+              Text(
+                'Pedido Cancelado',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red[900],
+                  fontSize: 16,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildInfoRow('Por', pedido.canceladoPor ?? 'Desconocido'),
-            _buildInfoRow(
-              'Motivo',
-              pedido.motivoCancelacion ?? 'No especificado',
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildInfoRow('Por', pedido.canceladoPor ?? 'Desconocido'),
+          _buildInfoRow(
+            'Motivo',
+            pedido.motivoCancelacion ?? 'No especificado',
+          ),
+        ],
       ),
     );
   }
@@ -730,18 +752,33 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (mostrarSubirComprobante)
-          ElevatedButton.icon(
-            onPressed: () => _abrirSubirComprobante(pedido),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _abrirSubirComprobante(pedido),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.upload_file_rounded),
+                label: const Text('Subir comprobante'),
               ),
-            ),
-            icon: const Icon(Icons.upload_file_rounded),
-            label: const Text('Subir comprobante de transferencia'),
+              const SizedBox(height: 6),
+              Text(
+                'Aqui veras los datos del repartidor para transferir.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         if (mostrarSubirComprobante && isCancelVisible)
           const SizedBox(height: 10),
@@ -776,9 +813,15 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                   IconButton(
                     onPressed: () async {
                       final url = pedido.transferenciaComprobanteUrl;
-                      if (url != null && await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(Uri.parse(url));
-                      }
+                      if (url == null || url.isEmpty) return;
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PantallaVerComprobanteUsuario(
+                            comprobanteUrl: url,
+                          ),
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.visibility),
                     color: Colors.green[700],
@@ -820,16 +863,49 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+          Text(
+            label,
+            style: TextStyle(
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              fontSize: 13,
+            ),
+          ),
           Flexible(
             child: Text(
               value ?? 'N/A',
               textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: CupertinoColors.label.resolveFrom(context),
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSurfaceCard({
+    required Widget child,
+    EdgeInsets? padding,
+    Color? backgroundColor,
+  }) {
+    return Container(
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: backgroundColor ??
+            CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 
@@ -899,7 +975,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
         // Recargar vista para mostrar el nuevo estado
         final provider = context.read<PedidoProvider>();
         provider.limpiarError();
-        provider.cargarDetalle(widget.pedidoId);
+        await provider.cargarDetalle(widget.pedidoId);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

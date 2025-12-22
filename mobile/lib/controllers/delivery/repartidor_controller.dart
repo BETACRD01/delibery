@@ -488,9 +488,14 @@ class RepartidorController extends ChangeNotifier {
 
   /// Marca un pedido como en camino (repartidor ya lo recogió y va hacia el cliente)
   /// Retorna true si fue exitoso, false si hubo error
-  Future<bool> marcarPedidoEnCamino(int pedidoId) async {
+  Future<bool> marcarPedidoEnCamino(
+    int pedidoId, {
+    bool mostrarLoading = true,
+  }) async {
     try {
-      _setLoading(true);
+      if (mostrarLoading) {
+        _setLoading(true);
+      }
       _setError(null);
 
       developer.log(
@@ -500,9 +505,11 @@ class RepartidorController extends ChangeNotifier {
 
       await _repartidorService.marcarPedidoEnCamino(pedidoId);
 
-      // Recargar listas de pedidos
-      await cargarPedidosActivos();
-      await cargarPedidosDisponibles();
+      // Recargar listas de pedidos en paralelo
+      await Future.wait([
+        cargarPedidosActivos(),
+        cargarPedidosDisponibles(),
+      ]);
 
       developer.log(
         'Pedido #$pedidoId marcado como en camino exitosamente',
@@ -532,7 +539,9 @@ class RepartidorController extends ChangeNotifier {
       _setError(errorMsg);
       return false;
     } finally {
-      _setLoading(false);
+      if (mostrarLoading) {
+        _setLoading(false);
+      }
     }
   }
 
@@ -545,9 +554,12 @@ class RepartidorController extends ChangeNotifier {
   Future<bool> marcarPedidoEntregado({
     required int pedidoId,
     File? imagenEvidencia,
+    bool mostrarLoading = true,
   }) async {
     try {
-      _setLoading(true);
+      if (mostrarLoading) {
+        _setLoading(true);
+      }
       _setError(null);
 
       developer.log(
@@ -560,9 +572,11 @@ class RepartidorController extends ChangeNotifier {
         imagenEvidencia: imagenEvidencia,
       );
 
-      // Recargar listas de pedidos
-      await cargarPedidosActivos();
-      await cargarPedidosDisponibles();
+      // Recargar listas de pedidos en paralelo
+      await Future.wait([
+        cargarPedidosActivos(),
+        cargarPedidosDisponibles(),
+      ]);
 
       developer.log(
         'Pedido #$pedidoId marcado como entregado exitosamente',
@@ -592,7 +606,9 @@ class RepartidorController extends ChangeNotifier {
       _setError(errorMsg);
       return false;
     } finally {
-      _setLoading(false);
+      if (mostrarLoading) {
+        _setLoading(false);
+      }
     }
   }
 

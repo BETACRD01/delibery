@@ -23,7 +23,7 @@ class RifasAdminApi {
     List<Map<String, dynamic>>? premios,
   }) async {
     try {
-      final body = {
+      final body = <String, String>{
         'titulo': titulo,
         'descripcion': descripcion,
         'pedidos_minimos': pedidosMinimos.toString(),
@@ -35,8 +35,12 @@ class RifasAdminApi {
       if (premios != null && premios.isNotEmpty) {
         for (int i = 0; i < premios.length; i++) {
           final premio = premios[i];
-          body['premios[$i][posicion]'] = premio['posicion'].toString();
-          body['premios[$i][descripcion]'] = premio['descripcion'];
+          final posicion = premio['posicion'];
+          final descripcion = premio['descripcion'];
+          if (posicion != null && descripcion != null) {
+            body['premios[$i][posicion]'] = posicion.toString();
+            body['premios[$i][descripcion]'] = descripcion.toString();
+          }
         }
       }
 

@@ -538,7 +538,7 @@ class _FormularioRepartidorState extends State<FormularioRepartidor> {
       // 6. Manejo de errores (Ej: Cédula duplicada)
       String errorMsg = e.toString();
 
-      if (errorMsg.startsWith("Exception: ")) {
+      if (errorMsg.startsWith('Exception: ')) {
         errorMsg = errorMsg.substring(11);
       }
 

@@ -1,18 +1,19 @@
 // lib/screens/admin/dashboard/widgets/dashboard_app_bar.dart
 import 'package:flutter/material.dart';
 import '../constants/dashboard_colors.dart';
-import '../../../../config/rutas.dart';
 
 class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TabController tabController;
   final int solicitudesPendientesCount;
   final VoidCallback onRefresh;
+  final VoidCallback onSolicitudesTap;
 
   const DashboardAppBar({
     super.key,
     required this.tabController,
     required this.solicitudesPendientesCount,
     required this.onRefresh,
+    required this.onSolicitudesTap,
   });
 
   @override
@@ -59,7 +60,7 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.notifications),
           onPressed: () {
             if (solicitudesPendientesCount > 0) {
-              Rutas.irA(context, Rutas.adminSolicitudesRol);
+              onSolicitudesTap();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

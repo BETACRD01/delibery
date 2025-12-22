@@ -486,6 +486,11 @@ def ver_comprobante_repartidor(request, pago_id):
             status=status.HTTP_404_NOT_FOUND
         )
 
+    # Permitir al repartidor asignado del pedido ver el comprobante
+    if pago.repartidor_asignado is None and pago.pedido.repartidor == repartidor:
+        pago.repartidor_asignado = repartidor
+        pago.save(update_fields=['repartidor_asignado', 'actualizado_en'])
+
     # Verificar que el repartidor sea el asignado a este pago
     if pago.repartidor_asignado != repartidor and not request.user.is_staff:
         return Response(
@@ -531,6 +536,11 @@ def marcar_comprobante_visto(request, pago_id):
             {'error': 'Pago no encontrado'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+    # Permitir al repartidor asignado del pedido marcar el comprobante
+    if pago.repartidor_asignado is None and pago.pedido.repartidor == repartidor:
+        pago.repartidor_asignado = repartidor
+        pago.save(update_fields=['repartidor_asignado', 'actualizado_en'])
 
     # Verificar que el repartidor sea el asignado
     if pago.repartidor_asignado != repartidor:

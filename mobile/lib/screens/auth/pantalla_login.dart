@@ -54,7 +54,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
       // CORREGIDO: Usar pushReplacementNamed en lugar de MaterialPageRoute
       // Esto evita el doble push y usa el sistema de rutas correctamente
       if (mounted) {
-        Navigator.pushReplacementNamed(context, Rutas.router);
+        await Navigator.pushReplacementNamed(context, Rutas.router);
       }
     } on ApiException catch (e) {
       if (mounted) {

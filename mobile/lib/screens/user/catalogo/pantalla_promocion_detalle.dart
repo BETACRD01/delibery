@@ -80,7 +80,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
       final promocion = Rutas.obtenerArgumentos<PromocionModel>(context);
 
       if (promocion == null) {
-        throw Exception("No se recibieron datos de la promoción");
+        throw Exception('No se recibieron datos de la promoción');
       }
 
       final productosService = ProductosService();
@@ -135,7 +135,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
         });
       }
     } catch (e) {
-      debugPrint("Error cargando productos de promoción: $e");
+      debugPrint('Error cargando productos de promoción: $e');
       if (mounted) {
         setState(() {
           _error = 'No se pudieron cargar los productos. Intenta nuevamente.';
@@ -632,7 +632,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                 else
                   const Expanded(
                     child: Text(
-                      "¡Aprovecha esta oferta!",
+                      '¡Aprovecha esta oferta!',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

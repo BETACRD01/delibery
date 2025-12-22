@@ -37,6 +37,7 @@ class SolicitudesSection extends StatelessWidget {
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: () {
+              controller.marcarSolicitudesPendientesVistas();
               Rutas.irA(context, Rutas.adminSolicitudesRol);
             },
             icon: const Icon(Icons.arrow_forward),
@@ -60,6 +61,7 @@ class SolicitudesSection extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
+          controller.marcarSolicitudesPendientesVistas();
           Rutas.irA(context, Rutas.adminSolicitudesRol);
         },
         borderRadius: BorderRadius.circular(16),
@@ -111,6 +113,7 @@ class SolicitudesSection extends StatelessWidget {
     BuildContext context,
     SolicitudCambioRol solicitud,
   ) {
+    controller.marcarSolicitudesPendientesVistas();
     DetalleSolicitudModal.mostrar(
       context: context,
       solicitud: solicitud,

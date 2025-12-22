@@ -155,7 +155,7 @@ class _PantallaEditarPerfilRepartidorState
       await _cargarDatosBancarios();
 
       setState(() => _loading = false);
-      _animationController.forward();
+      await _animationController.forward();
     } on ApiException catch (e) {
       developer.log('Error API: ${e.message}', name: 'EditarPerfilRepartidor');
       setState(() {

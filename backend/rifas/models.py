@@ -22,23 +22,40 @@ import random
 import logging
 from datetime import datetime, timedelta
 
-logger = logging.getLogger('rifas')
+logger = logging.getLogger("rifas")
 
 
 # ============================================
 #  ENUMS
 # ============================================
 
+
 class EstadoRifa(models.TextChoices):
     """Estados de la rifa"""
-    ACTIVA = 'activa', 'Activa'
-    FINALIZADA = 'finalizada', 'Finalizada'
-    CANCELADA = 'cancelada', 'Cancelada'
+
+    ACTIVA = "activa", "Activa"
+    FINALIZADA = "finalizada", "Finalizada"
+    CANCELADA = "cancelada", "Cancelada"
+
+
+class TipoSorteo(models.TextChoices):
+    """Define si el sorteo es automático o manual"""
+
+    AUTOMATICO = "automatico", "Automático"
+    MANUAL = "manual", "Manual"
+
+
+class EstadoPremio(models.TextChoices):
+    """Estados de un premio individual"""
+
+    ACTIVO = "activo", "Activo"
+    CANCELADO = "cancelado", "Cancelada"
 
 
 # ============================================
 # MODELO: RIFA
 # ============================================
+
 
 class Rifa(models.Model):
     """
@@ -50,33 +67,26 @@ class Rifa(models.Model):
     - Sorteo automático 5 min después de fecha_fin
     """
 
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # ============================================
     # INFORMACIÓN BÁSICA
     # ============================================
 
     titulo = models.CharField(
-        max_length=200,
-        verbose_name='Título',
-        help_text='Ej: Rifa Diciembre 2024'
+        max_length=200, verbose_name="Título", help_text="Ej: Rifa Diciembre 2024"
     )
 
     descripcion = models.TextField(
-        verbose_name='Descripción',
-        help_text='Descripción general de la rifa'
+        verbose_name="Descripción", help_text="Descripción general de la rifa"
     )
 
     imagen = models.ImageField(
-        upload_to='rifas/%Y/%m/',
+        upload_to="rifas/%Y/%m/",
         null=True,
         blank=True,
-        verbose_name='Imagen Principal',
-        help_text='Imagen promocional de la rifa'
+        verbose_name="Imagen Principal",
+        help_text="Imagen promocional de la rifa",
     )
 
     # ============================================
@@ -84,13 +94,12 @@ class Rifa(models.Model):
     # ============================================
 
     fecha_inicio = models.DateTimeField(
-        verbose_name='Fecha de Inicio',
-        help_text='Cuándo inicia la rifa'
+        verbose_name="Fecha de Inicio", help_text="Cuándo inicia la rifa"
     )
 
     fecha_fin = models.DateTimeField(
-        verbose_name='Fecha de Fin',
-        help_text='Cuándo finaliza - sorteo automático 5 min después'
+        verbose_name="Fecha de Fin",
+        help_text="Cuándo finaliza - sorteo automático 5 min después",
     )
 
     # ============================================
@@ -99,8 +108,8 @@ class Rifa(models.Model):
 
     pedidos_minimos = models.PositiveIntegerField(
         default=3,
-        verbose_name='Pedidos Mínimos',
-        help_text='Cantidad mínima de pedidos para participar'
+        verbose_name="Pedidos Mínimos",
+        help_text="Cantidad mínima de pedidos para participar",
     )
 
     # ============================================
@@ -111,8 +120,16 @@ class Rifa(models.Model):
         max_length=20,
         choices=EstadoRifa.choices,
         default=EstadoRifa.ACTIVA,
-        verbose_name='Estado',
-        db_index=True
+        verbose_name="Estado",
+        db_index=True,
+    )
+
+    tipo_sorteo = models.CharField(
+        max_length=20,
+        choices=TipoSorteo.choices,
+        default=TipoSorteo.MANUAL,
+        verbose_name="Tipo de Sorteo",
+        help_text="Automático (se sortea tras fecha_fin) o Manual (requiere acción de admin)",
     )
 
     # ============================================
@@ -120,15 +137,11 @@ class Rifa(models.Model):
     # ============================================
 
     mes = models.PositiveIntegerField(
-        verbose_name='Mes',
-        help_text='Mes de la rifa (1-12)',
-        db_index=True
+        verbose_name="Mes", help_text="Mes de la rifa (1-12)", db_index=True
     )
 
     anio = models.PositiveIntegerField(
-        verbose_name='Año',
-        help_text='Año de la rifa',
-        db_index=True
+        verbose_name="Año", help_text="Año de la rifa", db_index=True
     )
 
     # ============================================
@@ -139,37 +152,35 @@ class Rifa(models.Model):
         User,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='rifas_creadas',
-        verbose_name='Creado Por',
-        help_text='Admin que creó la rifa'
+        related_name="rifas_creadas",
+        verbose_name="Creado Por",
+        help_text="Admin que creó la rifa",
     )
 
     creado_en = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Fecha de Creación'
+        auto_now_add=True, verbose_name="Fecha de Creación"
     )
 
     actualizado_en = models.DateTimeField(
-        auto_now=True,
-        verbose_name='Última Actualización'
+        auto_now=True, verbose_name="Última Actualización"
     )
 
     class Meta:
-        db_table = 'rifas'
-        verbose_name = 'Rifa'
-        verbose_name_plural = 'Rifas'
-        ordering = ['-fecha_inicio']
+        db_table = "rifas"
+        verbose_name = "Rifa"
+        verbose_name_plural = "Rifas"
+        ordering = ["-fecha_inicio"]
         indexes = [
-            models.Index(fields=['estado', 'fecha_inicio']),
-            models.Index(fields=['mes', 'anio']),
-            models.Index(fields=['-fecha_inicio']),
+            models.Index(fields=["estado", "fecha_inicio"]),
+            models.Index(fields=["mes", "anio"]),
+            models.Index(fields=["-fecha_inicio"]),
         ]
         constraints = [
             # Solo una rifa activa por mes
             models.UniqueConstraint(
-                fields=['mes', 'anio', 'estado'],
+                fields=["mes", "anio", "estado"],
                 condition=Q(estado=EstadoRifa.ACTIVA),
-                name='una_rifa_activa_por_mes'
+                name="una_rifa_activa_por_mes",
             ),
         ]
 
@@ -189,11 +200,13 @@ class Rifa(models.Model):
         # Validar fechas
         if self.fecha_inicio and self.fecha_fin:
             if self.fecha_inicio >= self.fecha_fin:
-                errors['fecha_fin'] = 'La fecha de fin debe ser posterior a la de inicio'
+                errors["fecha_fin"] = (
+                    "La fecha de fin debe ser posterior a la de inicio"
+                )
 
         # Validar pedidos mínimos
         if self.pedidos_minimos < 1:
-            errors['pedidos_minimos'] = 'Debe requerir al menos 1 pedido'
+            errors["pedidos_minimos"] = "Debe requerir al menos 1 pedido"
 
         if errors:
             raise ValidationError(errors)
@@ -204,7 +217,6 @@ class Rifa(models.Model):
             self.mes = self.fecha_inicio.month
             self.anio = self.fecha_inicio.year
 
-        self.full_clean()
         super().save(*args, **kwargs)
 
     # ============================================
@@ -218,22 +230,25 @@ class Rifa(models.Model):
         Returns:
             QuerySet: Usuarios con pedidos mínimos entregados
         """
-        usuarios_elegibles = User.objects.filter(
-            rol_activo=User.RolChoices.CLIENTE,
-            is_active=True,
-            cuenta_desactivada=False
-        ).annotate(
-            pedidos_completados=Count(
-                'perfil__pedidos',
-                filter=Q(
-                    perfil__pedidos__estado=EstadoPedido.ENTREGADO,
-                    perfil__pedidos__fecha_entregado__gte=self.fecha_inicio,
-                    perfil__pedidos__fecha_entregado__lte=self.fecha_fin
+        usuarios_elegibles = (
+            User.objects.filter(
+                rol_activo=User.RolChoices.CLIENTE,
+                is_active=True,
+                cuenta_desactivada=False,
+            )
+            .annotate(
+                pedidos_completados=Count(
+                    "perfil__pedidos",
+                    filter=Q(
+                        perfil__pedidos__estado=EstadoPedido.ENTREGADO,
+                        perfil__pedidos__fecha_entregado__gte=self.fecha_inicio,
+                        perfil__pedidos__fecha_entregado__lte=self.fecha_fin,
+                    ),
                 )
             )
-        ).filter(
-            pedidos_completados__gte=self.pedidos_minimos
-        ).distinct()
+            .filter(pedidos_completados__gte=self.pedidos_minimos)
+            .distinct()
+        )
 
         return usuarios_elegibles
 
@@ -244,7 +259,7 @@ class Rifa(models.Model):
         Returns:
             QuerySet: Participaciones con datos de usuario.
         """
-        return self.participaciones.select_related('usuario')
+        return self.participaciones.select_related("usuario")
 
     def usuario_es_elegible(self, usuario):
         """
@@ -256,37 +271,42 @@ class Rifa(models.Model):
         Returns:
             dict: {'elegible': bool, 'pedidos': int, 'faltantes': int}
         """
-        if usuario.rol_activo != User.RolChoices.CLIENTE:
-            return {
-                'elegible': False,
-                'pedidos': 0,
-                'faltantes': self.pedidos_minimos,
-                'razon': 'Solo usuarios regulares pueden participar'
-            }
-        if not usuario.perfil.participa_en_sorteos:
-            return {
-                'elegible': False,
-                'pedidos': 0,
-                'faltantes': self.pedidos_minimos,
-                'razon': 'Tu cuenta no está habilitada para rifas'
-            }
-
         # Contar pedidos entregados en el rango
         pedidos_completados = Pedido.objects.filter(
             cliente__user=usuario,
             estado=EstadoPedido.ENTREGADO,
             fecha_entregado__gte=self.fecha_inicio,
-            fecha_entregado__lte=self.fecha_fin
+            fecha_entregado__lte=self.fecha_fin,
         ).count()
 
-        elegible = pedidos_completados >= self.pedidos_minimos
         faltantes = max(0, self.pedidos_minimos - pedidos_completados)
 
+        if usuario.rol_activo != User.RolChoices.CLIENTE:
+            return {
+                "elegible": False,
+                "pedidos": pedidos_completados,
+                "faltantes": faltantes,
+                "razon": "Solo usuarios regulares pueden participar",
+            }
+        if not usuario.perfil.participa_en_sorteos:
+            return {
+                "elegible": False,
+                "pedidos": pedidos_completados,
+                "faltantes": faltantes,
+                "razon": "Tu cuenta no está habilitada para rifas",
+            }
+
+        elegible = pedidos_completados >= self.pedidos_minimos
+
         return {
-            'elegible': elegible,
-            'pedidos': pedidos_completados,
-            'faltantes': faltantes,
-            'razon': 'Cumples los requisitos' if elegible else f'Te faltan {faltantes} pedidos'
+            "elegible": elegible,
+            "pedidos": pedidos_completados,
+            "faltantes": faltantes,
+            "razon": (
+                "Cumples los requisitos"
+                if elegible
+                else f"Te faltan {faltantes} pedidos"
+            ),
         }
 
     def realizar_sorteo(self):
@@ -298,26 +318,30 @@ class Rifa(models.Model):
             dict: {'premios_ganados': list, 'sin_participantes': bool}
         """
         if self.estado != EstadoRifa.ACTIVA:
-            raise ValidationError('Solo se puede sortear una rifa activa')
+            raise ValidationError("Solo se puede sortear una rifa activa")
 
         # Verificar que no haya ganadores ya asignados
         if self.premios.filter(ganador__isnull=False).exists():
-            raise ValidationError('Esta rifa ya tiene ganadores asignados')
+            raise ValidationError("Esta rifa ya tiene ganadores asignados")
 
         # Obtener participantes registrados
         participaciones = list(self.obtener_participaciones())
 
         if not participaciones:
-            logger.warning(f"No hay participantes registrados para la rifa {self.titulo}")
+            logger.warning(
+                f"No hay participantes registrados para la rifa {self.titulo}"
+            )
             self.estado = EstadoRifa.FINALIZADA
             self.save()
-            return {'premios_ganados': [], 'sin_participantes': True}
+            return {"premios_ganados": [], "sin_participantes": True}
 
-        # Obtener premios ordenados del 3ro al 1ro
-        premios = self.premios.all().order_by('-posicion')  # 3, 2, 1
+        # Obtener premios activos ordenados del 3ro al 1ro
+        premios = self.premios.filter(estado=EstadoPremio.ACTIVO).order_by(
+            "-posicion"
+        )  # 3, 2, 1
 
-        if not premios.exists():
-            raise ValidationError('Esta rifa no tiene premios configurados')
+        if not premios:
+            raise ValidationError("Esta rifa no tiene premios activos para sortear")
 
         premios_ganados = []
         participantes_disponibles = participaciones.copy()
@@ -325,7 +349,9 @@ class Rifa(models.Model):
         # Sortear cada premio
         for premio in premios:
             if not participantes_disponibles:
-                logger.warning(f"No hay más participantes para el premio {premio.posicion}")
+                logger.warning(
+                    f"No hay más participantes para el premio {premio.posicion}"
+                )
                 break
 
             # Seleccionar ganador aleatorio
@@ -337,11 +363,13 @@ class Rifa(models.Model):
             # Remover ganador de la lista para que no gane dos veces
             participantes_disponibles.remove(participacion)
 
-            premios_ganados.append({
-                'posicion': premio.posicion,
-                'descripcion': premio.descripcion,
-                'ganador': ganador
-            })
+            premios_ganados.append(
+                {
+                    "posicion": premio.posicion,
+                    "descripcion": premio.descripcion,
+                    "ganador": ganador,
+                }
+            )
 
             # Crear registro de participación
             if not participacion.ganador:
@@ -358,12 +386,12 @@ class Rifa(models.Model):
         self.estado = EstadoRifa.FINALIZADA
         self.save()
 
-        return {'premios_ganados': premios_ganados, 'sin_participantes': False}
+        return {"premios_ganados": premios_ganados, "sin_participantes": False}
 
     def cancelar_rifa(self, motivo=None):
         """Cancela la rifa"""
         if self.estado == EstadoRifa.FINALIZADA:
-            raise ValidationError('No se puede cancelar una rifa finalizada')
+            raise ValidationError("No se puede cancelar una rifa finalizada")
 
         self.estado = EstadoRifa.CANCELADA
         self.save()
@@ -378,9 +406,11 @@ class Rifa(models.Model):
         Returns:
             Rifa: Rifa activa o None
         """
-        return cls.objects.filter(
-            estado=EstadoRifa.ACTIVA
-        ).order_by('-fecha_inicio').first()
+        return (
+            cls.objects.filter(estado=EstadoRifa.ACTIVA)
+            .order_by("-fecha_inicio")
+            .first()
+        )
 
     @classmethod
     def obtener_historial_ganadores(cls, limit=10):
@@ -393,9 +423,11 @@ class Rifa(models.Model):
         Returns:
             QuerySet: Rifas finalizadas
         """
-        return cls.objects.filter(
-            estado=EstadoRifa.FINALIZADA
-        ).prefetch_related('premios__ganador').order_by('-fecha_fin')[:limit]
+        return (
+            cls.objects.filter(estado=EstadoRifa.FINALIZADA)
+            .prefetch_related("premios__ganador")
+            .order_by("-fecha_fin")[:limit]
+        )
 
     # ============================================
     #  PROPIEDADES
@@ -424,8 +456,19 @@ class Rifa(models.Model):
     def mes_nombre(self):
         """Nombre del mes en español"""
         meses = [
-            '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+            "",
+            "Enero",
+            "Febrero",
+            "Marzo",
+            "Abril",
+            "Mayo",
+            "Junio",
+            "Julio",
+            "Agosto",
+            "Septiembre",
+            "Octubre",
+            "Noviembre",
+            "Diciembre",
         ]
         return meses[self.mes]
 
@@ -433,6 +476,7 @@ class Rifa(models.Model):
 # ============================================
 # MODELO: PREMIO
 # ============================================
+
 
 class Premio(models.Model):
     """
@@ -446,37 +490,28 @@ class Premio(models.Model):
     Se muestran del 3 al 1 (orden inverso)
     """
 
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     rifa = models.ForeignKey(
-        Rifa,
-        on_delete=models.CASCADE,
-        related_name='premios',
-        verbose_name='Rifa'
+        Rifa, on_delete=models.CASCADE, related_name="premios", verbose_name="Rifa"
     )
 
     posicion = models.PositiveIntegerField(
-        verbose_name='Posición',
-        help_text='1=Primer lugar, 2=Segundo, 3=Tercero',
-        choices=[(1, '1er Lugar'), (2, '2do Lugar'), (3, '3er Lugar')]
+        verbose_name="Posición",
+        help_text="1=Primer lugar, 2=Segundo, 3=Tercero",
+        choices=[(1, "1er Lugar"), (2, "2do Lugar"), (3, "3er Lugar")],
     )
 
     descripcion = models.CharField(
-        max_length=300,
-        verbose_name='Descripción',
-        help_text='Descripción del premio'
+        max_length=300, verbose_name="Descripción", help_text="Descripción del premio"
     )
 
     imagen = models.ImageField(
-        upload_to='rifas/premios/%Y/%m/',
+        upload_to="rifas/premios/%Y/%m/",
         null=True,
         blank=True,
-        verbose_name='Imagen del Premio',
-        help_text='Imagen específica de este premio'
+        verbose_name="Imagen del Premio",
+        help_text="Imagen específica de este premio",
     )
 
     ganador = models.ForeignKey(
@@ -484,35 +519,44 @@ class Premio(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='premios_ganados',
-        verbose_name='Ganador',
-        help_text='Usuario ganador de este premio'
+        related_name="premios_ganados",
+        verbose_name="Ganador",
+        help_text="Usuario ganador de este premio",
+    )
+
+    estado = models.CharField(
+        max_length=20,
+        choices=EstadoPremio.choices,
+        default=EstadoPremio.ACTIVO,
+        verbose_name="Estado del Premio",
+        help_text="Indica si el premio está activo o ha sido cancelado",
     )
 
     creado_en = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Fecha de Creación'
+        auto_now_add=True, verbose_name="Fecha de Creación"
     )
 
     class Meta:
-        db_table = 'rifas_premios'
-        verbose_name = 'Premio'
-        verbose_name_plural = 'Premios'
-        ordering = ['rifa', 'posicion']
+        db_table = "rifas_premios"
+        verbose_name = "Premio"
+        verbose_name_plural = "Premios"
+        ordering = ["rifa", "posicion"]
         constraints = [
             # Solo un premio por posición por rifa
             models.UniqueConstraint(
-                fields=['rifa', 'posicion'],
-                name='premio_unico_por_posicion'
+                fields=["rifa", "posicion"], name="premio_unico_por_posicion"
             ),
         ]
         indexes = [
-            models.Index(fields=['rifa', 'posicion']),
-            models.Index(fields=['ganador']),
+            models.Index(fields=["rifa", "posicion"]),
+            models.Index(fields=["ganador"]),
+            models.Index(fields=["estado"]),
         ]
 
     def __str__(self):
-        posicion_str = {1: '1er', 2: '2do', 3: '3er'}.get(self.posicion, f'{self.posicion}°')
+        posicion_str = {1: "1er", 2: "2do", 3: "3er"}.get(
+            self.posicion, f"{self.posicion}°"
+        )
         return f"{self.rifa.titulo} - {posicion_str} Lugar: {self.descripcion}"
 
     def clean(self):
@@ -523,7 +567,7 @@ class Premio(models.Model):
 
         # Validar posición
         if self.posicion not in [1, 2, 3]:
-            errors['posicion'] = 'La posición debe ser 1, 2 o 3'
+            errors["posicion"] = "La posición debe ser 1, 2 o 3"
 
         if errors:
             raise ValidationError(errors)
@@ -533,6 +577,7 @@ class Premio(models.Model):
 #  MODELO: PARTICIPACIÓN
 # ============================================
 
+
 class Participacion(models.Model):
     """
     Registro de participación en rifas
@@ -540,69 +585,66 @@ class Participacion(models.Model):
     Guarda historial de quién participó y si ganó
     """
 
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     rifa = models.ForeignKey(
         Rifa,
         on_delete=models.CASCADE,
-        related_name='participaciones',
-        verbose_name='Rifa'
+        related_name="participaciones",
+        verbose_name="Rifa",
     )
 
     usuario = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='participaciones_rifas',
-        verbose_name='Usuario'
+        related_name="participaciones_rifas",
+        verbose_name="Usuario",
     )
 
     ganador = models.BooleanField(
         default=False,
-        verbose_name='Ganador',
-        help_text='Indica si este usuario ganó un premio'
+        verbose_name="Ganador",
+        help_text="Indica si este usuario ganó un premio",
     )
 
     posicion_premio = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name='Posición del Premio',
-        help_text='Qué premio ganó (1, 2, 3) si aplica'
+        verbose_name="Posición del Premio",
+        help_text="Qué premio ganó (1, 2, 3) si aplica",
     )
 
     pedidos_completados = models.PositiveIntegerField(
         default=0,
-        verbose_name='Pedidos Completados',
-        help_text='Cantidad de pedidos al momento del sorteo'
+        verbose_name="Pedidos Completados",
+        help_text="Cantidad de pedidos al momento del sorteo",
     )
 
     fecha_registro = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Fecha de Registro'
+        auto_now_add=True, verbose_name="Fecha de Registro"
     )
 
     class Meta:
-        db_table = 'rifas_participaciones'
-        verbose_name = 'Participación'
-        verbose_name_plural = 'Participaciones'
-        ordering = ['-fecha_registro']
-        unique_together = [['rifa', 'usuario']]
+        db_table = "rifas_participaciones"
+        verbose_name = "Participación"
+        verbose_name_plural = "Participaciones"
+        ordering = ["-fecha_registro"]
+        unique_together = [["rifa", "usuario"]]
         indexes = [
-            models.Index(fields=['rifa', 'usuario']),
-            models.Index(fields=['ganador']),
+            models.Index(fields=["rifa", "usuario"]),
+            models.Index(fields=["ganador"]),
         ]
 
     def __str__(self):
-        ganador_str = f" - GANADOR {self.posicion_premio}° LUGAR" if self.ganador else ""
+        ganador_str = (
+            f" - GANADOR {self.posicion_premio}° LUGAR" if self.ganador else ""
+        )
         return f"{self.usuario.email} - {self.rifa.titulo}{ganador_str}"
 
     def save(self, *args, **kwargs):
         """Calcular pedidos completados al guardar"""
         if not self.pedidos_completados:
             elegibilidad = self.rifa.usuario_es_elegible(self.usuario)
-            self.pedidos_completados = elegibilidad['pedidos']
+            self.pedidos_completados = elegibilidad["pedidos"]
 
         super().save(*args, **kwargs)

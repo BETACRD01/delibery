@@ -41,12 +41,15 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
         pagina: _paginaActual,
       );
 
+      if (!mounted) return;
+
       setState(() {
         _rifas = response['results'] ?? [];
         _totalPaginas = ((response['count'] ?? 0) / 10).ceil();
         _cargando = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Error al cargar rifas';
         _cargando = false;
@@ -125,7 +128,7 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
             context,
             MaterialPageRoute(builder: (_) => const PantallaCrearRifa()),
           );
-          if (result == true) _cargarRifas();
+          if (result == true) await _cargarRifas();
         },
         backgroundColor: DashboardColors.morado,
         icon: const Icon(Icons.add),
@@ -291,7 +294,7 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
               builder: (_) => PantallaRifaDetalle(rifaId: rifa['id']),
             ),
           );
-          if (result == true) _cargarRifas();
+          if (result == true) await _cargarRifas();
         },
         borderRadius: BorderRadius.circular(12),
         child: Column(

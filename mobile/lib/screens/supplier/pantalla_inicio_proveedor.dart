@@ -74,7 +74,7 @@ class _PantallaInicioProveedorState extends State<PantallaInicioProveedor>
       final success = await controller.cerrarSesion();
 
       if (success && mounted) {
-        Rutas.irAYLimpiar(context, Rutas.login);
+        await Rutas.irAYLimpiar(context, Rutas.login);
       }
     }
   }

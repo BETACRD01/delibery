@@ -58,7 +58,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
       _rifa =
           (data?['rifa'] ?? data?['rifa_activa'] ?? data)
               as Map<String, dynamic>?;
-      _animationController.forward();
+      await _animationController.forward();
     } on ApiException catch (e) {
       _error = e.message;
     } catch (e) {

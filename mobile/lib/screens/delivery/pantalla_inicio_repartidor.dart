@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/rutas.dart';
 import '../../models/repartidor.dart';
@@ -12,10 +13,8 @@ import '../../widgets/mapa_pedidos_widget.dart';
 import '../../controllers/delivery/repartidor_controller.dart';
 import 'widgets/repartidor_drawer.dart';
 import 'widgets/lista_vacia_widget.dart';
-import '../../screens/user/pedidos/pantalla_subir_comprobante.dart';
-import '../../services/pago_service.dart';
-import 'pantalla_ver_comprobante.dart';
 import '../../services/session_cleanup.dart';
+import 'pantalla_ver_comprobante.dart';
 
 /// ✅ REFACTORIZADA: Pantalla principal para REPARTIDORES
 /// UI limpia que delega toda la lógica al controller
@@ -46,7 +45,6 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
   static const Color _surface = Color(0xFFF2F4F7);
   static const Color _cardBorder = Color(0xFFE1E4EB);
   static const Color _shadowColor = Color(0x1A000000);
-  final PagoService _pagoService = PagoService();
 
   // ============================================
   // CICLO DE VIDA
@@ -83,9 +81,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       return;
     }
 
-    // Cargar pendientes y pedidos activos iniciales
-    await _controller.cargarPedidosDisponibles();
-    await _controller.cargarPedidosActivos();
+    // Cargar pendientes y pedidos activos iniciales en paralelo
+    await Future.wait([
+      _controller.cargarPedidosDisponibles(),
+      _controller.cargarPedidosActivos(),
+    ]);
 
     // Iniciar smart polling automático
     _controller.startSmartPolling();
@@ -246,14 +246,6 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
         // Cambiar a la pestaña "En Curso" para que el usuario vea el pedido aceptado
         _tabController.animateTo(1);
 
-        if (_requiereSubirComprobante(detallePedido)) {
-          await _mostrarSubirComprobante(
-            detallePedido.pagoId!,
-            pedidoId: detallePedido.id,
-          );
-          if (!mounted) return;
-        }
-
         // Mostrar mensaje con información del pedido aceptado
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -279,48 +271,6 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       final mensajeError = _controller.error ?? 'Error aceptando el pedido';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
-      );
-    }
-  }
-
-  bool _requiereSubirComprobante(PedidoDetalladoRepartidor pedido) {
-    final esTransferencia = pedido.metodoPago.toLowerCase() == 'transferencia';
-    final sinComprobante =
-        (pedido.transferenciaComprobanteUrl ?? '').isEmpty;
-    return esTransferencia && sinComprobante && pedido.pagoId != null;
-  }
-
-  Future<void> _mostrarSubirComprobante(
-    int pagoId, {
-    int? pedidoId,
-  }) async {
-    try {
-      final datos = await _pagoService.obtenerDatosBancariosPago(pagoId);
-      if (!mounted) return;
-
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PantallaSubirComprobante(
-            pagoId: pagoId,
-            datosBancarios: datos,
-          ),
-        ),
-      );
-
-      if (!mounted) return;
-      await _controller.cargarPedidosActivos();
-      await _controller.cargarPedidosDisponibles();
-      if (pedidoId != null) {
-        await _controller.cargarPedidosActivos();
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo iniciar el comprobante: $e'),
-          backgroundColor: _rojo,
-        ),
       );
     }
   }
@@ -468,7 +418,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       await SessionCleanup.clearProviders(context);
       await _controller.cerrarSesion();
       if (!mounted) return;
-      Rutas.irAYLimpiar(context, Rutas.login);
+      await Rutas.irAYLimpiar(context, Rutas.login);
     }
   }
 
@@ -1234,12 +1184,16 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.call, color: _success),
+                    icon: const Icon(Icons.call, color: _success, size: 22),
                     onPressed: () => _llamarCliente(pedido.cliente.telefono),
                     tooltip: 'Llamar al cliente',
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+                    icon: const Icon(
+                      FontAwesomeIcons.whatsapp,
+                      color: Color(0xFF25D366),
+                      size: 24,
+                    ),
                     onPressed: () => _abrirWhatsAppCliente(pedido),
                     tooltip: 'Enviar mensaje por WhatsApp',
                   ),
@@ -1302,18 +1256,18 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
                             style: TextStyle(
                               color:
                                   (pedido.transferenciaComprobanteUrl ?? '')
-                                      .isNotEmpty
-                                  ? Colors.green[800]
-                                  : Colors.orange[700],
+                                          .isNotEmpty
+                                      ? Colors.green[800]
+                                      : Colors.orange[700],
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
                           ),
                           backgroundColor:
                               (pedido.transferenciaComprobanteUrl ?? '')
-                                  .isNotEmpty
-                              ? Colors.green.withValues(alpha: 0.14)
-                              : Colors.orange.withValues(alpha: 0.14),
+                                      .isNotEmpty
+                                  ? Colors.green.withValues(alpha: 0.14)
+                                  : Colors.orange.withValues(alpha: 0.14),
                           materialTapTargetSize:
                               MaterialTapTargetSize.shrinkWrap,
                           padding: const EdgeInsets.symmetric(
@@ -1324,8 +1278,8 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if ((pedido.transferenciaComprobanteUrl ?? '').isNotEmpty &&
-                        pedido.pagoId != null)
+                    if (pedido.pagoId != null &&
+                        (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty)
                       TextButton.icon(
                         onPressed: () {
                           Navigator.push(
@@ -1617,14 +1571,20 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       if (!mounted) return;
 
       // Mostrar indicador de carga
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+      unawaited(
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
+        ),
       );
 
       // Marcar como en camino
-      final exito = await _controller.marcarPedidoEnCamino(pedido.id);
+      final exito = await _controller.marcarPedidoEnCamino(
+        pedido.id,
+        mostrarLoading: false,
+      );
 
       if (!mounted) return;
 
@@ -1656,175 +1616,189 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     final tieneComprobante =
         (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty;
 
-    final confirmar = await showDialog<bool>(
+    final resultado = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar Entrega'),
-        contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 320),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '¿Confirmas que el pedido #${pedido.numeroPedido} fue entregado exitosamente?',
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.payment, size: 20, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Método de pago: ${pedido.metodoPago}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-              if (esTransferencia) ...[
-                const SizedBox(height: 12),
-                if (!tieneComprobante)
+      builder: (dialogContext) {
+        var isSubmitting = false;
+        return StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            title: const Text('Confirmar Entrega'),
+            contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '¿Confirmas que el pedido #${pedido.numeroPedido} fue entregado exitosamente?',
+                  ),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange[50],
+                      color: Colors.grey[100],
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange[300]!),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.warning, color: Colors.orange, size: 20),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'El cliente aún no ha subido el comprobante de transferencia.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        const Icon(Icons.payment, size: 20, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Método de pago: ${pedido.metodoPago}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
-                  )
-                else
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                  ),
+                  if (esTransferencia) ...[
+                    const SizedBox(height: 12),
+                    if (!tieneComprobante)
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.green[50],
+                          color: Colors.orange[50],
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green[300]!),
+                          border: Border.all(color: Colors.orange[300]!),
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.check_circle, color: _success, size: 20),
+                            Icon(Icons.warning, color: Colors.orange, size: 20),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Comprobante recibido',
+                                'El cliente aún no ha subido el comprobante de transferencia.',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: _success,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (pedido.pagoId != null)
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context, false);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PantallaVerComprobante(
-                                  pagoId: pedido.pagoId!,
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green[300]!),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  color: _success,
+                                  size: 20,
                                 ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Comprobante recibido',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _success,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (pedido.pagoId != null)
+                            TextButton.icon(
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () {
+                                      Navigator.pop(dialogContext, null);
+                                      Navigator.push(
+                                        dialogContext,
+                                        MaterialPageRoute(
+                                          builder: (_) => PantallaVerComprobante(
+                                            pagoId: pedido.pagoId!,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              icon: const Icon(Icons.receipt_long),
+                              label: const Text('Ver comprobante'),
+                            ),
+                        ],
+                      ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed:
+                    isSubmitting ? null : () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        if (esTransferencia && !tieneComprobante) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'No puedes entregar sin comprobante de transferencia del cliente',
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.receipt_long),
-                          label: const Text('Ver comprobante'),
+                              backgroundColor: _rojo,
+                            ),
+                          );
+                          return;
+                        }
+                        setStateDialog(() => isSubmitting = true);
+                        final exito = await _controller.marcarPedidoEntregado(
+                          pedidoId: pedido.id,
+                          mostrarLoading: false,
+                        );
+                        if (!mounted || !dialogContext.mounted) return;
+                        Navigator.pop(dialogContext, exito);
+                      },
+                style: ElevatedButton.styleFrom(backgroundColor: _success),
+                child: isSubmitting
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
-                    ],
-                  ),
-              ],
+                      )
+                    : const Text('Confirmar Entrega'),
+              ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (esTransferencia && !tieneComprobante) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'No puedes entregar sin comprobante de transferencia del cliente',
-                    ),
-                    backgroundColor: _rojo,
-                  ),
-                );
-                return;
-              }
-              Navigator.pop(context, true);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: _success),
-            child: const Text('Confirmar Entrega'),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
-    if (confirmar == true) {
-      if (!mounted) return;
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-
-      final exito = await _controller.marcarPedidoEntregado(
-        pedidoId: pedido.id,
-      );
-
-      if (!mounted) return;
-
-      Navigator.pop(context);
-
-      if (exito) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Pedido #${pedido.numeroPedido} marcado como entregado',
-            ),
-            backgroundColor: _success,
+    if (resultado == null || !mounted) return;
+    if (resultado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Pedido #${pedido.numeroPedido} marcado como entregado',
           ),
-        );
-      } else {
-        final errorMsg = _controller.error ?? 'Error al marcar como entregado';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: _rojo),
-        );
-      }
+          backgroundColor: _success,
+        ),
+      );
+      return;
     }
+    final errorMsg = _controller.error ?? 'Error al marcar como entregado';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMsg), backgroundColor: _rojo),
+    );
   }
 
   Widget _buildHistorial() {

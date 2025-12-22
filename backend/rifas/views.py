@@ -17,7 +17,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import Rifa, Participacion, EstadoRifa, Premio
@@ -35,19 +35,20 @@ from .serializers import (
     EstadisticasRifasSerializer,
     ListaParticipantesSerializer,
     ParticipanteSerializer,
-    UsuarioSimpleSerializer
+    UsuarioSimpleSerializer,
 )
 from authentication.models import User
 from pedidos.models import Pedido, EstadoPedido
 
 import logging
 
-logger = logging.getLogger('rifas')
+logger = logging.getLogger("rifas")
 
 
 # ============================================
 # 🔐 PERMISOS PERSONALIZADOS
 # ============================================
+
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     """
@@ -76,6 +77,7 @@ class IsAdmin(permissions.BasePermission):
 # 🎲 VIEWSET: RIFAS
 # ============================================
 
+
 class RifaViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestión de Rifas
@@ -97,42 +99,50 @@ class RifaViewSet(viewsets.ModelViewSet):
     - GET    /api/rifas/estadisticas/            - Estadísticas generales
     """
 
-    queryset = Rifa.objects.all().select_related(
-        'creado_por'
-    ).prefetch_related(
-        'premios__ganador'
-    ).order_by('-fecha_inicio')
+    queryset = (
+        Rifa.objects.all()
+        .select_related("creado_por")
+        .prefetch_related("premios__ganador")
+        .order_by("-fecha_inicio")
+    )
 
     permission_classes = [IsAdminOrReadOnly]
 
     def get_serializer_class(self):
         """Seleccionar serializer según acción"""
-        if self.action == 'list':
+        if self.action == "list":
             return RifaListSerializer
-        elif self.action in ['create', 'update', 'partial_update']:
+        elif self.action in ["create", "update", "partial_update"]:
             return RifaWriteSerializer
-        elif self.action == 'activa':
+        elif self.action == "activa":
             return RifaActivaAppSerializer
-        elif self.action == 'sortear':
+        elif self.action == "sortear":
             return SorteoResultadoSerializer
-        elif self.action == 'participantes':
+        elif self.action == "participantes":
             return ListaParticipantesSerializer
-        elif self.action == 'historial_ganadores':
+        elif self.action == "historial_ganadores":
             return HistorialGanadoresSerializer
-        elif self.action == 'estadisticas':
+        elif self.action == "estadisticas":
             return EstadisticasRifasSerializer
         else:
             return RifaDetailSerializer
 
     def get_permissions(self):
         """Permisos según acción"""
-        if self.action in ['sortear', 'participantes', 'create', 'update', 'partial_update', 'destroy']:
+        if self.action in [
+            "sortear",
+            "participantes",
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+        ]:
             return [IsAdmin()]
         return [IsAuthenticated()]
-    
+
     def get_queryset(self):
         # Protección básica para Swagger en el queryset principal
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Rifa.objects.none()
         return super().get_queryset()
 
@@ -152,9 +162,9 @@ class RifaViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset()
 
         # Filtros opcionales
-        estado = request.query_params.get('estado')
-        mes = request.query_params.get('mes')
-        anio = request.query_params.get('anio')
+        estado = request.query_params.get("estado")
+        mes = request.query_params.get("mes")
+        anio = request.query_params.get("anio")
 
         if estado:
             queryset = queryset.filter(estado=estado)
@@ -179,39 +189,66 @@ class RifaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         """
         Crear nueva rifa (solo admin)
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
 
-        # Retornar detalle completo
-        rifa = serializer.instance
-        detail_serializer = RifaDetailSerializer(rifa, context={'request': request})
+            # Retornar detalle completo
+            rifa = serializer.instance
+            detail_serializer = RifaDetailSerializer(rifa, context={"request": request})
 
-        logger.info(f"Rifa creada por {request.user.email}: {rifa.titulo}")
+            logger.info(f"Rifa creada por {request.user.email}: {rifa.titulo}")
 
-        return Response(
-            detail_serializer.data,
-            status=status.HTTP_201_CREATED
-        )
+            return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
+        except IntegrityError:
+            return Response(
+                {
+                    "error": "Error de base de datos: Posiblemente ya existe una rifa activa para este mes."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.message_dict if hasattr(e, "message_dict") else str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
         """Actualizar rifa (solo admin)"""
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+        try:
+            partial = kwargs.pop("partial", False)
+            instance = self.get_object()
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=partial
+            )
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
 
-        # Retornar detalle completo
-        detail_serializer = RifaDetailSerializer(instance, context={'request': request})
+            # Retornar detalle completo
+            detail_serializer = RifaDetailSerializer(
+                instance, context={"request": request}
+            )
 
-        logger.info(f"Rifa actualizada por {request.user.email}: {instance.titulo}")
+            logger.info(f"Rifa actualizada por {request.user.email}: {instance.titulo}")
 
-        return Response(detail_serializer.data)
+            return Response(detail_serializer.data)
+        except IntegrityError:
+            return Response(
+                {"error": "Error de base de datos al actualizar la rifa."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.message_dict if hasattr(e, "message_dict") else str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -223,10 +260,10 @@ class RifaViewSet(viewsets.ModelViewSet):
         if instance.estado != EstadoRifa.CANCELADA:
             return Response(
                 {
-                    'error': 'Solo se pueden eliminar rifas canceladas',
-                    'detail': 'Primero cancela la rifa antes de eliminarla'
+                    "error": "Solo se pueden eliminar rifas canceladas",
+                    "detail": "Primero cancela la rifa antes de eliminarla",
                 },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         titulo = instance.titulo
@@ -235,15 +272,15 @@ class RifaViewSet(viewsets.ModelViewSet):
         logger.warning(f"Rifa eliminada por {request.user.email}: {titulo}")
 
         return Response(
-            {'message': f'Rifa "{titulo}" eliminada correctamente'},
-            status=status.HTTP_204_NO_CONTENT
+            {"message": f'Rifa "{titulo}" eliminada correctamente'},
+            status=status.HTTP_204_NO_CONTENT,
         )
 
     # ============================================
     # 🎯 CUSTOM ACTIONS
     # ============================================
 
-    @action(detail=False, methods=['get'], url_path='activa')
+    @action(detail=False, methods=["get"], url_path="activa")
     def activa(self, request):
         """
         GET /api/rifas/activa/
@@ -255,17 +292,14 @@ class RifaViewSet(viewsets.ModelViewSet):
 
         if not rifa:
             return Response(
-                {
-                    'message': 'No hay rifa activa en este momento',
-                    'rifa': None
-                },
-                status=status.HTTP_200_OK
+                {"message": "No hay rifa activa en este momento", "rifa": None},
+                status=status.HTTP_200_OK,
             )
 
         serializer = self.get_serializer(rifa)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'], url_path='elegibilidad')
+    @action(detail=True, methods=["get"], url_path="elegibilidad")
     def elegibilidad(self, request, pk=None):
         """
         GET /api/rifas/{id}/elegibilidad/
@@ -277,16 +311,18 @@ class RifaViewSet(viewsets.ModelViewSet):
         elegibilidad = rifa.usuario_es_elegible(request.user)
         serializer = ElegibilidadSerializer(elegibilidad)
 
-        return Response({
-            'rifa': {
-                'id': str(rifa.id),
-                'titulo': rifa.titulo,
-                'pedidos_minimos': rifa.pedidos_minimos
-            },
-            'elegibilidad': serializer.data
-        })
+        return Response(
+            {
+                "rifa": {
+                    "id": str(rifa.id),
+                    "titulo": rifa.titulo,
+                    "pedidos_minimos": rifa.pedidos_minimos,
+                },
+                "elegibilidad": serializer.data,
+            }
+        )
 
-    @action(detail=True, methods=['post'], url_path='participar')
+    @action(detail=True, methods=["post"], url_path="participar")
     def participar(self, request, pk=None):
         """
         POST /api/rifas/{id}/participar/
@@ -296,11 +332,15 @@ class RifaViewSet(viewsets.ModelViewSet):
         rifa = self.get_object()
         ahora = timezone.now()
 
-        if rifa.estado != EstadoRifa.ACTIVA or rifa.fecha_inicio > ahora or rifa.fecha_fin < ahora:
+        if (
+            rifa.estado != EstadoRifa.ACTIVA
+            or rifa.fecha_inicio > ahora
+            or rifa.fecha_fin < ahora
+        ):
             return Response(
                 {
-                    'success': False,
-                    'message': 'La rifa no está disponible para participar',
+                    "success": False,
+                    "message": "La rifa no está disponible para participar",
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -308,19 +348,19 @@ class RifaViewSet(viewsets.ModelViewSet):
         if Participacion.objects.filter(rifa=rifa, usuario=request.user).exists():
             return Response(
                 {
-                    'success': False,
-                    'message': 'Ya estás participando en esta rifa',
+                    "success": False,
+                    "message": "Ya estás participando en esta rifa",
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         elegibilidad = rifa.usuario_es_elegible(request.user)
-        if not elegibilidad.get('elegible'):
+        if not elegibilidad.get("elegible"):
             return Response(
                 {
-                    'success': False,
-                    'message': elegibilidad.get('razon', 'No cumples los requisitos'),
-                    'elegibilidad': elegibilidad,
+                    "success": False,
+                    "message": elegibilidad.get("razon", "No cumples los requisitos"),
+                    "elegibilidad": elegibilidad,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -328,26 +368,28 @@ class RifaViewSet(viewsets.ModelViewSet):
         participacion = Participacion.objects.create(
             rifa=rifa,
             usuario=request.user,
-            pedidos_completados=elegibilidad.get('pedidos', 0),
+            pedidos_completados=elegibilidad.get("pedidos", 0),
         )
 
         return Response(
             {
-                'success': True,
-                'message': 'Participación registrada correctamente',
-                'participacion': ParticipacionSerializer(
+                "success": True,
+                "message": "Participación registrada correctamente",
+                "participacion": ParticipacionSerializer(
                     participacion,
-                    context={'request': request},
+                    context={"request": request},
                 ).data,
-                'rifa': RifaActivaAppSerializer(
+                "rifa": RifaActivaAppSerializer(
                     rifa,
-                    context={'request': request},
+                    context={"request": request},
                 ).data,
             },
             status=status.HTTP_201_CREATED,
         )
 
-    @action(detail=True, methods=['post'], url_path='sortear', permission_classes=[IsAdmin])
+    @action(
+        detail=True, methods=["post"], url_path="sortear", permission_classes=[IsAdmin]
+    )
     @transaction.atomic
     def sortear(self, request, pk=None):
         """
@@ -360,13 +402,16 @@ class RifaViewSet(viewsets.ModelViewSet):
         rifa = self.get_object()
         rifa = Rifa.objects.select_for_update().get(pk=pk)
 
-        if not rifa.premios.exists():
+        if (
+            rifa.tipo_sorteo == Rifa.TipoSorteo.MANUAL
+            and timezone.now() < rifa.fecha_fin
+        ):
             return Response(
                 {
-                    'success': False,
-                    'error': 'Esta rifa no tiene premios configurados'
+                    "success": False,
+                    "error": "El sorteo manual solo puede realizarse después de la fecha de finalización de la rifa.",
                 },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Validar input
@@ -377,41 +422,46 @@ class RifaViewSet(viewsets.ModelViewSet):
         if rifa.estado != EstadoRifa.ACTIVA:
             return Response(
                 {
-                    'success': False,
-                    'error': f'No se puede sortear una rifa {rifa.get_estado_display().lower()}'
+                    "success": False,
+                    "error": f"No se puede sortear una rifa {rifa.get_estado_display().lower()}",
                 },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if rifa.premios.filter(ganador__isnull=False).exists():
             return Response(
-                {
-                    'success': False,
-                    'error': 'Esta rifa ya tiene ganadores asignados'
-                },
-                status=status.HTTP_400_BAD_REQUEST
+                {"success": False, "error": "Esta rifa ya tiene ganadores asignados"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Realizar sorteo
         try:
             resultado = rifa.realizar_sorteo()
 
-            if resultado.get('sin_participantes'):
-                return Response({
-                    'success': False,
-                    'message': 'No hay participantes registrados para sortear',
-                    'premios_ganados': [],
-                    'rifa': RifaListSerializer(rifa, context={'request': request}).data,
-                    'total_participantes': 0,
-                    'sin_participantes': True
-                })
+            if resultado.get("sin_participantes"):
+                return Response(
+                    {
+                        "success": False,
+                        "message": "No hay participantes registrados para sortear",
+                        "premios_ganados": [],
+                        "rifa": RifaListSerializer(
+                            rifa, context={"request": request}
+                        ).data,
+                        "total_participantes": 0,
+                        "sin_participantes": True,
+                    }
+                )
 
-            premios_ganados = resultado.get('premios_ganados', [])
+            premios_ganados = resultado.get("premios_ganados", [])
             premios_data = [
                 {
-                    'posicion': p['posicion'],
-                    'descripcion': p['descripcion'],
-                    'ganador': UsuarioSimpleSerializer(p['ganador']).data if p.get('ganador') else None
+                    "posicion": p["posicion"],
+                    "descripcion": p["descripcion"],
+                    "ganador": (
+                        UsuarioSimpleSerializer(p["ganador"]).data
+                        if p.get("ganador")
+                        else None
+                    ),
                 }
                 for p in premios_ganados
             ]
@@ -421,34 +471,34 @@ class RifaViewSet(viewsets.ModelViewSet):
                 f"para rifa {rifa.titulo} | Premios: {len(premios_ganados)}"
             )
 
-            return Response({
-                'success': True,
-                'message': '¡Sorteo realizado!',
-                'premios_ganados': premios_data,
-                'rifa': RifaListSerializer(rifa, context={'request': request}).data,
-                'total_participantes': rifa.total_participantes,
-                'sin_participantes': False
-            })
+            return Response(
+                {
+                    "success": True,
+                    "message": "¡Sorteo realizado!",
+                    "premios_ganados": premios_data,
+                    "rifa": RifaListSerializer(rifa, context={"request": request}).data,
+                    "total_participantes": rifa.total_participantes,
+                    "sin_participantes": False,
+                }
+            )
 
         except ValidationError as e:
             return Response(
-                {
-                    'success': False,
-                    'error': str(e)
-                },
-                status=status.HTTP_400_BAD_REQUEST
+                {"success": False, "error": str(e)}, status=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
             logger.error(f"Error al realizar sorteo: {str(e)}")
             return Response(
-                {
-                    'success': False,
-                    'error': 'Error interno al realizar el sorteo'
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"success": False, "error": "Error interno al realizar el sorteo"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @action(detail=True, methods=['get'], url_path='participantes', permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="participantes",
+        permission_classes=[IsAdmin],
+    )
     def participantes(self, request, pk=None):
         """
         GET /api/rifas/{id}/participantes/
@@ -457,22 +507,28 @@ class RifaViewSet(viewsets.ModelViewSet):
         """
         rifa = self.get_object()
 
-        participaciones = rifa.participaciones.select_related('usuario').order_by('-fecha_registro')
+        participaciones = rifa.participaciones.select_related("usuario").order_by(
+            "-fecha_registro"
+        )
         participantes_data = [
             {
-                'usuario': participacion.usuario,
-                'pedidos_completados': participacion.pedidos_completados,
-                'elegible': True
+                "usuario": participacion.usuario,
+                "pedidos_completados": participacion.pedidos_completados,
+                "elegible": True,
             }
             for participacion in participaciones
         ]
 
-        return Response({
-            'total': len(participantes_data),
-            'participantes': ParticipanteSerializer(participantes_data, many=True).data
-        })
+        return Response(
+            {
+                "total": len(participantes_data),
+                "participantes": ParticipanteSerializer(
+                    participantes_data, many=True
+                ).data,
+            }
+        )
 
-    @action(detail=False, methods=['get'], url_path='historial-ganadores')
+    @action(detail=False, methods=["get"], url_path="historial-ganadores")
     def historial_ganadores(self, request):
         """
         GET /api/rifas/historial-ganadores/
@@ -482,35 +538,39 @@ class RifaViewSet(viewsets.ModelViewSet):
         Query params:
         - limit: cantidad de registros (default: 10)
         """
-        limit = int(request.query_params.get('limit', 10))
+        limit = int(request.query_params.get("limit", 10))
 
         historial = Rifa.obtener_historial_ganadores(limit=limit)
 
         data = []
         for rifa in historial:
             premios_data = []
-            for premio in rifa.premios.all().order_by('-posicion'):
+            for premio in rifa.premios.all().order_by("-posicion"):
                 if premio.ganador:
-                    premios_data.append({
-                        'posicion': premio.posicion,
-                        'descripcion': premio.descripcion,
-                        'ganador': premio.ganador
-                    })
+                    premios_data.append(
+                        {
+                            "posicion": premio.posicion,
+                            "descripcion": premio.descripcion,
+                            "ganador": premio.ganador,
+                        }
+                    )
 
-            data.append({
-                'id': rifa.id,
-                'titulo': rifa.titulo,
-                'mes_nombre': rifa.mes_nombre,
-                'anio': rifa.anio,
-                'premios': premios_data,
-                'fecha_fin': rifa.fecha_fin,
-                'total_participantes': rifa.total_participantes
-            })
+            data.append(
+                {
+                    "id": rifa.id,
+                    "titulo": rifa.titulo,
+                    "mes_nombre": rifa.mes_nombre,
+                    "anio": rifa.anio,
+                    "premios": premios_data,
+                    "fecha_fin": rifa.fecha_fin,
+                    "total_participantes": rifa.total_participantes,
+                }
+            )
 
         serializer = HistorialGanadoresSerializer(data, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'], url_path='estadisticas')
+    @action(detail=False, methods=["get"], url_path="estadisticas")
     def estadisticas(self, request):
         """
         GET /api/rifas/estadisticas/
@@ -522,58 +582,106 @@ class RifaViewSet(viewsets.ModelViewSet):
 
         # Totales
         total_rifas = Rifa.objects.filter(estado=EstadoRifa.FINALIZADA).count()
-        total_ganadores = Premio.objects.filter(
-            ganador__isnull=False
-        ).count()
+        total_ganadores = Premio.objects.filter(ganador__isnull=False).count()
 
         # Últimos ganadores
         ultimos_ganadores = Rifa.obtener_historial_ganadores(limit=5)
 
         # Estadísticas personales del usuario
-        mis_participaciones = Participacion.objects.filter(
-            usuario=request.user
-        ).count()
+        mis_participaciones = Participacion.objects.filter(usuario=request.user).count()
 
         mis_victorias = Participacion.objects.filter(
-            usuario=request.user,
-            ganador=True
+            usuario=request.user, ganador=True
         ).count()
 
         # Construir datos para serializer
         ultimos_ganadores_data = []
         for rifa in ultimos_ganadores:
             premios_data = []
-            for premio in rifa.premios.all().order_by('-posicion'):
+            for premio in rifa.premios.all().order_by("-posicion"):
                 if premio.ganador:
-                    premios_data.append({
-                        'posicion': premio.posicion,
-                        'descripcion': premio.descripcion,
-                        'ganador': premio.ganador
-                    })
+                    premios_data.append(
+                        {
+                            "posicion": premio.posicion,
+                            "descripcion": premio.descripcion,
+                            "ganador": premio.ganador,
+                        }
+                    )
 
-            ultimos_ganadores_data.append({
-                'id': rifa.id,
-                'titulo': rifa.titulo,
-                'mes_nombre': rifa.mes_nombre,
-                'anio': rifa.anio,
-                'premios': premios_data,
-                'fecha_fin': rifa.fecha_fin,
-                'total_participantes': rifa.total_participantes
-            })
+            ultimos_ganadores_data.append(
+                {
+                    "id": rifa.id,
+                    "titulo": rifa.titulo,
+                    "mes_nombre": rifa.mes_nombre,
+                    "anio": rifa.anio,
+                    "premios": premios_data,
+                    "fecha_fin": rifa.fecha_fin,
+                    "total_participantes": rifa.total_participantes,
+                }
+            )
 
         data = {
-            'rifa_activa': rifa_activa,
-            'total_rifas_realizadas': total_rifas,
-            'total_ganadores': total_ganadores,
-            'ultimos_ganadores': ultimos_ganadores_data,
-            'mi_participaciones': mis_participaciones,
-            'mis_victorias': mis_victorias
+            "rifa_activa": rifa_activa,
+            "total_rifas_realizadas": total_rifas,
+            "total_ganadores": total_ganadores,
+            "ultimos_ganadores": ultimos_ganadores_data,
+            "mi_participaciones": mis_participaciones,
+            "mis_victorias": mis_victorias,
         }
 
-        serializer = EstadisticasRifasSerializer(data, context={'request': request})
+        serializer = EstadisticasRifasSerializer(data, context={"request": request})
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], url_path='cancelar', permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="premios/(?P<premio_pk>[^/.]+)/cancelar",
+        permission_classes=[IsAdmin],
+    )
+    def cancelar_premio(self, request, pk=None, premio_pk=None):
+        """
+        POST /api/rifas/{id}/premios/{premio_id}/cancelar/
+
+        Cancela un premio específico de una rifa (solo admin).
+        Un premio no puede ser cancelado si ya tiene un ganador.
+        """
+        rifa = self.get_object()
+        premio = get_object_or_404(Premio, pk=premio_pk, rifa=rifa)
+
+        if premio.ganador:
+            return Response(
+                {"error": "No se puede cancelar un premio que ya tiene un ganador."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if premio.estado == EstadoPremio.CANCELADO:
+            return Response(
+                {"message": "El premio ya se encontraba cancelado."},
+                status=status.HTTP_200_OK,
+            )
+
+        premio.estado = EstadoPremio.CANCELADO
+        premio.save()
+
+        logger.warning(
+            f"Premio {premio.posicion} ({premio.descripcion}) de la rifa '{rifa.titulo}' "
+            f"cancelado por {request.user.email}."
+        )
+
+        # Usamos el serializer de premios para devolver el estado actualizado
+        from .serializers import PremioSerializer
+
+        return Response(
+            {
+                "success": True,
+                "message": "Premio cancelado correctamente.",
+                "premio": PremioSerializer(premio, context={"request": request}).data,
+            }
+        )
+
+    @action(
+        detail=True, methods=["post"], url_path="cancelar", permission_classes=[IsAdmin]
+    )
     def cancelar(self, request, pk=None):
         """
         POST /api/rifas/{id}/cancelar/
@@ -584,7 +692,7 @@ class RifaViewSet(viewsets.ModelViewSet):
         """
         rifa = self.get_object()
 
-        motivo = request.data.get('motivo', 'Sin motivo especificado')
+        motivo = request.data.get("motivo", "Sin motivo especificado")
 
         try:
             rifa.cancelar_rifa(motivo=motivo)
@@ -594,26 +702,25 @@ class RifaViewSet(viewsets.ModelViewSet):
                 f"Motivo: {motivo}"
             )
 
-            return Response({
-                'success': True,
-                'message': f'Rifa "{rifa.titulo}" cancelada correctamente',
-                'motivo': motivo,
-                'rifa': RifaListSerializer(rifa, context={'request': request}).data
-            })
+            return Response(
+                {
+                    "success": True,
+                    "message": f'Rifa "{rifa.titulo}" cancelada correctamente',
+                    "motivo": motivo,
+                    "rifa": RifaListSerializer(rifa, context={"request": request}).data,
+                }
+            )
 
         except ValidationError as e:
             return Response(
-                {
-                    'success': False,
-                    'error': str(e)
-                },
-                status=status.HTTP_400_BAD_REQUEST
+                {"success": False, "error": str(e)}, status=status.HTTP_400_BAD_REQUEST
             )
 
 
 # ============================================
 # 🎟️ VIEWSET: PARTICIPACIONES
 # ============================================
+
 
 class ParticipacionViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -625,16 +732,17 @@ class ParticipacionViewSet(viewsets.ReadOnlyModelViewSet):
     - GET /api/participaciones/mis-participaciones/  - Mis participaciones
     """
 
-    queryset = Participacion.objects.all().select_related(
-        'rifa',
-        'usuario'
-    ).order_by('-fecha_registro')
+    queryset = (
+        Participacion.objects.all()
+        .select_related("rifa", "usuario")
+        .order_by("-fecha_registro")
+    )
 
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         """Seleccionar serializer"""
-        if self.action == 'list':
+        if self.action == "list":
             return ParticipacionSimpleSerializer
         return ParticipacionSerializer
 
@@ -645,7 +753,7 @@ class ParticipacionViewSet(viewsets.ReadOnlyModelViewSet):
         - Usuario: solo sus participaciones
         """
         # 1. Protección para Swagger (Evita Error 500 con AnonymousUser)
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Participacion.objects.none()
 
         # 2. Protección para usuario no autenticado
@@ -660,7 +768,7 @@ class ParticipacionViewSet(viewsets.ReadOnlyModelViewSet):
 
         return queryset.filter(usuario=self.request.user)
 
-    @action(detail=False, methods=['get'], url_path='mis-participaciones')
+    @action(detail=False, methods=["get"], url_path="mis-participaciones")
     def mis_participaciones(self, request):
         """
         GET /api/participaciones/mis-participaciones/
@@ -669,20 +777,22 @@ class ParticipacionViewSet(viewsets.ReadOnlyModelViewSet):
         """
         # Protección adicional si se llama directamente
         if not request.user.is_authenticated:
-             return Response(status=status.HTTP_401_UNAUTHORIZED)
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-        participaciones = Participacion.objects.filter(
-            usuario=request.user
-        ).select_related('rifa').order_by('-fecha_registro')
-
-        serializer = ParticipacionSerializer(
-            participaciones,
-            many=True,
-            context={'request': request}
+        participaciones = (
+            Participacion.objects.filter(usuario=request.user)
+            .select_related("rifa")
+            .order_by("-fecha_registro")
         )
 
-        return Response({
-            'total': participaciones.count(),
-            'victorias': participaciones.filter(ganador=True).count(),
-            'participaciones': serializer.data
-        })
+        serializer = ParticipacionSerializer(
+            participaciones, many=True, context={"request": request}
+        )
+
+        return Response(
+            {
+                "total": participaciones.count(),
+                "victorias": participaciones.filter(ganador=True).count(),
+                "participaciones": serializer.data,
+            }
+        )

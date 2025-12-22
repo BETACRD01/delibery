@@ -196,7 +196,7 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
           ),
         );
 
-        Navigator.pushAndRemoveUntil(
+        await Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const PantallaRouter()),
           (route) => false,

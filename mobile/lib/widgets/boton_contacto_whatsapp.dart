@@ -1,6 +1,7 @@
 // lib/widgets/boton_contacto_whatsapp.dart
 
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/jp_theme.dart' hide JPSnackbar;
 import 'jp_snackbar.dart';
@@ -87,7 +88,7 @@ class BotonContactoWhatsApp extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: () => _abrirWhatsApp(context),
       icon: Icon(
-        icono ?? Icons.chat,
+        icono ?? FontAwesomeIcons.whatsapp,
         color: Colors.white,
       ),
       label: Text(
@@ -124,7 +125,7 @@ class BotonContactoWhatsApp extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  icono ?? Icons.chat,
+                  icono ?? FontAwesomeIcons.whatsapp,
                   color: Colors.white,
                   size: 20,
                 ),
@@ -241,7 +242,7 @@ class OpcionesContacto extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _realizarLlamada(context),
-                    icon: const Icon(Icons.phone, size: 18),
+                    icon: const Icon(FontAwesomeIcons.phone, size: 18),
                     label: const Text('Llamar'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: JPColors.primary,
@@ -259,7 +260,7 @@ class OpcionesContacto extends StatelessWidget {
                     mensaje: mensajeWhatsApp,
                     esBotonCompleto: true,
                     textoBoton: 'WhatsApp',
-                    icono: Icons.chat_bubble,
+                    icono: FontAwesomeIcons.whatsapp,
                   ),
                 ),
               ],

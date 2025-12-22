@@ -1,6 +1,7 @@
 // lib/widgets/card_contacto_repartidor.dart
 
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../theme/jp_theme.dart';
 import 'boton_contacto_whatsapp.dart';
 
@@ -87,7 +88,7 @@ class BotonWhatsAppRepartidor extends StatelessWidget {
       mensaje: _generarMensajeWhatsApp(),
       esBotonCompleto: true,
       textoBoton: 'Contactar repartidor',
-      icono: Icons.chat_bubble,
+      icono: FontAwesomeIcons.whatsapp,
     );
   }
 }
@@ -120,13 +121,13 @@ class FABContactoRepartidor extends StatelessWidget {
     return FloatingActionButton.extended(
       onPressed: () {},
       backgroundColor: const Color(0xFF25D366), // Color de WhatsApp
-      icon: const Icon(Icons.chat_bubble, color: Colors.white),
+      icon: const Icon(FontAwesomeIcons.whatsapp, color: Colors.white),
       label: BotonContactoWhatsApp(
         telefono: telefonoRepartidor!,
         mensaje: _generarMensajeWhatsApp(),
         esBotonCompleto: true,
         textoBoton: 'Contactar',
-        icono: Icons.chat_bubble,
+        icono: FontAwesomeIcons.whatsapp,
       ),
     );
   }

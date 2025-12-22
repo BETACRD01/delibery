@@ -195,7 +195,7 @@ class _PantallaMisSolicitudesState extends State<PantallaMisSolicitudes> {
       context,
       CupertinoPageRoute(builder: (_) => const PantallaSolicitarRol()),
     );
-    if (resultado == true) _cargarSolicitudes();
+    if (resultado == true) await _cargarSolicitudes();
   }
 }
 
