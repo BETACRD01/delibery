@@ -1,13 +1,16 @@
 // lib/screens/user/perfil/editar/pantalla_editar_informacion.dart
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import 'dart:ui';
-import '../../../../theme/jp_theme.dart';
-import '../../../../services/usuarios_service.dart';
+
 import '../../../../apis/helpers/api_exception.dart';
 import '../../../../models/usuario.dart';
+import '../../../../services/usuarios_service.dart';
+import '../../../../theme/jp_theme.dart';
+import '../../../../widgets/util/phone_normalizer.dart';
 
 class PantallaEditarInformacion extends StatefulWidget {
   final PerfilModel perfil;
@@ -203,15 +206,17 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
       }
 
       await _usuarioService.actualizarPerfil(datos);
-      final perfilActualizado =
-          await _usuarioService.obtenerPerfil(forzarRecarga: true);
+      final perfilActualizado = await _usuarioService.obtenerPerfil(
+        forzarRecarga: true,
+      );
 
       if (!mounted) return;
       _nombreCtrl.text = perfilActualizado.firstName;
       _apellidoCtrl.text = perfilActualizado.lastName;
       _emailCtrl.text = perfilActualizado.usuarioEmail;
-      _telefonoCtrl.text =
-          _telefonoNacionalDesdePerfil(perfilActualizado.telefono);
+      _telefonoCtrl.text = _telefonoNacionalDesdePerfil(
+        perfilActualizado.telefono,
+      );
       _telefonoNumero = _telefonoCtrl.text;
       _fechaNacimiento = perfilActualizado.fechaNacimiento;
 
@@ -694,6 +699,9 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             LengthLimitingTextInputFormatter(15),
           ],
           onChanged: (phone) {
+            // FIX: Guardar solo el número actual que escribe el usuario.
+            // IntlPhoneField a veces mantiene estado interno.
+            // Al asignar phone.number, aseguramos usar lo que el usuario ve.
             _telefonoNumero = phone.number;
           },
           onCountryChanged: (country) {
@@ -701,11 +709,12 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             _dialCode = dial.isEmpty ? '+593' : '+$dial';
           },
           validator: (phone) {
-            final digits =
-                phone?.number.replaceAll(RegExp(r'\D'), '') ?? '';
+            // Validación local básica
+            final digits = phone?.number.replaceAll(RegExp(r'\D'), '') ?? '';
             if (digits.isEmpty) {
               return 'Requerido';
             }
+            // Aceptar 09... (10) o 9... (9)
             if (digits.length == 9 || digits.length == 10) {
               return null;
             }
@@ -858,23 +867,37 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
   String _telefonoNacionalDesdePerfil(String? telefono) {
     if (telefono == null || telefono.trim().isEmpty) return '';
     final limpio = telefono.trim();
+
+    // Prioridad Ecuador
     if (limpio.startsWith('+593')) {
-      final local = limpio.replaceFirst('+593', '');
-      if (local.startsWith('0')) return local;
-      return '0$local';
+      final local = limpio.substring(4); // Remover +593
+      // Asegurar 0 inicial para visualización en Ecuador
+      if (local.isNotEmpty && !local.startsWith('0')) return '0$local';
+      return local;
     }
+
+    // Intento genérico de separar dial code
     if (limpio.startsWith('+')) {
-      return limpio.replaceFirst(RegExp(r'^\+\d+'), '');
+      final dial = _dialCodeDesdePerfil(limpio);
+      if (limpio.startsWith(dial)) {
+        return limpio.substring(dial.length);
+      }
     }
+
     return limpio;
   }
 
   String _dialCodeDesdePerfil(String? telefono) {
     if (telefono == null || telefono.trim().isEmpty) return '+593';
     final limpio = telefono.trim();
+
+    if (limpio.startsWith('+593')) return '+593';
+
     if (limpio.startsWith('+')) {
-      final match = RegExp(r'^\+\d+').firstMatch(limpio);
-      if (match != null) return match.group(0) ?? '+593';
+      // Intentar capturar código de país (1 a 4 dígitos)
+      // NO usar \d+ porque capturaría todo el teléfono
+      final match = RegExp(r'^\+(\d{1,4})').firstMatch(limpio);
+      if (match != null) return '+${match.group(1)}';
     }
     return '+593';
   }
@@ -890,17 +913,6 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
     final numero = _telefonoNumero.trim().isNotEmpty
         ? _telefonoNumero.trim()
         : _telefonoCtrl.text.trim();
-    if (numero.isEmpty) return '';
-
-    var digits = numero.replaceAll(RegExp(r'\D'), '');
-    final dial = _dialCode.replaceAll(RegExp(r'\D'), '');
-    if (dial.isEmpty) return digits;
-
-    // Ecuador: si viene con 0 inicial, lo removemos para construir +5939...
-    if (dial == '593' && digits.startsWith('0')) {
-      digits = digits.replaceFirst(RegExp(r'^0+'), '');
-    }
-
-    return '+$dial$digits';
+    return normalizeUserPhoneForProfile(rawNumber: numero, dialCode: _dialCode);
   }
 }

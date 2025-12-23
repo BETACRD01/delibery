@@ -6,7 +6,7 @@ import '../../config/rutas.dart';
 import '../../config/api_config.dart';
 import '../../apis/helpers/api_exception.dart';
 import '../../services/core/validation/validators.dart';
-import '../../theme/jp_theme.dart'; // Asegúrate de importar tu tema
+import '../../theme/jp_theme.dart';
 
 class PantallaRecuperarPassword extends StatefulWidget {
   const PantallaRecuperarPassword({super.key});
@@ -34,7 +34,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
   bool _bloqueadoTemporalmente = false;
 
   // ============================================
-  // LÓGICA (Intacta)
+  // LÓGICA
   // ============================================
 
   Future<void> _enviarCodigo() async {
@@ -51,23 +51,21 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
     });
 
     try {
-      // ✅ CORRECTO
-      await _api.solicitarRecuperacion(
-      email: _emailController.text.trim(),
-     );
-      if (mounted) {
-      setState(() {
-      _codigoEnviado = true;
-      _loading = false;
-    });
+      await _api.solicitarRecuperacion(email: _emailController.text.trim());
 
-    // Pequeña pausa para que el usuario vea el éxito antes de cambiar
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      await Rutas.irAVerificarCodigo(context, _emailController.text.trim());
-    }
-  }
-} on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _codigoEnviado = true;
+          _loading = false;
+        });
+
+        // Pequeña pausa para que el usuario vea el éxito antes de cambiar
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          await Rutas.irAVerificarCodigo(context, _emailController.text.trim());
+        }
+      }
+    } on ApiException catch (e) {
       if (mounted) {
         setState(() {
           if (e.statusCode == 429) {
@@ -92,6 +90,13 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
     }
   }
 
+  // Helper local para formatear el tiempo (Antes estaba en AuthService)
+  String _formatearTiempoEspera(int segundos) {
+    final min = segundos ~/ 60;
+    final sec = segundos % 60;
+    return min > 0 ? '$min m $sec s' : '$sec s';
+  }
+
   void _mostrarDialogoBloqueado() {
     showDialog(
       context: context,
@@ -114,11 +119,16 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.timer_outlined, size: 16, color: JPColors.warning),
+                    const Icon(
+                      Icons.timer_outlined,
+                      size: 16,
+                      color: JPColors.warning,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Espera ${AuthService.formatearTiempoEspera(_tiempoEspera!)}',
+                        // CORREGIDO: Usamos la función local
+                        'Espera ${_formatearTiempoEspera(_tiempoEspera!)}',
                         style: const TextStyle(
                           color: JPColors.warning,
                           fontWeight: FontWeight.bold,
@@ -149,7 +159,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
   }
 
   // ============================================
-  // UI OPTIMIZADA
+  // UI
   // ============================================
 
   @override
@@ -160,7 +170,11 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: JPColors.textPrimary, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: JPColors.textPrimary,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -189,7 +203,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
         children: [
           _buildHeaderIcon(),
           const SizedBox(height: 32),
-          
+
           const Text(
             'Recuperar Contraseña',
             textAlign: TextAlign.center,
@@ -212,11 +226,11 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
           const SizedBox(height: 32),
 
           _buildEmailInput(),
-          
+
           if (_error != null) _buildErrorMessage(),
-          
+
           const SizedBox(height: 24),
-          
+
           _buildSendButton(),
         ],
       ),
@@ -263,9 +277,15 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
       decoration: InputDecoration(
         labelText: 'Correo electrónico',
         labelStyle: const TextStyle(color: JPColors.textSecondary),
-        prefixIcon: const Icon(Icons.email_outlined, size: 20, color: JPColors.textSecondary),
-        // Estilo Minimalista Clean
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        prefixIcon: const Icon(
+          Icons.email_outlined,
+          size: 20,
+          color: JPColors.textSecondary,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
@@ -279,8 +299,8 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
           borderSide: const BorderSide(color: JPColors.primary, width: 1.5),
         ),
         filled: true,
-        fillColor: _bloqueadoTemporalmente 
-            ? const Color(0xFFF5F5F5) 
+        fillColor: _bloqueadoTemporalmente
+            ? const Color(0xFFF5F5F5)
             : const Color(0xFFFAFAFA),
       ),
     );
@@ -300,7 +320,11 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.error_outline, size: 20, color: JPColors.error),
+                const Icon(
+                  Icons.error_outline,
+                  size: 20,
+                  color: JPColors.error,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -332,9 +356,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
         style: ElevatedButton.styleFrom(
           backgroundColor: JPColors.primary,
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           disabledBackgroundColor: Colors.grey[300],
         ),
         child: _loading
@@ -359,10 +381,6 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
     );
   }
 
-  // ============================================
-  // UI - PANTALLA ÉXITO (Simplificada)
-  // ============================================
-  
   Widget _buildCodigoEnviadoExito() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -374,7 +392,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
           color: JPColors.success,
         ),
         const SizedBox(height: 24),
-        
+
         const Text(
           '¡Código enviado!',
           textAlign: TextAlign.center,
@@ -385,7 +403,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -411,10 +429,9 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
             ],
           ),
         ),
-        
+
         const SizedBox(height: 32),
-        
-        // Nota de expiración discreta
+
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -430,7 +447,7 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
             ),
           ],
         ),
-        
+
         const SizedBox(height: 32),
         const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ],

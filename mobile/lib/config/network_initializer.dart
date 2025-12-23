@@ -1,65 +1,70 @@
 // lib/config/network_initializer.dart
 import 'package:flutter/material.dart';
+
 import 'api_config.dart';
 
 // ============================================================================
-// NETWORK INITIALIZER
+// NETWORK INITIALIZER (ADAPTADO A NGROK)
 // ============================================================================
 
 class NetworkInitializer {
   NetworkInitializer._();
 
+  /// Inicializa la configuración.
   static Future<void> initialize() async {
-    debugPrint('Inicializando detección de red...');
+    debugPrint('Inicializando configuración de red...');
     await ApiConfig.initialize();
   }
 
   // --------------------------------------------------------------------------
-  // Getters
+  // Getters Informativos
   // --------------------------------------------------------------------------
 
-  static String? get currentNetwork => ApiConfig.currentNetwork;
-  static String? get serverIp => ApiConfig.currentServerIp;
+  // Ya no detectamos nombres de WiFi (Casa/Trabajo), ahora es Modo Desarrollo o Prod.
+  static String get currentNetwork =>
+      ApiConfig.isProduction ? 'Internet (Producción)' : 'Túnel Seguro (Ngrok)';
+
+  // La IP ahora es la URL completa
+  static String get serverIp => ApiConfig.baseUrl;
+
   static String get baseUrl => ApiConfig.baseUrl;
-  static bool get isConnected => ApiConfig.currentServerIp != null;
+
+  // Asumimos conectado si hay una URL configurada
+  static bool get isConnected => ApiConfig.baseUrl.isNotEmpty;
 
   // --------------------------------------------------------------------------
-  // Widget Info
+  // Widget Info (Panel de Estado)
   // --------------------------------------------------------------------------
 
   static Widget buildNetworkInfo() {
-    final network = currentNetwork ?? 'No detectada';
-    final ip = serverIp ?? 'N/A';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _InfoRow(
-          label: 'Red Actual',
-          value: network,
-          icon: _getNetworkIcon(network),
+          label: 'Modo',
+          value: currentNetwork,
+          icon: ApiConfig.isProduction ? Icons.public : Icons.developer_mode,
+          color: ApiConfig.isProduction ? Colors.green : Colors.orange,
         ),
-        _InfoRow(label: 'IP Servidor', value: ip, icon: Icons.dns),
+        _InfoRow(
+          label: 'Conexión',
+          // Mostramos solo una parte de la URL para que no ocupe mucho espacio
+          value: serverIp.replaceAll('https://', ''),
+          icon: Icons.link,
+        ),
         _InfoRow(
           label: 'Estado',
-          value: isConnected ? 'Conectado' : 'Desconectado',
-          icon: isConnected ? Icons.check_circle : Icons.error,
-          color: isConnected ? Colors.green : Colors.red,
+          value: 'Activo',
+          icon: Icons.check_circle,
+          color: Colors.green,
         ),
       ],
     );
   }
-
-  static IconData _getNetworkIcon(String network) {
-    if (network.contains('CASA')) return Icons.home;
-    if (network.contains('INSTITUCIONAL')) return Icons.business;
-    if (network.contains('DESCONOCIDA')) return Icons.help_outline;
-    return Icons.public;
-  }
 }
 
 // ============================================================================
-// WIDGETS PRIVADOS
+// WIDGETS PRIVADOS (UI)
 // ============================================================================
 
 class _InfoRow extends StatelessWidget {
@@ -85,7 +90,13 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
           Expanded(
-            child: Text(value, style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              value,
+              style: const TextStyle(color: Colors.grey),
+              overflow: TextOverflow
+                  .ellipsis, // Evita desbordamiento si la URL es larga
+              maxLines: 1,
+            ),
           ),
         ],
       ),
@@ -94,7 +105,7 @@ class _InfoRow extends StatelessWidget {
 }
 
 // ============================================================================
-// REFRESH BUTTON
+// REFRESH BUTTON (SIMULADO)
 // ============================================================================
 
 class NetworkRefreshButton extends StatefulWidget {
@@ -113,17 +124,22 @@ class _NetworkRefreshButtonState extends State<NetworkRefreshButton> {
     setState(() => _refreshing = true);
 
     try {
-      await ApiConfig.refreshNetwork();
+      // Como Ngrok es fijo, no necesitamos "buscar" IPs.
+      // Simulamos una pequeña carga para dar feedback al usuario.
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // Llamamos al callback si existe (para recargar pantallas)
       widget.onNetworkChanged?.call();
+
       if (mounted) {
         _showSnackBar(
-          'Red actualizada: ${ApiConfig.currentNetwork ?? "Desconocida"}',
+          'Conexión sincronizada: ${NetworkInitializer.currentNetwork}',
           Colors.green,
         );
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('Error al actualizar: $e', Colors.red);
+        _showSnackBar('Error de conexión', Colors.red);
       }
     } finally {
       if (mounted) {
@@ -152,8 +168,10 @@ class _NetworkRefreshButtonState extends State<NetworkRefreshButton> {
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.refresh),
-      tooltip: 'Refrescar red',
+          : const Icon(
+              Icons.sync,
+            ), // Cambiado a icono de Sync que tiene más sentido
+      tooltip: 'Sincronizar conexión',
     );
   }
 }

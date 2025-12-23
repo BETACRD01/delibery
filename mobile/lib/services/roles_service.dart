@@ -39,13 +39,12 @@ class RolesService {
   factory RolesService() => _instance;
 
   final _client = ApiClient();
-  static const _tokenDuration = Duration(hours: 12);
 
   void _log(String msg, {Object? error, StackTrace? stack}) =>
       developer.log(msg, name: 'RolesService', error: error, stackTrace: stack);
 
   // --------------------------------------------------------------------------
-  // Metodos Principales
+  // Métodos Principales
   // --------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> obtenerRolesDisponibles() async {
@@ -62,7 +61,9 @@ class RolesService {
           .where((r) => r.esAceptado)
           .map((r) => r.nombre)
           .toList();
-      final activo = rolActivoApi ??
+
+      final activo =
+          rolActivoApi ??
           roles
               .where((r) => r.activo && r.esAceptado)
               .map((r) => r.nombre)
@@ -115,14 +116,16 @@ class RolesService {
 
       if (response.containsKey('tokens')) {
         final tokens = response['tokens'];
-        final rolFinal =
-            (tokens['rol'] as String? ?? nuevoRol).toString().toUpperCase();
+        final rolFinal = (tokens['rol'] as String? ?? nuevoRol)
+            .toString()
+            .toUpperCase();
+
+        // CORREGIDO: Eliminado el parámetro 'lifetime'
         await _client.saveTokens(
           tokens['access'],
           tokens['refresh'],
           role: rolFinal,
           userId: _client.userId,
-          lifetime: _tokenDuration,
         );
         _log('Rol cambiado, tokens actualizados. Rol final: $rolFinal');
       } else {

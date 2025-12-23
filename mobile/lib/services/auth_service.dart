@@ -1,5 +1,7 @@
 // lib/services/auth_service.dart
+
 import 'dart:developer' as developer;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../apis/subapis/http_client.dart';
 import '../config/api_config.dart';
 import '../apis/helpers/api_exception.dart';
@@ -8,7 +10,6 @@ import 'core/cache/cache_manager.dart';
 import 'repartidor_service.dart';
 import 'usuarios_service.dart';
 import 'role_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // ============================================================================
 // USER INFO MODEL
@@ -43,7 +44,6 @@ class AuthService {
   factory AuthService() => _instance;
 
   final _client = ApiClient();
-  static const _tokenDuration = Duration(hours: 24);
 
   void _log(String msg, {Object? error, StackTrace? stack}) =>
       developer.log(msg, name: 'AuthService', error: error, stackTrace: stack);
@@ -95,7 +95,7 @@ class AuthService {
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
         throw ApiException.loginFallido(
-          mensaje: 'Email o contrasena incorrectos',
+          mensaje: 'Email o contraseña incorrectos',
           errors: e.errors,
         );
       }
@@ -104,7 +104,7 @@ class AuthService {
       _log('Error en login', error: e, stack: stack);
       throw ApiException(
         statusCode: 0,
-        message: 'Error de conexion',
+        message: 'Error de conexión',
         errors: {'error': '$e'},
         contexto: 'login',
       );
@@ -143,11 +143,13 @@ class AuthService {
 
   Future<void> logout() async {
     try {
-      _log('Cerrando sesion...');
+      _log('Cerrando sesión...');
       if (_client.refreshToken != null) {
-        await _client.post(ApiConfig.logout, {
-          'refresh_token': _client.refreshToken,
-        });
+        // Intentamos notificar al backend, pero no bloqueamos si falla.
+        // CORRECCIÓN APLICADA: Tipar el retorno del catchError explícitamente.
+        await _client
+            .post(ApiConfig.logout, {'refresh_token': _client.refreshToken})
+            .catchError((_) => <String, dynamic>{});
       }
     } catch (e) {
       _log('Advertencia logout: $e');
@@ -163,13 +165,13 @@ class AuthService {
         await prefs.remove('historial_busqueda');
         await prefs.remove('inbox_notificaciones');
       } catch (e) {
-        _log('Advertencia limpiando cache local: $e');
+        _log('Advertencia limpiando caché local: $e');
       }
     }
   }
 
   // --------------------------------------------------------------------------
-  // Perfil y Recuperacion
+  // Perfil y Recuperación
   // --------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> getPerfil() => _client.get(ApiConfig.perfil);
@@ -249,26 +251,27 @@ class AuthService {
 
     if (response.containsKey('tokens')) {
       final tokens = response['tokens'];
-      final rolFinal =
-          (tokens['rol'] as String? ?? nuevoRol).toString().toUpperCase();
+      final rolFinal = (tokens['rol'] as String? ?? nuevoRol)
+          .toString()
+          .toUpperCase();
+
       await _client.saveTokens(
         tokens['access'],
         tokens['refresh'],
         role: rolFinal,
         userId: _client.userId,
-        lifetime: _tokenDuration,
       );
       _log('Rol cambiado (con tokens). Rol final: $rolFinal');
     } else {
       await _client.cacheUserRole(nuevoRol);
-      _log('Rol cambiado sin tokens, cache actualizado');
+      _log('Rol cambiado sin tokens, caché actualizado');
     }
 
     return response;
   }
 
   // --------------------------------------------------------------------------
-  // Utilidades Publicas
+  // Utilidades Públicas
   // --------------------------------------------------------------------------
 
   UserInfo? get user {
@@ -287,7 +290,8 @@ class AuthService {
   }
 
   bool get isAuthenticated => _client.isAuthenticated;
-  Future<bool> hasStoredTokens() => _client.hasStoredTokens();
+
+  Future<bool> hasStoredTokens() async => _client.isAuthenticated;
 
   Future<void> loadTokens() async {
     await _client.loadTokens();
@@ -301,17 +305,6 @@ class AuthService {
     _log('Autenticado: ${_client.isAuthenticated}');
     _log('Rol: ${_client.userRole ?? "N/A"}');
     _log('User ID: ${_client.userId ?? "N/A"}');
-    if (_client.tokenExpiry != null) {
-      _log(
-        'Expira en: ${_client.tokenExpiry!.difference(DateTime.now()).inMinutes} min',
-      );
-    }
-  }
-
-  static String formatearTiempoEspera(int segundos) {
-    final min = segundos ~/ 60;
-    final sec = segundos % 60;
-    return min > 0 ? '$min m $sec s' : '$sec s';
   }
 
   // --------------------------------------------------------------------------
@@ -336,7 +329,6 @@ class AuthService {
       tokens['refresh'],
       role: rol,
       userId: tokens['user_id'] as int?,
-      lifetime: _tokenDuration,
     );
 
     _log('Auth exitoso - Rol: $rol');
@@ -404,8 +396,8 @@ class AuthService {
       'last_name': 'Apellido',
       'email': 'Email',
       'celular': 'Celular',
-      'password': 'Contrasena',
-      'password2': 'Confirmar contrasena',
+      'password': 'Contraseña',
+      'password2': 'Confirmar contraseña',
     };
 
     final missing = required.entries
@@ -426,7 +418,7 @@ class AuthService {
     if (data['password'] != data['password2']) {
       throw ApiException(
         statusCode: 400,
-        message: 'Las contrasenas no coinciden',
+        message: 'Las contraseñas no coinciden',
         errors: {'password2': 'No coincide'},
       );
     }

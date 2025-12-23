@@ -1,184 +1,56 @@
 // lib/config/api_config.dart
+
 import 'dart:developer' as developer;
-import 'dart:io';
-import 'package:network_info_plus/network_info_plus.dart';
+
 import 'package:flutter/material.dart';
 
 class ApiConfig {
   ApiConfig._();
 
   // ============================================================================
-  // CONSTANTES DE RED
+  // 1. CONFIGURACIÓN PRINCIPAL (NGROK / PRODUCCIÓN)
   // ============================================================================
 
-  static const _redCasa = '192.168.1';
-  static const _ipLocal = '192.168.1.6';
-  static const _redInstitucional = '172.16';
-  static const _ipInstitucional = '172.16.61.251';
-  static const _redHotspot = '192.168.137';
-  static const _ipHotspot = '192.168.137.1';
-  static const _ipEmulador = '10.0.2.2';
-  static const _envHost = String.fromEnvironment('API_HOST');
-  static const _envPort = String.fromEnvironment('API_PORT');
-  static const _defaultPort = '8000';
-  static const enableEmulatorFallback = bool.fromEnvironment(
-    'ENABLE_EMULATOR_FALLBACK',
-    defaultValue: false,
-  );
+  // CAMBIA ESTO CADA VEZ QUE REINICIES NGROK (Sin la barra / al final)
+  static const String _ngrokUrl = 'https://7ecaf5123e85.ngrok-free.app';
+
+  // URL para producción (cuando subas a Play Store)
+  static const String _prodUrl = 'https://api.tu-dominio-real.com';
+
+  // Cambia a 'true' SOLO cuando generes el APK final
+  static const bool _isProduction = false;
 
   // ============================================================================
-  // ESTADO INTERNO
+  // 2. INICIALIZACIÓN
   // ============================================================================
 
-  static String? _cachedIp;
-  static String? _network;
-  static bool _initialized = false;
-  static bool _manualMode = false;
-  static String? _manualIp;
-  static bool _isEmulator = false;
-
-  // ============================================================================
-  // INICIALIZACIÓN Y DETECCIÓN
-  // ============================================================================
-
+  /// Método de inicialización (llamado desde main.dart)
   static Future<void> initialize() async {
-    if (_initialized) return;
-
-    if (_envHost.isNotEmpty) {
-      _network = 'MANUAL_ENV';
-      setManualIp(_envHost);
-      _initialized = true;
-      await _printDebug();
-      return;
-    }
-
-    try {
-      await _detectIp();
-      _initialized = true;
-      await _printDebug();
-    } catch (_) {
-      _cachedIp = _ipLocal;
-      _network = 'LOCAL (Fallback)';
-      _initialized = true;
-    }
-  }
-
-  static Future<String> _detectIp() async {
-    try {
-      if (await _checkEmulator()) {
-        _network = 'EMULADOR';
-        _cachedIp = _ipEmulador;
-        return _buildUrl(_ipEmulador);
-      }
-
-      final wifiIP = await NetworkInfo().getWifiIP();
-
-      if (wifiIP == null || wifiIP.isEmpty) {
-        _cachedIp = _ipLocal;
-        _network = 'LOCAL (Sin WiFi)';
-        return _buildUrl(_ipLocal);
-      }
-
-      final configs = {
-        _redCasa: ('CASA/RED_LOCAL', _ipLocal),
-        _redHotspot: ('HOTSPOT', _ipHotspot),
-        _redInstitucional: ('INSTITUCIONAL', _ipInstitucional),
-      };
-
-      for (final entry in configs.entries) {
-        if (wifiIP.startsWith(entry.key)) {
-          _network = entry.value.$1;
-          _cachedIp = entry.value.$2;
-          return _buildUrl(_cachedIp!);
-        }
-      }
-
-      _network = 'DESCONOCIDA';
-      _cachedIp = _ipLocal;
-      return _buildUrl(_ipLocal);
-    } catch (_) {
-      _cachedIp = _ipLocal;
-      _network = 'ERROR';
-      return _buildUrl(_ipLocal);
-    }
-  }
-
-  static Future<bool> _checkEmulator() async {
-    if (!Platform.isAndroid) return false;
-    try {
-      if (Platform.environment.containsKey('ANDROID_EMULATOR')) {
-        _isEmulator = true;
-        return true;
-      }
-      final wifiIP = await NetworkInfo().getWifiIP();
-      _isEmulator = wifiIP == '10.0.2.15' || wifiIP == '10.0.2.16';
-      return _isEmulator;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  static String _buildUrl(String ip) => 'http://$ip:$puerto';
-
-  static Future<String> refreshNetwork() async {
-    _cachedIp = null;
-    _network = null;
-    return await _detectIp();
+    developer.log('API CONFIG: Inicializando...');
+    developer.log(
+      'MODO: ${_isProduction ? "PRODUCCIÓN" : "DESARROLLO (Ngrok)"}',
+    );
+    developer.log('URL BASE: $baseUrl');
   }
 
   // ============================================================================
-  // URL BASE
+  // 3. GETTERS GLOBALES
   // ============================================================================
 
-  static const _prodUrl = 'https://api.deliber.com';
-  static const _isProd = bool.fromEnvironment('dart.vm.product');
+  /// Devuelve la URL base activa
+  static String get baseUrl => _isProduction ? _prodUrl : _ngrokUrl;
 
-  static Future<String> getBaseUrl() async {
-    if (_isProd) return _prodUrl;
-    if (_cachedIp != null) return _buildUrl(_cachedIp!);
-    return await _detectIp();
-  }
-
-  static String get baseUrl {
-    if (_isProd) return _prodUrl;
-    if (_envHost.isNotEmpty) return _buildUrl(_envHost);
-    if (_manualMode && _manualIp != null) return _buildUrl(_manualIp!);
-    if (_cachedIp != null) return _buildUrl(_cachedIp!);
-    return _buildUrl(_ipLocal);
-  }
-
+  /// Endpoint principal de la API
   static String get apiUrl => '$baseUrl/api';
 
-  static void setManualIp(String ip) {
-    _manualMode = true;
-    _manualIp = ip;
-    _cachedIp = ip;
-  }
-
-  static void disableManualIp() {
-    _manualMode = false;
-    _manualIp = null;
-    _cachedIp = null;
-  }
+  /// Endpoint para imágenes/media
+  static String get mediaUrl => '$baseUrl/media';
 
   // ============================================================================
-  // ENDPOINTS BASE
+  // 4. ENDPOINTS: AUTH
   // ============================================================================
 
   static String get _auth => '$apiUrl/auth';
-  static String get _users => '$apiUrl/usuarios';
-  static String get _products => '$apiUrl/productos';
-  static String get _suppliers => '$apiUrl/proveedores';
-  static String get _delivery => '$apiUrl/repartidores';
-  static String get _admin => '$apiUrl/admin';
-  static String get _adminEnvios => '$_admin/envios';
-  static String get _payments => '$apiUrl/pagos';
-  static String get _ratings => '$apiUrl/calificaciones';
-  static String get _super => '$apiUrl/super-categorias';
-
-  // ============================================================================
-  // AUTH
-  // ============================================================================
 
   static String get registro => '$_auth/registro/';
   static String get login => '$_auth/login/';
@@ -199,8 +71,10 @@ class ApiConfig {
   static String get tokenRefresh => '$_auth/token/refresh/';
 
   // ============================================================================
-  // USUARIOS
+  // 5. ENDPOINTS: USUARIOS
   // ============================================================================
+
+  static String get _users => '$apiUrl/usuarios';
 
   static String get infoRol => '$_users/verificar-roles/';
   static String get usuariosPerfil => '$_users/perfil/';
@@ -234,7 +108,7 @@ class ApiConfig {
   static String get usuariosMisRoles => '$_users/mis-roles/';
 
   // ============================================================================
-  // RIFAS
+  // 6. ENDPOINTS: RIFAS
   // ============================================================================
 
   static String get rifasMisParticipaciones =>
@@ -248,8 +122,10 @@ class ApiConfig {
       '$apiUrl/rifas/$rifaId/participar/';
 
   // ============================================================================
-  // PRODUCTOS Y CARRITO
+  // 7. ENDPOINTS: PRODUCTOS Y CARRITO
   // ============================================================================
+
+  static String get _products => '$apiUrl/productos';
 
   static String get productosCategorias => '$_products/categorias/';
   static String get productosLista => '$_products/productos/';
@@ -265,11 +141,14 @@ class ApiConfig {
   static String carritoItemCantidad(int id) =>
       '$_products/carrito/item/$id/cantidad/';
   static String carritoRemoverItem(int id) => '$_products/carrito/item/$id/';
+
   static String get enviosCotizar => '$apiUrl/envios/cotizar/';
 
   // ============================================================================
-  // PROVEEDORES
+  // 8. ENDPOINTS: PROVEEDORES
   // ============================================================================
+
+  static String get _suppliers => '$apiUrl/proveedores';
 
   static String get proveedores => '$_suppliers/';
   static String get miProveedor => '$_suppliers/mi_proveedor/';
@@ -294,7 +173,7 @@ class ApiConfig {
     String? tipo,
     String? ciudad,
     String? search,
-  }) => _buildQueryUrl(proveedores, {
+  }) => buildQueryUrl(proveedores, {
     'activos': activos,
     'verificados': verificados,
     'tipo_proveedor': tipo,
@@ -303,8 +182,10 @@ class ApiConfig {
   });
 
   // ============================================================================
-  // REPARTIDORES
+  // 9. ENDPOINTS: REPARTIDORES
   // ============================================================================
+
+  static String get _delivery => '$apiUrl/repartidores';
 
   static String get repartidorPerfil => '$_delivery/perfil/';
   static String get repartidorPerfilActualizar =>
@@ -350,8 +231,10 @@ class ApiConfig {
       '$_delivery/publico/$repartidorId/info/';
 
   // ============================================================================
-  // CALIFICACIONES
+  // 10. ENDPOINTS: CALIFICACIONES
   // ============================================================================
+
+  static String get _ratings => '$apiUrl/calificaciones';
 
   static String get calificacionesRapida => '$_ratings/rapida/';
   static String calificacionesPendientesPedido(int pedidoId) =>
@@ -362,17 +245,21 @@ class ApiConfig {
       '$_ratings/$type/$id/resumen/';
 
   // ============================================================================
-  // ADMIN
+  // 11. ENDPOINTS: ADMIN
   // ============================================================================
+
+  static String get _admin => '$apiUrl/admin';
+  static String get _adminEnvios => '$_admin/envios';
 
   static String get adminDashboard => '$_admin/dashboard/';
   static String get adminAcciones => '$_admin/acciones/';
-  // Admin - Envíos (solo administradores)
+
+  // Admin Envíos
   static String get adminEnviosConfiguracion => '$_adminEnvios/configuracion/';
   static String get adminEnviosZonas => '$_adminEnvios/zonas/';
   static String get adminEnviosCiudades => '$_adminEnvios/ciudades/';
 
-  // Admin - Proveedores
+  // Admin Proveedores
   static String get adminProveedores => '$_admin/proveedores/';
   static String get adminProveedoresPendientes =>
       '$_admin/proveedores/pendientes/';
@@ -391,14 +278,14 @@ class ApiConfig {
     bool? activo,
     String? tipoProveedor,
     String? search,
-  }) => _buildQueryUrl(adminProveedores, {
+  }) => buildQueryUrl(adminProveedores, {
     'verificado': verificado,
     'activo': activo,
     'tipo_proveedor': tipoProveedor,
     'search': search,
   });
 
-  // Admin - Repartidores
+  // Admin Repartidores
   static String get adminRepartidores => '$_admin/repartidores/';
   static String get adminRepartidoresPendientes =>
       '$_admin/repartidores/pendientes/';
@@ -417,14 +304,14 @@ class ApiConfig {
     bool? activo,
     String? estado,
     String? search,
-  }) => _buildQueryUrl(adminRepartidores, {
+  }) => buildQueryUrl(adminRepartidores, {
     'verificado': verificado,
     'activo': activo,
     'estado': estado,
     'search': search,
   });
 
-  // Admin - Usuarios
+  // Admin Usuarios
   static String get adminUsuarios => '$_admin/usuarios/';
   static String adminUsuarioDetalle(int id) => '$_admin/usuarios/$id/';
   static String adminUsuarioResetPassword(int id) =>
@@ -434,13 +321,13 @@ class ApiConfig {
     String? search,
     bool? activo,
     bool? rol,
-  }) => _buildQueryUrl(adminUsuarios, {
+  }) => buildQueryUrl(adminUsuarios, {
     'search': search,
     'activo': activo,
     'rol': rol,
   });
 
-  // Admin - Solicitudes
+  // Admin Solicitudes
   static String get adminSolicitudesCambioRol =>
       '$_admin/solicitudes-cambio-rol/';
   static String get adminSolicitudesPendientes =>
@@ -455,7 +342,7 @@ class ApiConfig {
       '$_admin/solicitudes-cambio-rol/$id/rechazar/';
 
   // ============================================================================
-  // PEDIDOS
+  // 12. ENDPOINTS: PEDIDOS
   // ============================================================================
 
   static String get pedidos => '$apiUrl/pedidos/';
@@ -476,7 +363,7 @@ class ApiConfig {
     String? tipo,
     int page = 1,
     int pageSize = 20,
-  }) => _buildQueryUrl(pedidos, {
+  }) => buildQueryUrl(pedidos, {
     'estado': estado,
     'tipo': tipo,
     'page': page,
@@ -484,8 +371,10 @@ class ApiConfig {
   });
 
   // ============================================================================
-  // PAGOS
+  // 13. ENDPOINTS: PAGOS
   // ============================================================================
+
+  static String get _payments => '$apiUrl/pagos';
 
   static String obtenerDatosBancariosPago(int pagoId) =>
       '$_payments/pagos/$pagoId/datos-bancarios/';
@@ -497,8 +386,10 @@ class ApiConfig {
       '$_payments/pagos/$pagoId/marcar-visto/';
 
   // ============================================================================
-  // SUPER (Supermercados, Farmacias, etc.)
+  // 14. ENDPOINTS: SUPER (FARMACIAS, TIENDAS)
   // ============================================================================
+
+  static String get _super => '$apiUrl/super-categorias';
 
   static String get superCategorias => '$_super/categorias/';
   static String get superProveedores => '$_super/proveedores/';
@@ -518,29 +409,29 @@ class ApiConfig {
   static String superProductoDetalle(int id) => '$_super/productos/$id/';
 
   // ============================================================================
-  // CONSTANTES
+  // 15. CONSTANTES DEL SISTEMA
   // ============================================================================
 
   static const apiKeyMobile =
       'mobile_app_deliber_2025_aW7xK3pM9qR5tL2nV8jH4cF6gB1dY0sZ';
   static const apiKeyWeb =
       'web_admin_deliber_2025_XkJ9mP3nQ7wR2vL5zT8hF1cY4gN6sB0d';
+
   static String get currentApiKey => apiKeyMobile;
 
-  static String get puerto => _envPort.isNotEmpty ? _envPort : _defaultPort;
-  static String get localBackendIp => _ipLocal;
-  static String get emulatorHost => _ipEmulador;
-
+  // Timeouts y Reintentos
   static const connectTimeout = Duration(seconds: 30);
   static const receiveTimeout = Duration(seconds: 30);
   static const sendTimeout = Duration(seconds: 30);
   static const maxRetries = 3;
   static const retryDelay = Duration(seconds: 2);
 
+  // Verificación y Seguridad
   static const codigoLongitud = 6;
   static const codigoExpiracionMinutos = 15;
   static const maxIntentosVerificacion = 5;
 
+  // Roles
   static const rolUsuario = 'USUARIO';
   static const rolRepartidor = 'REPARTIDOR';
   static const rolProveedor = 'PROVEEDOR';
@@ -554,7 +445,7 @@ class ApiConfig {
     'otro',
   ];
 
-  // HTTP Status
+  // HTTP Status Codes
   static const statusOk = 200;
   static const statusCreated = 201;
   static const statusBadRequest = 400;
@@ -573,23 +464,22 @@ class ApiConfig {
   static const errorRateLimit = 'Demasiados intentos. Espera un momento.';
 
   // ============================================================================
-  // HELPERS
+  // 16. HELPERS Y UTILIDADES
   // ============================================================================
 
-  static bool get isProduction => _isProd;
-  static bool get isDevelopment => !_isProd;
+  static bool get isProduction => _isProduction;
+  static bool get isDevelopment => !_isProduction;
   static bool get isHttps => baseUrl.startsWith('https');
-  static String? get currentNetwork => _network;
-  static String? get currentServerIp => _cachedIp;
-  static bool get isInitialized => _initialized;
-  static bool get isEmulatorDevice => _isEmulator;
 
+  /// Procesa URLs de imágenes. Si viene relativa, le pega el Base URL.
   static String getMediaUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     return path.startsWith('http') ? path : '$baseUrl$path';
   }
 
-  static bool isValidUrl(String url) {
+  /// Valida URLs HTTP/HTTPS
+  static bool isValidUrl(String? url) {
+    if (url == null || url.isEmpty) return false;
     try {
       final uri = Uri.parse(url);
       return uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https');
@@ -598,6 +488,7 @@ class ApiConfig {
     }
   }
 
+  /// Valida horarios de apertura/cierre
   static bool validarHorarios(String? apertura, String? cierre) {
     if (apertura == null || cierre == null) return true;
     try {
@@ -609,32 +500,36 @@ class ApiConfig {
     }
   }
 
+  /// Parseador de hora interno
   static TimeOfDay _parseTime(String time) {
     final parts = time.split(':');
     return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 
-  static String _buildQueryUrl(String base, Map<String, dynamic> params) {
+  /// Constructor de Query Strings limpio (sin nulos)
+  static String buildQueryUrl(String base, Map<String, dynamic> params) {
     final filtered = params.entries.where(
       (e) => e.value != null && e.value.toString().isNotEmpty,
     );
+
     if (filtered.isEmpty) return base;
+
     final qs = filtered
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value.toString())}')
         .join('&');
+
     return '$base?$qs';
   }
 
-  static Future<void> _printDebug() async {
-    final buffer = StringBuffer()
-      ..writeln('--- Deliber API Config ---')
-      ..writeln('Env: ${_isProd ? "PROD" : "DEV"}')
-      ..writeln('URL: ${await getBaseUrl()}');
-
-    if (_network != null) buffer.writeln('Red: $_network');
-    if (_cachedIp != null) buffer.writeln('IP: $_cachedIp:$puerto');
-    if (_manualMode) buffer.writeln('Manual: $_manualIp');
-
-    developer.log(buffer.toString(), name: 'Deliber API');
+  /// Debug de la configuración
+  static void printDebug() {
+    developer.log('---------------------------------------', name: 'ApiConfig');
+    developer.log('API CONFIG - ESTADO', name: 'ApiConfig');
+    developer.log(
+      'Modo: ${_isProduction ? "PROD" : "DEV (Ngrok)"}',
+      name: 'ApiConfig',
+    );
+    developer.log('URL: $baseUrl', name: 'ApiConfig');
+    developer.log('---------------------------------------', name: 'ApiConfig');
   }
 }

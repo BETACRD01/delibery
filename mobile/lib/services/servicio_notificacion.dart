@@ -1,11 +1,13 @@
 // lib/services/servicio_notificacion.dart
 
+import 'dart:async'; // Necesario para Timer, Future.delayed y reintentos
+import 'dart:developer' as developer;
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'dart:developer' as developer;
-import 'dart:async'; // Necesario para Timer, Future.delayed y reintentos
-import '../apis/user/usuarios_api.dart';
+
 import '../apis/helpers/api_exception.dart'; // Importar ApiException
+import '../apis/user/usuarios_api.dart';
 
 class NotificationService {
   // ---------------------------------------------------------------------------
@@ -101,14 +103,24 @@ class NotificationService {
         await _retryEnviarToken(token, attempt);
         return; // Éxito, salir de la función
       } on ApiException catch (e) {
+        // Error de red: se intentará más tarde
         if (e.isNetworkError) {
           _log(
             'Sin conexion al registrar token FCM; se intentara de nuevo mas tarde',
           );
           return;
         }
+
+        // Error 401: Sesión expirada - silenciosamente saltar (comportamiento esperado)
+        if (e.statusCode == 401) {
+          _log(
+            'Sesion expirada, omitiendo registro FCM (el usuario debera iniciar sesion)',
+          );
+          return;
+        }
+
+        // Error 429: Reintentar después de un delay
         if (e.statusCode == 429 && attempt < _maxRetries) {
-          // Error 429: Reintentar después de un delay
           final delay = _baseDelay * attempt;
           _log(
             'Token FCM: Error 429 (Throttle). Reintentando en ${delay.inSeconds}s (Intento $attempt/$_maxRetries)',
@@ -117,12 +129,9 @@ class NotificationService {
           await Future.delayed(delay);
           continue;
         } else {
-          // Error 429 en último intento o cualquier otro error fatal
-          _log(
-            'Error fatal registrando token FCM (Intento $attempt)',
-            error: e,
-          );
-          return; // Salir de la función después del último intento o error no-429
+          // Cualquier otro error fatal
+          _log('Error registrando token FCM (Intento $attempt): ${e.message}');
+          return;
         }
       } catch (e) {
         // Otros errores no ApiException (ej. Timeout, SocketException)

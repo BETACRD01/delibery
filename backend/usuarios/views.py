@@ -130,8 +130,57 @@ def actualizar_perfil(request):
             # 1. Actualización de Celular (Modelo User)
             if nuevo_celular:
                 nuevo_celular = str(nuevo_celular).strip()
+                
+                # --- SANITIZACIÓN DE EMERGENCIA (HOTFIX) ---
+                # Detectar payloads corruptos concatenados por error en la app móvil
+                # Ej: +5939863523410986665311 (nuevo + viejo pegados)
+                digits_only = re.sub(r'\D', '', nuevo_celular)
+                
+                # Quitar prefijo de país para análisis
+                if nuevo_celular.startswith('+593') or nuevo_celular.startswith('593'):
+                    digits_content = digits_only[3:]
+                else:
+                    digits_content = digits_only
+
+                # Si es sospechosamente largo (> 12 dígitos) y parece contener múltiples números
+                if len(digits_content) > 12:
+                    logger.warning(f"[FIX] Detectado celular corrupto/concatenado: {nuevo_celular}")
+                    
+                    # Buscar TODOS los patrones de celular ecuatoriano válidos
+                    # Patrón: 09xxxxxxxx (10 dígitos) o 9xxxxxxxx (9 dígitos)
+                    posibles_numeros = re.findall(r'(0?9\d{8})', digits_content)
+                    
+                    candidato_elegido = None
+                    celular_actual_normalizado = user.celular.replace('+593', '0') if user.celular else ''
+                    
+                    logger.info(f"[FIX] Candidatos encontrados en cadena corrupta: {posibles_numeros}")
+                    logger.info(f"[FIX] Celular actual (normalizado): {celular_actual_normalizado}")
+
+                    for cand in posibles_numeros:
+                        # Normalizar a formato local 09...
+                        cand_norm = cand
+                        if len(cand_norm) == 9: 
+                            cand_norm = '0' + cand_norm
+                        
+                        # Si encontramos uno que sea DIFERENTE al actual, ese es el nuevo
+                        if cand_norm != celular_actual_normalizado:
+                            candidato_elegido = cand_norm
+                            logger.info(f"[FIX] ¡Candidato nuevo detectado!: {candidato_elegido}")
+                            break
+                    
+                    # Si no encontramos uno diferente, usamos el primero encontrado (fallback)
+                    if not candidato_elegido and posibles_numeros:
+                         candidato_elegido = posibles_numeros[0]
+                         if len(candidato_elegido) == 9: candidato_elegido = '0' + candidato_elegido
+                         logger.warning("[FIX] No se encontró número diferente. Usando el primero encontrado.")
+
+                    if candidato_elegido:
+                        nuevo_celular = candidato_elegido
+                        logger.info(f"[FIX] Celular recuperado final: {nuevo_celular}")
+
                 if re.match(r'^09\d{8}$', nuevo_celular):
                     nuevo_celular = '+593' + nuevo_celular[1:]
+                
                 try:
                     validar_celular(nuevo_celular)
                 except DjangoValidationError as exc:
@@ -143,24 +192,41 @@ def actualizar_perfil(request):
                 if User.objects.filter(celular=nuevo_celular).exclude(id=user.id).exists():
                     raise DRFValidationError({"telefono": "Este número ya está registrado."})
                 
+                logger.info(f"[DEBUG] Guardando celular para usuario ID {user.id} ({user.username})")
+                
                 user.celular = nuevo_celular
                 user.save(update_fields=["celular"])
+                
+                # CRITICAL: Actualizar también la instancia perfil.user
+                # Si no hacemos esto, el serializador (que usa perfil.user) tiene una referencia
+                # con el celular antiguo. Al hacer user.save() dentro del serializador (para otros campos),
+                # se sobreescribe el cambio de celular con el valor viejo.
+                perfil.user.celular = nuevo_celular 
+                
+                # Verificar persistencia inmediata
+                user_verif = User.objects.get(id=user.id)
+                logger.info(f"[DEBUG] Valor leido de DB tras save: '{user_verif.celular}'")
 
             # 2. Actualización de Perfil (Modelo Perfil)
             # Limpieza de campo foto si viene vacío
-            if "foto_perfil" in data and data["foto_perfil"] in [None, "", "null"]:
-                data["foto_perfil"] = None
-
+            if 'foto_perfil' in data and not data['foto_perfil']:
+                perfil.foto_perfil = None
+                
             serializer = ActualizarPerfilSerializer(perfil, data=data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+            if serializer.is_valid():
+                perfil = serializer.save()
+                
+                # 3. Recargar objeto para serializar respuesta
+                # Aseguramos recargar TODO desde la DB para la respuesta final
+                perfil.refresh_from_db()
+                perfil = Perfil.objects.select_related('user').get(id=perfil.id)
 
-        # Respuesta exitosa
-        perfil.refresh_from_db()
-        return Response({
-            "mensaje": "Perfil actualizado correctamente.",
-            "perfil": PerfilSerializer(perfil, context={"request": request}).data
-        })
+                return Response({
+                    "mensaje": "Perfil actualizado correctamente.",
+                    "perfil": PerfilSerializer(perfil, context={"request": request}).data
+                })
+            
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     except DRFValidationError as e:
         return Response({"error": "Error de validación", "detalles": e.detail}, status=status.HTTP_400_BAD_REQUEST)

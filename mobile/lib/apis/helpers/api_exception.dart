@@ -118,6 +118,30 @@ class ApiException implements Exception {
       return errors['detail'].toString();
     }
 
+    if (errors.containsKey('detalles')) {
+      final detalles = errors['detalles'];
+      if (detalles is Map<String, dynamic> && detalles.isNotEmpty) {
+        if (detalles.containsKey('telefono')) {
+          final telError = detalles['telefono'];
+          if (telError is List && telError.isNotEmpty) {
+            return telError.first.toString();
+          }
+          if (telError is String) {
+            return telError;
+          }
+        }
+        final firstKey = detalles.keys.first;
+        final firstVal = detalles[firstKey];
+        if (firstVal is List && firstVal.isNotEmpty) {
+          return firstVal.first.toString();
+        }
+        return firstVal.toString();
+      }
+      if (detalles is String) {
+        return detalles;
+      }
+    }
+
     if (errors.containsKey('non_field_errors')) {
       final list = errors['non_field_errors'];
       if (list is List && list.isNotEmpty) {

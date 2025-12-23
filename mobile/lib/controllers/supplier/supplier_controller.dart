@@ -6,6 +6,8 @@ import '../../services/auth_service.dart';
 import '../../services/proveedor_service.dart';
 import '../../models/proveedor.dart';
 import '../../apis/helpers/api_exception.dart';
+import '../../apis/resources/users/profile_api.dart';
+import '../../apis/dtos/user/requests/update_profile_request.dart';
 import '../../services/productos_service.dart';
 import '../../models/producto_model.dart';
 import '../../models/promocion_model.dart';
@@ -15,6 +17,7 @@ import '../../models/promocion_model.dart';
 class SupplierController extends ChangeNotifier {
   final AuthService _authService;
   final ProveedorService _proveedorService;
+  final ProfileApi _profileApi;
   final ProductosService _productosService = ProductosService();
 
   // ============================================
@@ -30,9 +33,13 @@ class SupplierController extends ChangeNotifier {
   bool _subiendoLogo = false;
   bool _actualizandoContacto = false;
 
-  SupplierController({AuthService? authService, ProveedorService? proveedorService})
-    : _authService = authService ?? AuthService(),
-      _proveedorService = proveedorService ?? ProveedorService();
+  SupplierController({
+    AuthService? authService,
+    ProveedorService? proveedorService,
+    ProfileApi? profileApi,
+  })  : _authService = authService ?? AuthService(),
+        _proveedorService = proveedorService ?? ProveedorService(),
+        _profileApi = profileApi ?? ProfileApi();
 
   // ============================================
   // GETTERS - ESTADO PRINCIPAL
@@ -231,22 +238,19 @@ class SupplierController extends ChangeNotifier {
 
       // Actualizar teléfono si viene y es diferente
       if (telefono != null && telefono.isNotEmpty) {
-        debugPrint('📱 Intentando actualizar teléfono a: $telefono');
+        debugPrint('📱 Actualizando teléfono en perfil de usuario: $telefono');
 
-        // DIAGNÓSTICO A: Verificar payload exacto
-        // Asegurarse que el backend espera 'telefono', 'phone' o 'celular'
-        final datosAdicionales = {'telefono': telefono};
-        debugPrint('Payload enviado a actualizarMiProveedor: $datosAdicionales');
+        final request = UpdateProfileRequest(telefono: telefono);
+        await _profileApi.updateProfile(request);
 
-        _proveedor = await _proveedorService.actualizarMiProveedor(datosAdicionales);
+        // Recargar proveedor para reflejar celular_usuario actualizado
+        _proveedor = await _proveedorService.obtenerMiProveedor();
 
         // DIAGNÓSTICO E/3: Verificación post-update y Prueba Definitiva
         // Si el backend devuelve el objeto actualizado, verificamos si el cambio se aplicó
         if (_proveedor?.celularActual != telefono) {
           debugPrint('⚠️ ALERTA: El teléfono no se actualizó en la respuesta inmediata.');
           debugPrint('Valor esperado: $telefono | Valor recibido: ${_proveedor?.celularActual}');
-          debugPrint('🔄 Forzando recarga completa del perfil para verificar persistencia...');
-          await cargarDatos();
         } else {
           debugPrint('✅ Teléfono actualizado y verificado correctamente.');
         }

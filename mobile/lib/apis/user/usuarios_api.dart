@@ -70,6 +70,10 @@ class UsuariosApi {
     _log('GET: Obtener perfil');
     try {
       final response = await _client.get(_perfil);
+      final perfil = response['perfil'];
+      if (perfil is Map<String, dynamic> && perfil.containsKey('telefono')) {
+        _log('Perfil telefono (GET): ${perfil['telefono']}');
+      }
       return response;
     } catch (e, stackTrace) {
       _log('Error obteniendo perfil', error: e, stackTrace: stackTrace);
@@ -91,8 +95,15 @@ class UsuariosApi {
     Map<String, dynamic> data,
   ) async {
     _log('PATCH: Actualizar perfil - Campos: ${data.keys.join(", ")}');
+    if (data.containsKey('telefono')) {
+      _log('Payload telefono: ${data['telefono']}');
+    }
     try {
       final response = await _client.patch(_actualizarPerfil, data);
+      final perfil = response['perfil'];
+      if (perfil is Map<String, dynamic> && perfil.containsKey('telefono')) {
+        _log('Perfil telefono (PATCH): ${perfil['telefono']}');
+      }
       _log('Perfil actualizado correctamente');
       return response;
     } catch (e, stackTrace) {

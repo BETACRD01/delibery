@@ -1,16 +1,19 @@
 // lib/apis/subapis/http_client.dart
+
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:developer' as developer;
+import 'dart:io';
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../../config/api_config.dart';
 import '../helpers/api_exception.dart';
 
 // ============================================================================
-// API CLIENT
+// API CLIENT (OPTIMIZADO PARA NGROK/PRODUCCIÓN)
 // ============================================================================
 
 class ApiClient {
@@ -19,17 +22,12 @@ class ApiClient {
   factory ApiClient() => _instance;
 
   // --------------------------------------------------------------------------
-  // Storage
+  // Storage (Almacenamiento Seguro)
   // --------------------------------------------------------------------------
 
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      resetOnError: true,
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-      synchronizable: false,
-    ),
+    aOptions: AndroidOptions(resetOnError: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
   static const _keyAccess = 'jp_access_token';
@@ -39,7 +37,7 @@ class ApiClient {
   static const _keyUserId = 'jp_user_id';
 
   // --------------------------------------------------------------------------
-  // State
+  // State (Estado en Memoria)
   // --------------------------------------------------------------------------
 
   String? _accessToken;
@@ -47,14 +45,14 @@ class ApiClient {
   String? _userRole;
   int? _userId;
   DateTime? _tokenExpiry;
+
   bool _isRefreshing = false;
   Completer<bool>? _refreshCompleter;
   bool _tokensLoaded = false;
   DateTime? _nextRefreshRetry;
-  bool _refreshCooldownLogged = false;
 
   // --------------------------------------------------------------------------
-  // Getters
+  // Getters Públicos
   // --------------------------------------------------------------------------
 
   bool get isAuthenticated => _accessToken != null;
@@ -62,24 +60,20 @@ class ApiClient {
   String? get refreshToken => _refreshToken;
   String? get userRole => _userRole;
   int? get userId => _userId;
-  DateTime? get tokenExpiry => _tokenExpiry;
   bool get tokensLoaded => _tokensLoaded;
 
   void _log(String msg, {Object? error}) =>
       developer.log(msg, name: 'ApiClient', error: error);
 
   // --------------------------------------------------------------------------
-  // Token Management
+  // Gestión de Tokens (Guardar / Cargar / Borrar)
   // --------------------------------------------------------------------------
 
-  /// Actualiza solo el rol cacheado cuando la API no devuelve nuevos tokens.
   Future<void> cacheUserRole(String role) async {
     final normalized = role.toUpperCase();
     _userRole = normalized;
-
     try {
       await _storage.write(key: _keyRole, value: normalized);
-      _log('Rol cacheado localmente: $normalized');
     } catch (e) {
       _log('Error cacheando rol', error: e);
     }
@@ -90,7 +84,6 @@ class ApiClient {
     String refresh, {
     String? role,
     int? userId,
-    Duration? lifetime,
   }) async {
     try {
       _accessToken = access;
@@ -98,7 +91,8 @@ class ApiClient {
       _userRole = role;
       _userId = userId;
       _tokensLoaded = true;
-      _tokenExpiry = DateTime.now().add(lifetime ?? const Duration(hours: 12));
+      // Asumimos validez de 12 horas si no se especifica
+      _tokenExpiry = DateTime.now().add(const Duration(hours: 12));
 
       await Future.wait([
         _storage.write(key: _keyAccess, value: access),
@@ -109,7 +103,7 @@ class ApiClient {
           _storage.write(key: _keyUserId, value: userId.toString()),
       ]);
 
-      _log('Tokens guardados');
+      _log('Tokens guardados correctamente');
     } catch (e) {
       _log('Error guardando tokens', error: e);
       rethrow;
@@ -117,113 +111,81 @@ class ApiClient {
   }
 
   Future<void> loadTokens() async {
-    if (_tokensLoaded && _accessToken != null) {
-      return;
-    }
+    if (_tokensLoaded && _accessToken != null) return;
 
     try {
       _accessToken = await _storage.read(key: _keyAccess);
       _refreshToken = await _storage.read(key: _keyRefresh);
       _userRole = await _storage.read(key: _keyRole);
 
-      final userIdStr = await _storage.read(key: _keyUserId);
-      if (userIdStr != null) {
-        _userId = int.tryParse(userIdStr);
-      }
+      final uid = await _storage.read(key: _keyUserId);
+      if (uid != null) _userId = int.tryParse(uid);
 
-      final expiryStr = await _storage.read(key: _keyExpiry);
-      if (expiryStr != null) {
-        _tokenExpiry = DateTime.tryParse(expiryStr);
-      }
+      final expiry = await _storage.read(key: _keyExpiry);
+      if (expiry != null) _tokenExpiry = DateTime.tryParse(expiry);
 
       if (_accessToken != null) {
         _tokensLoaded = true;
-        _log('Tokens cargados');
+        _log('Sesión restaurada');
       }
     } catch (e) {
       _log('Error cargando tokens', error: e);
-      _tokensLoaded = false;
       await clearTokens();
     }
   }
 
   Future<void> clearTokens() async {
+    _accessToken = null;
+    _refreshToken = null;
+    _userRole = null;
+    _userId = null;
+    _tokenExpiry = null;
+    _tokensLoaded = false;
     try {
-      _accessToken = null;
-      _refreshToken = null;
-      _userRole = null;
-      _userId = null;
-      _tokenExpiry = null;
-      _isRefreshing = false;
-      _refreshCompleter = null;
-      _tokensLoaded = false;
-
       await _storage.deleteAll();
-      _log('Sesion limpiada');
+      _log('Sesión cerrada y limpiada');
     } catch (e) {
-      _log('Error limpiando tokens', error: e);
-    }
-  }
-
-  Future<bool> hasStoredTokens() async {
-    try {
-      return await _storage.containsKey(key: _keyAccess);
-    } catch (_) {
-      return false;
+      _log('Error limpiando storage', error: e);
     }
   }
 
   // --------------------------------------------------------------------------
-  // Token Validation & Refresh
+  // Validación y Refresh Automático
   // --------------------------------------------------------------------------
 
   bool _isTokenExpiring() {
-    if (_tokenExpiry == null) {
-      return true;
-    }
+    if (_tokenExpiry == null) return true;
+    // Consideramos expirado 5 minutos antes para prevenir fallos en vuelo
     return DateTime.now().isAfter(
       _tokenExpiry!.subtract(const Duration(minutes: 5)),
     );
   }
 
   Future<bool> _ensureValidToken() async {
-    if (_accessToken == null) {
-      return false;
-    }
-    if (!_isTokenExpiring()) {
-      return true;
-    }
+    if (_accessToken == null) return false;
 
+    if (!_isTokenExpiring()) return true;
+
+    // Evitar loops infinitos de refresh si falla mucho
     if (_nextRefreshRetry != null &&
         DateTime.now().isBefore(_nextRefreshRetry!)) {
-      if (!_refreshCooldownLogged) {
-        _log('Refresh en cooldown');
-        _refreshCooldownLogged = true;
-      }
       return false;
     }
-    _refreshCooldownLogged = false;
 
-    _log('Token proximo a expirar, refrescando...');
+    _log('Token por expirar, intentando refresh...');
     return await refreshAccessToken();
   }
 
   Future<bool> refreshAccessToken() async {
-    if (_refreshToken == null) {
-      _log('No hay refresh token');
-      return false;
-    }
+    if (_refreshToken == null) return false;
 
-    if (_isRefreshing) {
-      return await _refreshCompleter!.future;
-    }
+    // Si ya hay un refresh en proceso, esperar a que termine
+    if (_isRefreshing) return await _refreshCompleter!.future;
 
     _isRefreshing = true;
     _refreshCompleter = Completer<bool>();
 
     try {
-      _log('Solicitando nuevo token...');
-
       final response = await http
           .post(
             Uri.parse(ApiConfig.tokenRefresh),
@@ -239,36 +201,22 @@ class ApiClient {
         final data = json.decode(response.body);
         await saveTokens(
           data['access'],
-          _refreshToken!,
+          _refreshToken!, // Mantenemos el refresh actual si no viene uno nuevo
           role: _userRole,
           userId: _userId,
         );
-        _log('Token refrescado');
-        _nextRefreshRetry = null;
-        _refreshCooldownLogged = false;
         _refreshCompleter!.complete(true);
+        _nextRefreshRetry = null;
         return true;
+      } else {
+        _log('Refresh fallido: ${response.statusCode}');
+        await clearTokens(); // Si falla el refresh, forzamos logout
+        _refreshCompleter!.complete(false);
+        return false;
       }
-
-      if (response.statusCode == 401) {
-        _log('Refresh token invalido');
-        await clearTokens();
-      }
-
-      _refreshCompleter!.complete(false);
-      return false;
-    } on SocketException catch (e) {
-      _log('Error de red refrescando', error: e);
-      _nextRefreshRetry = DateTime.now().add(const Duration(seconds: 30));
-      _refreshCompleter!.complete(false);
-      return false;
-    } on TimeoutException catch (e) {
-      _log('Timeout refrescando', error: e);
-      _nextRefreshRetry = DateTime.now().add(const Duration(seconds: 30));
-      _refreshCompleter!.complete(false);
-      return false;
     } catch (e) {
-      _log('Error refrescando', error: e);
+      _log('Error en refresh', error: e);
+      _nextRefreshRetry = DateTime.now().add(const Duration(seconds: 30));
       _refreshCompleter!.complete(false);
       return false;
     } finally {
@@ -278,15 +226,12 @@ class ApiClient {
   }
 
   // --------------------------------------------------------------------------
-  // HTTP Methods
+  // Métodos HTTP Públicos (GET, POST, PUT, PATCH, DELETE)
   // --------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> get(String endpoint) async {
     await _ensureValidToken();
-    return _execute(
-      () => http.get(Uri.parse(endpoint), headers: _headers),
-      endpoint,
-    );
+    return _execute(() => http.get(Uri.parse(endpoint), headers: _headers));
   }
 
   Future<Map<String, dynamic>> post(
@@ -300,7 +245,6 @@ class ApiClient {
         headers: _headers,
         body: json.encode(data),
       ),
-      endpoint,
     );
   }
 
@@ -308,17 +252,16 @@ class ApiClient {
     String endpoint,
     Map<String, dynamic> data,
   ) async {
-    final headers = {
-      'Content-Type': 'application/json',
-      'X-API-Key': ApiConfig.apiKeyMobile,
-    };
+    // No validamos token aquí porque es público (Login, Registro)
     return _execute(
       () => http.post(
         Uri.parse(endpoint),
-        headers: headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': ApiConfig.apiKeyMobile,
+        },
         body: json.encode(data),
       ),
-      endpoint,
       esPublico: true,
     );
   }
@@ -334,7 +277,6 @@ class ApiClient {
         headers: _headers,
         body: json.encode(data),
       ),
-      endpoint,
     );
   }
 
@@ -349,20 +291,16 @@ class ApiClient {
         headers: _headers,
         body: json.encode(data),
       ),
-      endpoint,
     );
   }
 
   Future<Map<String, dynamic>> delete(String endpoint) async {
     await _ensureValidToken();
-    return _execute(
-      () => http.delete(Uri.parse(endpoint), headers: _headers),
-      endpoint,
-    );
+    return _execute(() => http.delete(Uri.parse(endpoint), headers: _headers));
   }
 
   // --------------------------------------------------------------------------
-  // Multipart
+  // Subida de Archivos (Multipart)
   // --------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> multipart(
@@ -377,57 +315,43 @@ class ApiClient {
     int attempt = 0;
     while (attempt < ApiConfig.maxRetries) {
       try {
-        final request = http.MultipartRequest(method, Uri.parse(endpoint))
-          ..headers.addAll(_multipartHeaders)
-          ..fields.addAll(fields);
+        final request = http.MultipartRequest(method, Uri.parse(endpoint));
+        request.headers.addAll(_multipartHeaders);
+        request.fields.addAll(fields);
 
         for (final entry in files.entries) {
           final file = entry.value;
           final ext = file.path.split('.').last.toLowerCase();
           request.files.add(
-            http.MultipartFile(
+            await http.MultipartFile.fromPath(
               entry.key,
-              file.openRead(),
-              await file.length(),
-              filename: file.path.split('/').last,
+              file.path,
               contentType: _contentType(ext),
             ),
           );
         }
 
         final streamedResponse = await request.send().timeout(
-          ApiConfig.receiveTimeout * 3,
+          ApiConfig.sendTimeout,
         );
         final response = await http.Response.fromStream(streamedResponse);
 
         if (response.statusCode == 401 && _accessToken != null) {
-          _log('Token expirado en multipart, refrescando...');
           if (await refreshAccessToken()) {
             attempt++;
-            continue;
+            continue; // Reintentar con nuevo token
           }
           throw ApiException.sesionExpirada();
         }
 
         return _handleResponse(response);
-      } on ApiException catch (e) {
-        // No reintentar errores de validacion/permisos para preservar el mensaje del backend.
-        if (!e.isRecoverable) {
-          rethrow;
-        }
-        attempt++;
-        if (attempt >= ApiConfig.maxRetries) {
-          rethrow;
-        }
-        final delaySeconds = e.retryAfter ?? 2;
-        await Future.delayed(Duration(seconds: delaySeconds));
       } catch (e) {
         attempt++;
         if (attempt >= ApiConfig.maxRetries) {
           throw ApiException(
             statusCode: 0,
-            message: 'Error en subida tras $attempt intentos',
-            errors: {'error': '$e'},
+            message: 'Error subiendo archivos tras $attempt intentos',
+            errors: {'error': e.toString()},
           );
         }
         await Future.delayed(const Duration(seconds: 2));
@@ -440,66 +364,68 @@ class ApiClient {
   }
 
   // --------------------------------------------------------------------------
-  // Core Execution
+  // Ejecución Central (_execute)
   // --------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> _execute(
-    Future<http.Response> Function() requestFn,
-    String endpoint, {
+    Future<http.Response> Function() requestFn, {
     bool esPublico = false,
   }) async {
     int attempt = 0;
 
+    // Bucle de reintentos
     while (attempt < ApiConfig.maxRetries) {
       try {
-        final response = await requestFn().timeout(
-          esPublico ? ApiConfig.connectTimeout : ApiConfig.receiveTimeout,
-        );
+        final response = await requestFn().timeout(ApiConfig.connectTimeout);
 
+        // Manejo automático de Token Expirado (401)
         if (response.statusCode == 401 && !esPublico && _accessToken != null) {
-          _log('Token expirado (401), refrescando...');
+          _log('Token 401 detectado, intentando refresh...');
           if (await refreshAccessToken()) {
             attempt++;
-            continue;
+            continue; // Reintentamos la petición original con el nuevo token
           }
           throw ApiException.sesionExpirada();
         }
 
         return _handleResponse(response, esPublico: esPublico);
-      } on SocketException {
-        if (_tryEmulatorFallback(attempt)) {
-          attempt++;
-          continue;
-        }
+      } on SocketException catch (_) {
+        // Error de conexión puro (sin internet / ngrok caído)
         attempt++;
         if (attempt >= ApiConfig.maxRetries) {
           throw ApiException(
             statusCode: 0,
             message: ApiConfig.errorNetwork,
-            errors: {'conexion': 'Sin conexion'},
+            errors: {'conexion': 'No se pudo conectar al servidor'},
           );
         }
-        await Future.delayed(Duration(milliseconds: 500 * attempt));
-      } on TimeoutException {
-        if (_tryEmulatorFallback(attempt)) {
-          attempt++;
-          continue;
-        }
+        await Future.delayed(const Duration(seconds: 1));
+      } on TimeoutException catch (_) {
+        // Timeout
         attempt++;
         if (attempt >= ApiConfig.maxRetries) {
           throw ApiException(
             statusCode: 0,
             message: ApiConfig.errorTimeout,
-            errors: {'timeout': 'Operacion expiro'},
+            errors: {'timeout': 'La petición tardó demasiado'},
           );
         }
+      } catch (e) {
+        if (e is ApiException) {
+          rethrow; // Si ya es una excepción procesada, la pasamos
+        }
+        throw ApiException(
+          statusCode: 0,
+          message: ApiConfig.errorUnknown,
+          errors: {'error': e.toString()},
+        );
       }
     }
     throw ApiException(statusCode: 0, message: 'Error tras reintentos');
   }
 
   // --------------------------------------------------------------------------
-  // Headers & Utilities
+  // Headers y Utilidades Privadas
   // --------------------------------------------------------------------------
 
   Map<String, String> get _headers => {
@@ -513,51 +439,41 @@ class ApiClient {
     if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
   };
 
-  bool _tryEmulatorFallback(int attempt) {
-    if (!ApiConfig.enableEmulatorFallback) {
-      return false;
-    }
-    if (attempt != 0 || !Platform.isAndroid || !ApiConfig.isEmulatorDevice) {
-      return false;
-    }
-    if (ApiConfig.currentServerIp != ApiConfig.localBackendIp) {
-      return false;
-    }
-
-    _log('Fallback a emulador host 10.0.2.2');
-    ApiConfig.setManualIp(ApiConfig.emulatorHost);
-    return true;
-  }
-
   Future<void> _validateFiles(Map<String, File> files) async {
     for (final entry in files.entries) {
       final file = entry.value;
       if (!await file.exists()) {
         throw ApiException(
           statusCode: 400,
-          message: 'Archivo no encontrado: ${file.path}',
-          errors: {entry.key: 'No existe'},
+          message: 'Archivo no encontrado: ${entry.key}',
         );
       }
+      // Límite de 10MB
       if ((await file.length()) > 10 * 1024 * 1024) {
         throw ApiException(
           statusCode: 400,
-          message: 'Archivo excede 10MB',
-          errors: {entry.key: 'Muy grande'},
+          message: 'El archivo ${entry.key} es muy grande (Max 10MB)',
         );
       }
     }
   }
 
-  MediaType _contentType(String ext) => switch (ext) {
-    'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
-    'png' => MediaType('image', 'png'),
-    'pdf' => MediaType('application', 'pdf'),
-    _ => MediaType('application', 'octet-stream'),
-  };
+  MediaType _contentType(String ext) {
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return MediaType('image', 'jpeg');
+      case 'png':
+        return MediaType('image', 'png');
+      case 'pdf':
+        return MediaType('application', 'pdf');
+      default:
+        return MediaType('application', 'octet-stream');
+    }
+  }
 
   // --------------------------------------------------------------------------
-  // Response Handling
+  // Procesamiento de Respuesta (JSON Parsing)
   // --------------------------------------------------------------------------
 
   Map<String, dynamic> _handleResponse(
@@ -566,71 +482,64 @@ class ApiClient {
   }) {
     final code = response.statusCode;
 
+    // ÉXITO (200-299)
     if (code >= 200 && code < 300) {
-      if (response.body.isEmpty) {
-        return {'success': true};
-      }
+      if (response.body.isEmpty) return {'success': true};
       try {
-        final decoded = json.decode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          return decoded;
-        }
-        if (decoded is List) {
-          return {'data': decoded, 'success': true};
-        }
+        final decoded = json.decode(
+          utf8.decode(response.bodyBytes),
+        ); // utf8 decode para tildes
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is List) return {'data': decoded, 'success': true};
         return {'success': true, 'raw_data': decoded};
       } catch (_) {
         return {'success': true, 'raw_data': response.body};
       }
     }
 
+    // ERROR
     _log('Error HTTP $code: ${response.body}');
 
     Map<String, dynamic> errorBody = {};
+    String mensajeError = 'Error desconocido';
+
     try {
       if (response.body.isNotEmpty) {
-        final decoded = json.decode(response.body);
+        final decoded = json.decode(utf8.decode(response.bodyBytes));
         if (decoded is Map<String, dynamic>) {
           errorBody = decoded;
-        } else {
-          errorBody = {'error': '$decoded'};
+          // Intentamos extraer el mensaje más legible posible
+          if (decoded.containsKey('detail')) {
+            mensajeError = decoded['detail'];
+          } else if (decoded.containsKey('message')) {
+            mensajeError = decoded['message'];
+          } else if (decoded.containsKey('error')) {
+            mensajeError = decoded['error'];
+          }
         }
       }
     } catch (_) {
-      errorBody = {'error': response.body};
+      mensajeError = response.body; // Si no es JSON, devolvemos el texto plano
+    }
+
+    // Mensajes amigables para errores comunes
+    if (code == 401) {
+      mensajeError = esPublico ? 'Credenciales incorrectas' : 'Sesión expirada';
+    }
+    if (code == 403) {
+      mensajeError = 'No tienes permiso para realizar esta acción';
+    }
+    if (code == 404) {
+      mensajeError = 'Recurso no encontrado';
+    }
+    if (code == 500) {
+      mensajeError = ApiConfig.errorServer;
     }
 
     throw ApiException(
       statusCode: code,
-      message: _extractError(errorBody, code, esPublico),
+      message: mensajeError,
       errors: errorBody,
-      contexto: esPublico ? 'publico' : 'autenticado',
     );
-  }
-
-  String _extractError(Map<String, dynamic> error, int code, bool esPublico) {
-    if (code == 401) {
-      return esPublico ? 'Credenciales invalidas' : 'Sesion expirada';
-    }
-    if (code == 403) {
-      return 'Sin permisos';
-    }
-    if (code == 404) {
-      return 'No encontrado';
-    }
-    if (code == 429) {
-      return 'Demasiadas peticiones';
-    }
-    if (code >= 500) {
-      return ApiConfig.errorServer;
-    }
-
-    for (final key in ['detail', 'message', 'error']) {
-      if (error.containsKey(key)) {
-        return error[key].toString();
-      }
-    }
-
-    return 'Error ($code)';
   }
 }

@@ -1,4 +1,4 @@
-// lib/screens/auth/pantalla_verificar_codigo.dart
+// lib/screens/auth/recuperacion/pantalla_verificar_codigo.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -67,7 +67,7 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
   }
 
   // ============================================
-  // MÉTODOS
+  // MÉTODOS LÓGICOS
   // ============================================
 
   /// Obtiene el email de los argumentos de navegación
@@ -95,51 +95,108 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
     return _obtenerCodigo().length == 6;
   }
 
- /// ✅ Verifica el código con el backend
-Future<void> _verificarCodigo() async {
-  if (!_codigoCompleto()) {
-    setState(() => _error = 'Por favor ingresa los 6 dígitos');
-    return;
-  }
-
-  setState(() {
-    _loading = true;
-    _error = null;
-  });
-
-  try {
-    final codigo = _obtenerCodigo();
-
-    // ✅ CORREGIDO: verificarCodigoRecuperacion → verificarCodigo
-    await _api.verificarCodigo(email: _email!, codigo: codigo);
-
-    if (mounted) {
-      // ✅ Código válido, ir a pantalla de nueva contraseña
-      await Rutas.irANuevaPassword(context, email: _email!, codigo: codigo);
+  /// ✅ Verifica el código con el backend
+  Future<void> _verificarCodigo() async {
+    if (!_codigoCompleto()) {
+      setState(() => _error = 'Por favor ingresa los 6 dígitos');
+      return;
     }
-  } on ApiException catch (e) {
-    if (mounted) {
-      setState(() {
-        _error = e.message;
-        _intentosRestantes = e.intentosRestantes;
-        _bloqueado = e.isCuentaBloqueada || e.statusCode == 429;
-        _loading = false;
-      });
 
-      // Si está bloqueado, mostrar diálogo
-      if (_bloqueado) {
-        _mostrarDialogoBloqueado(e);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final codigo = _obtenerCodigo();
+
+      await _api.verificarCodigo(email: _email!, codigo: codigo);
+
+      if (mounted) {
+        // ✅ Código válido, ir a pantalla de nueva contraseña
+        await Rutas.irANuevaPassword(context, email: _email!, codigo: codigo);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _intentosRestantes = e.intentosRestantes;
+          _bloqueado = e.isCuentaBloqueada || e.statusCode == 429;
+          _loading = false;
+        });
+
+        // Si está bloqueado, mostrar diálogo
+        if (_bloqueado) {
+          _mostrarDialogoBloqueado(e);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Error de conexión. Intenta nuevamente';
+          _loading = false;
+        });
       }
     }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _error = 'Error de conexión. Intenta nuevamente';
-        _loading = false;
-      });
+  }
+
+  /// Solicita un nuevo código
+  Future<void> _solicitarNuevoCodigo() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await _api.solicitarRecuperacion(email: _email!);
+
+      if (mounted) {
+        setState(() => _loading = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Nuevo código enviado a tu email'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+
+        // Limpiar campos
+        for (var controller in _controllers) {
+          controller.clear();
+        }
+        _focusNodes[0].requestFocus();
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Error al enviar nuevo código';
+          _loading = false;
+        });
+      }
     }
   }
-}
+
+  // ============================================
+  // HELPERS DE UI
+  // ============================================
+
+  /// Helper local para formatear el tiempo
+  String _formatearTiempoEspera(int segundos) {
+    final min = segundos ~/ 60;
+    final sec = segundos % 60;
+    return min > 0 ? '$min m $sec s' : '$sec s';
+  }
 
   /// Muestra diálogo de cuenta bloqueada
   void _mostrarDialogoBloqueado(ApiException error) {
@@ -193,7 +250,8 @@ Future<void> _verificarCodigo() async {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    AuthService.formatearTiempoEspera(tiempoEspera),
+                    // ✅ CORREGIDO: Usamos el método local
+                    _formatearTiempoEspera(tiempoEspera),
                     style: TextStyle(
                       color: Colors.orange[900],
                       fontSize: 16,
@@ -222,54 +280,6 @@ Future<void> _verificarCodigo() async {
       ),
     );
   }
-
- /// Solicita un nuevo código
-Future<void> _solicitarNuevoCodigo() async {
-  setState(() {
-    _loading = true;
-    _error = null;
-  });
-
-  try {
-    // ✅ CORREGIDO: solicitarCodigoRecuperacion → solicitarRecuperacion
-    await _api.solicitarRecuperacion(email: _email!);
-
-    if (mounted) {
-      setState(() => _loading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Nuevo código enviado a tu email'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-
-      // Limpiar campos
-      for (var controller in _controllers) {
-        controller.clear();
-      }
-      _focusNodes[0].requestFocus();
-    }
-  } on ApiException catch (e) {
-    if (mounted) {
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _error = 'Error al enviar nuevo código';
-        _loading = false;
-      });
-    }
-  }
-}
 
   /// Maneja el cambio de texto en los campos
   void _onChanged(int index, String value) {
@@ -327,7 +337,7 @@ Future<void> _solicitarNuevoCodigo() async {
                       shape: BoxShape.circle,
                       color: _azulPrincipal.withValues(alpha: 0.1),
                     ),
-                    child:const Icon(
+                    child: const Icon(
                       Icons.verified_user,
                       size: 80,
                       color: _azulPrincipal,
@@ -396,7 +406,7 @@ Future<void> _solicitarNuevoCodigo() async {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide:const BorderSide(
+                              borderSide: const BorderSide(
                                 color: _azulPrincipal,
                                 width: 2,
                               ),
@@ -446,7 +456,7 @@ Future<void> _solicitarNuevoCodigo() async {
                     const SizedBox(height: 12),
                   ],
 
-                  // ✅ Intentos restantes
+                  // Intentos restantes
                   if (_intentosRestantes != null &&
                       _intentosRestantes! > 0) ...[
                     Container(

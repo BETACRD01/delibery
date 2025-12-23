@@ -157,7 +157,6 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         'descripcion': _descripcionController.text.trim(),
         'direccion': _direccionController.text.trim(),
         'ciudad': _ciudadController.text.trim(),
-        'telefono': telefonoFinal.isNotEmpty ? telefonoFinal : null,
         if (_horarioAperturaController.text.isNotEmpty)
           'horario_apertura': _horarioAperturaController.text.trim(),
         if (_horarioCierreController.text.isNotEmpty)
@@ -182,6 +181,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         email: _emailController.text.trim(),
         firstName: firstName,
         lastName: lastName,
+        telefono: telefonoFinal,
       );
 
       if (!successContacto) {

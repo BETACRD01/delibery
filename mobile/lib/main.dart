@@ -1,28 +1,28 @@
 // lib/main.dart
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import './config/rutas.dart';
-import './config/api_config.dart';
-import './services/servicio_notificacion.dart';
-import './services/notification_handler.dart';
-import './services/auth_service.dart';
+import 'package:provider/provider.dart';
+import '../controllers/user/perfil_controller.dart';
 import './apis/subapis/http_client.dart';
-import './providers/proveedor_carrito.dart';
-import './providers/proveedor_pedido.dart';
+import './config/api_config.dart';
+import './config/rutas.dart';
+import './controllers/delivery/repartidor_controller.dart';
+import './controllers/supplier/supplier_controller.dart';
+import './l10n/app_localizations.dart';
 import './providers/locale_provider.dart';
 import './providers/notificaciones_provider.dart';
-import './l10n/app_localizations.dart';
-import '../controllers/user/perfil_controller.dart';
-import './controllers/supplier/supplier_controller.dart';
-import './controllers/delivery/repartidor_controller.dart';
-import './services/pedido_service.dart';
+import './providers/proveedor_carrito.dart';
+import './providers/proveedor_pedido.dart';
 import './screens/delivery/pantalla_ver_comprobante.dart';
+import './services/auth_service.dart';
+import './services/notification_handler.dart';
+import './services/pedido_service.dart';
 import './services/role_manager.dart';
+import './services/servicio_notificacion.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -46,19 +46,30 @@ void main() async {
 
   final apiClient = ApiClient();
   final initFutures = <Future<void>>[
-    [Permission.location, Permission.notification]
-        .request()
-        .then((_) {}),
+    [Permission.location, Permission.notification].request().then((_) {}),
     ApiConfig.initialize().catchError((e) => debugPrint('Error red: $e')),
     apiClient.loadTokens().catchError((e) => debugPrint('Error tokens: $e')),
   ];
   await Future.wait(initFutures);
 
   if (apiClient.isAuthenticated && apiClient.accessToken != null) {
-    await NotificationService().initialize().catchError(
-      (e) => debugPrint('Error notificaciones: $e'),
+    // Verificar si la sesión es realmente válida antes de inicializar servicios
+    final isSessionValid = await AuthService().verificarToken().catchError(
+      (_) => false,
     );
-    debugPrint('Rol: ${AuthService().getRolCacheado()?.toUpperCase()}');
+
+    if (isSessionValid) {
+      await NotificationService().initialize().catchError(
+        (e) => debugPrint('Error notificaciones: $e'),
+      );
+      debugPrint(
+        'Sesion valida - Rol: ${AuthService().getRolCacheado()?.toUpperCase()}',
+      );
+    } else {
+      // Sesión inválida: limpiar tokens viejos silenciosamente
+      debugPrint('Sesion expirada, redirigiendo a login...');
+      await apiClient.clearTokens();
+    }
   }
 
   runApp(
