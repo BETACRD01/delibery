@@ -1,8 +1,12 @@
 // lib/screens/user/inicio/widgets/seccion_promociones.dart
 
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../../theme/jp_theme.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:mobile/theme/app_colors_primary.dart';
+import 'package:mobile/theme/app_colors_support.dart';
+import 'package:mobile/theme/app_theme.dart';
+
 import '../../../../../models/promocion_model.dart';
 
 class SeccionPromociones extends StatefulWidget {
@@ -47,9 +51,9 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
               const Text(
                 'Promociones Especiales',
                 style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: JPColors.textPrimary,
+                  fontSize: 20, // Slightly larger
+                  fontWeight: FontWeight.bold,
+                  color: AppColorsSupport.textPrimary,
                   letterSpacing: -0.5,
                 ),
               ),
@@ -104,8 +108,8 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
                   height: 8,
                   decoration: BoxDecoration(
                     color: _currentPage == index
-                        ? JPColors.primary
-                        : JPColors.primary.withValues(alpha: 0.2),
+                        ? AppColorsPrimary.main
+                        : AppColorsPrimary.main.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -128,7 +132,7 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
         width: 300,
         decoration: BoxDecoration(
           color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
         ),
       ),
     );
@@ -144,6 +148,7 @@ class _PromocionCardImpacto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Keep internal colors logic for promo card but refine shadows
     final cardColor = promocion.color;
     final vence = promocion.textoTiempoRestante;
 
@@ -152,17 +157,19 @@ class _PromocionCardImpacto extends StatelessWidget {
       child: Container(
         width: 300, // Tarjeta protagonista pero compacta
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20), // Bordes suaves
+          borderRadius: BorderRadius.circular(
+            AppConstants.radiusLarge,
+          ), // Bordes suaves
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 12,
-              offset: const Offset(0, 6), // Sombra ligera
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -193,12 +200,12 @@ class _PromocionCardImpacto extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Badge(
-                      icon: Icons.local_offer_rounded,
+                      icon: CupertinoIcons.tag_fill, // iOS Icon
                       text: promocion.descuento.isNotEmpty
                           ? promocion.descuento.toUpperCase()
                           : 'PROMO',
                       color: Colors.white,
-                      background: Colors.white.withValues(alpha: 0.14),
+                      background: Colors.white.withValues(alpha: 0.2),
                     ),
                     const SizedBox(height: 12),
 
@@ -209,6 +216,7 @@ class _PromocionCardImpacto extends StatelessWidget {
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                         height: 1.1,
+                        letterSpacing: -0.5,
                         shadows: [
                           Shadow(
                             color: Colors.black87,
@@ -226,8 +234,8 @@ class _PromocionCardImpacto extends StatelessWidget {
                     Text(
                       promocion.descripcion,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        fontSize: 13.5,
+                        color: Colors.white.withValues(alpha: 0.95),
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
                         shadows: const [
                           Shadow(
@@ -243,10 +251,10 @@ class _PromocionCardImpacto extends StatelessWidget {
                     const SizedBox(height: 10),
                     if (vence.isNotEmpty)
                       _Badge(
-                        icon: Icons.timer_outlined,
+                        icon: CupertinoIcons.time,
                         text: vence,
                         color: Colors.white,
-                        background: Colors.black.withValues(alpha: 0.2),
+                        background: Colors.black.withValues(alpha: 0.3),
                         compact: true,
                       ),
                   ],
@@ -333,8 +341,8 @@ class _Badge extends StatelessWidget {
             style: TextStyle(
               color: color,
               fontSize: compact ? 12 : 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.2,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.3,
             ),
           ),
         ],

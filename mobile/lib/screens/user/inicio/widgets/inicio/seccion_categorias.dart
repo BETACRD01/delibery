@@ -1,7 +1,9 @@
 // lib/screens/user/inicio/widgets/seccion_categorias.dart
 
 import 'package:flutter/material.dart';
-import '../../../../../theme/jp_theme.dart';
+import 'package:mobile/theme/app_colors_primary.dart';
+import 'package:mobile/theme/app_colors_support.dart';
+
 import '../../../../../models/categoria_model.dart';
 
 /// Sección de categorías en la pantalla Home
@@ -45,9 +47,10 @@ class SeccionCategorias extends StatelessWidget {
           const Text(
             'Categorías',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: JPColors.textPrimary,
+              color: AppColorsSupport.textPrimary,
+              letterSpacing: -0.5,
             ),
           ),
           if (onVerTodo != null)
@@ -56,9 +59,9 @@ class SeccionCategorias extends StatelessWidget {
               child: const Text(
                 'Ver todo',
                 style: TextStyle(
-                  color: JPColors.primary,
+                  color: AppColorsPrimary.main,
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: 15,
                 ),
               ),
             ),
@@ -74,7 +77,7 @@ class SeccionCategorias extends StatelessWidget {
         : categorias;
 
     return SizedBox(
-      height: 100,
+      height: 110, // Increased slightly for spacing
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
@@ -107,8 +110,8 @@ class SeccionCategorias extends StatelessWidget {
                   height: 60,
                   width: 60,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    shape: BoxShape.circle,
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -116,7 +119,7 @@ class SeccionCategorias extends StatelessWidget {
                   height: 12,
                   width: 50,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -134,7 +137,7 @@ class SeccionCategorias extends StatelessWidget {
       child: Center(
         child: Text(
           'No hay categorías disponibles',
-          style: TextStyle(color: JPColors.textSecondary),
+          style: TextStyle(color: AppColorsSupport.textSecondary),
         ),
       ),
     );
@@ -157,26 +160,29 @@ class _CategoriaItem extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              height: 60,
-              width: 60,
+              height: 64,
+              width: 64,
               decoration: BoxDecoration(
                 // Si tiene foto fondo blanco, si no fondo suave del color
                 color: categoria.tieneImagen
                     ? Colors.white
-                    : (categoria.color ?? JPColors.primary).withValues(
+                    : (categoria.color ?? AppColorsPrimary.main).withValues(
                         alpha: 0.1,
                       ),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                borderRadius: BorderRadius.circular(20), // iOS squaricle-ish
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 5,
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: ClipOval(child: _buildContenidoVisual()),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: _buildContenidoVisual(),
+              ),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -184,9 +190,10 @@ class _CategoriaItem extends StatelessWidget {
               child: Text(
                 categoria.nombre,
                 style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: JPColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColorsSupport.textSecondary,
+                  letterSpacing: -0.2,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -205,8 +212,8 @@ class _CategoriaItem extends StatelessWidget {
     if (categoria.tieneImagen && categoria.imagenUrl != null) {
       return Image.network(
         categoria.imagenUrl!,
-        width: 60,
-        height: 60,
+        width: 64,
+        height: 64,
         fit: BoxFit.cover,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
@@ -216,7 +223,7 @@ class _CategoriaItem extends StatelessWidget {
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: categoria.color ?? JPColors.primary,
+                color: categoria.color ?? AppColorsPrimary.main,
                 value: loadingProgress.expectedTotalBytes != null
                     ? loadingProgress.cumulativeBytesLoaded /
                           loadingProgress.expectedTotalBytes!
@@ -239,8 +246,8 @@ class _CategoriaItem extends StatelessWidget {
       child: Icon(
         // Si no hay icono definido, usa uno genérico
         categoria.icono ?? Icons.category_outlined,
-        color: categoria.color ?? JPColors.primary,
-        size: 28,
+        color: categoria.color ?? AppColorsPrimary.main,
+        size: 30,
       ),
     );
   }

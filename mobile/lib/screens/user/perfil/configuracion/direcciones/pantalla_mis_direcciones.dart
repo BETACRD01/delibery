@@ -9,16 +9,19 @@ import 'package:flutter/material.dart'
         InputDecoration,
         OutlineInputBorder,
         ListTile,
-        Divider;
+        Divider,
+        MaterialType;
+import 'package:geocoding/geocoding.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
-import 'package:geocoding/geocoding.dart';
-import '../../../../../theme/jp_theme.dart';
-import '../../../../../services/usuarios_service.dart';
-import '../../../../../services/toast_service.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+
 import '../../../../../apis/helpers/api_exception.dart';
 import '../../../../../models/usuario.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
+import '../../../../../services/toast_service.dart';
+import '../../../../../services/usuarios_service.dart';
+import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/jp_theme.dart';
 
 /// 📍 Pantalla optimizada para gestionar direcciones
 /// ✅ Modo unificado: Crea O Edita según el contexto
@@ -237,107 +240,110 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
         ),
       ),
       child: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              // Dirección con autocompletado
-              _buildCampoDireccionConAutocompletado(),
-              const SizedBox(height: 16),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                // Dirección con autocompletado
+                _buildCampoDireccionConAutocompletado(),
+                const SizedBox(height: 16),
 
-              // Calle secundaria
-              _buildCampoTexto(
-                controller: _calleSecundariaController,
-                label: 'Calle secundaria',
-                icon: CupertinoIcons.map,
-                hint: 'Ej: Esq. con Calle 10',
-                opcional: true,
-              ),
-              const SizedBox(height: 16),
-
-              // Piso/Departamento
-              _buildCampoTexto(
-                controller: _pisoController,
-                label: 'Piso / Departamento',
-                icon: CupertinoIcons.building_2_fill,
-                hint: 'Ej: Torre B, depto 302',
-                opcional: true,
-              ),
-              const SizedBox(height: 16),
-
-              // Ciudad
-              _buildCampoTexto(
-                controller: _ciudadController,
-                label: 'Ciudad',
-                icon: CupertinoIcons.location_solid,
-                hint: 'Ciudad / Provincia',
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'La ciudad es requerida';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Indicaciones
-              _buildCampoTexto(
-                controller: _indicacionesController,
-                label: 'Indicaciones de entrega',
-                icon: CupertinoIcons.text_alignleft,
-                hint: 'Ej: Llamar al llegar, timbre dañado',
-                maxLines: 3,
-                opcional: true,
-              ),
-              const SizedBox(height: 16),
-
-              // Teléfono
-              _buildCampoTelefono(),
-              const SizedBox(height: 32),
-
-              // Botón guardar
-              SizedBox(
-                width: double.infinity,
-                child: CupertinoButton.filled(
-                  onPressed: _guardando ? null : _guardarDireccion,
-                  borderRadius: BorderRadius.circular(12),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: _guardando
-                      ? const CupertinoActivityIndicator(
-                          color: CupertinoColors.white,
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _modoEdicion
-                                  ? CupertinoIcons.check_mark
-                                  : CupertinoIcons.location_fill,
-                              color: CupertinoColors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _modoEdicion
-                                  ? 'Actualizar dirección'
-                                  : 'Guardar dirección',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: CupertinoColors.white,
-                              ),
-                            ),
-                          ],
-                        ),
+                // Calle secundaria
+                _buildCampoTexto(
+                  controller: _calleSecundariaController,
+                  label: 'Calle secundaria',
+                  icon: CupertinoIcons.map,
+                  hint: 'Ej: Esq. con Calle 10',
+                  opcional: true,
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
+                const SizedBox(height: 16),
+
+                // Piso/Departamento
+                _buildCampoTexto(
+                  controller: _pisoController,
+                  label: 'Piso / Departamento',
+                  icon: CupertinoIcons.building_2_fill,
+                  hint: 'Ej: Torre B, depto 302',
+                  opcional: true,
+                ),
+                const SizedBox(height: 16),
+
+                // Ciudad
+                _buildCampoTexto(
+                  controller: _ciudadController,
+                  label: 'Ciudad',
+                  icon: CupertinoIcons.location_solid,
+                  hint: 'Ciudad / Provincia',
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'La ciudad es requerida';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Indicaciones
+                _buildCampoTexto(
+                  controller: _indicacionesController,
+                  label: 'Indicaciones de entrega',
+                  icon: CupertinoIcons.text_alignleft,
+                  hint: 'Ej: Llamar al llegar, timbre dañado',
+                  maxLines: 3,
+                  opcional: true,
+                ),
+                const SizedBox(height: 16),
+
+                // Teléfono
+                _buildCampoTelefono(),
+                const SizedBox(height: 32),
+
+                // Botón guardar
+                SizedBox(
+                  width: double.infinity,
+                  child: CupertinoButton.filled(
+                    onPressed: _guardando ? null : _guardarDireccion,
+                    borderRadius: BorderRadius.circular(12),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: _guardando
+                        ? const CupertinoActivityIndicator(
+                            color: CupertinoColors.white,
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _modoEdicion
+                                    ? CupertinoIcons.check_mark
+                                    : CupertinoIcons.location_fill,
+                                color: CupertinoColors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _modoEdicion
+                                    ? 'Actualizar dirección'
+                                    : 'Guardar dirección',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: CupertinoColors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ), // Form
+        ), // Material
+      ), // SafeArea
     );
   }
 
@@ -380,11 +386,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
       children: [
         Row(
           children: [
-            Icon(
-              CupertinoIcons.home,
-              color: JPCupertinoColors.systemBlue(context),
-              size: 20,
-            ),
+            Icon(CupertinoIcons.home, color: AppColorsPrimary.main, size: 20),
             const SizedBox(width: 8),
             Text(
               'Dirección principal',
@@ -433,7 +435,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: const BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide(
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                       width: 2,
                     ),
                   ),
@@ -455,7 +457,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
                         onPressed: _mostrarSeleccionMapaPlaceholder,
                         child: Icon(
                           CupertinoIcons.map,
-                          color: JPCupertinoColors.systemBlue(context),
+                          color: AppColorsPrimary.main,
                           size: 22,
                         ),
                       ),
@@ -488,7 +490,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
                     dense: true,
                     leading: Icon(
                       Icons.place,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                       size: 18,
                     ),
                     title: Text(
@@ -532,8 +534,9 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: JPCupertinoColors.systemGreen(context)
-                    .withValues(alpha: 0.12),
+                color: JPCupertinoColors.systemGreen(
+                  context,
+                ).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -584,7 +587,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
       children: [
         Row(
           children: [
-            Icon(icon, color: JPCupertinoColors.systemBlue(context), size: 20),
+            Icon(icon, color: AppColorsPrimary.main, size: 20),
             const SizedBox(width: 8),
             Text(
               label,
@@ -632,10 +635,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: const BorderRadius.all(Radius.circular(12)),
-                borderSide: BorderSide(
-                  color: JPCupertinoColors.systemBlue(context),
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: AppColorsPrimary.main, width: 2),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -661,11 +661,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
       children: [
         Row(
           children: [
-            Icon(
-              CupertinoIcons.phone,
-              color: JPCupertinoColors.systemBlue(context),
-              size: 20,
-            ),
+            Icon(CupertinoIcons.phone, color: AppColorsPrimary.main, size: 20),
             const SizedBox(width: 8),
             Text(
               'Teléfono de contacto',
@@ -714,10 +710,7 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: const BorderRadius.all(Radius.circular(12)),
-                borderSide: BorderSide(
-                  color: JPCupertinoColors.systemBlue(context),
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: AppColorsPrimary.main, width: 2),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),

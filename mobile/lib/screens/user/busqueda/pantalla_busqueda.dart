@@ -1,15 +1,18 @@
 // lib/screens/user/busqueda/pantalla_busqueda.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show CircleAvatar, NetworkImage;
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+
+import '../../../config/rutas.dart';
 import '../../../controllers/user/busqueda_controller.dart';
 import '../../../models/producto_model.dart';
-import '../../../theme/jp_theme.dart';
 import '../../../providers/proveedor_carrito.dart';
-import '../../../config/rutas.dart';
 import '../../../services/toast_service.dart';
+import '../../../theme/app_colors_primary.dart';
+import '../../../theme/app_colors_support.dart';
+import '../../../theme/jp_theme.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 
 class PantallaBusqueda extends StatefulWidget {
@@ -29,11 +32,16 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
           return CupertinoPageScaffold(
             backgroundColor: JPCupertinoColors.background(context),
             child: CustomScrollView(
+              // Cerrar teclado al deslizar
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               slivers: [
-                // AppBar iOS
+                // AppBar iOS más compacto
                 CupertinoSliverNavigationBar(
                   backgroundColor: JPCupertinoColors.surface(context),
-                  largeTitle: const Text('Buscar productos'),
+                  largeTitle: Text(
+                    'Buscar',
+                    style: TextStyle(color: AppColorsSupport.textPrimary),
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -59,7 +67,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                       color: JPCupertinoColors.background(context),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 12,
+                        vertical: 10,
                       ),
                       child: _buildBarraBusqueda(context, controller),
                     ),
@@ -97,7 +105,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
         children: [
           Icon(
             CupertinoIcons.slider_horizontal_3,
-            color: JPCupertinoColors.label(context),
+            color: AppColorsSupport.textPrimary,
             size: 22,
           ),
           if (controller.tieneFiltrosActivos)
@@ -108,7 +116,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: JPCupertinoColors.systemBlue(context),
+                  color: AppColorsPrimary.main,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -124,7 +132,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
       onPressed: () => _mostrarOrdenamiento(context, controller),
       child: Icon(
         CupertinoIcons.arrow_up_arrow_down,
-        color: JPCupertinoColors.label(context),
+        color: AppColorsSupport.textPrimary,
         size: 22,
       ),
     );
@@ -170,6 +178,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
   Widget _buildContent(BusquedaController controller) {
     if (controller.buscando) {
       return SliverFillRemaining(
+        hasScrollBody: false,
         child: Center(
           child: CupertinoActivityIndicator(
             radius: 14,
@@ -180,25 +189,35 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
     }
 
     if (controller.error != null) {
-      return SliverFillRemaining(child: _buildEstadoError(controller.error!));
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _buildEstadoError(controller.error!),
+      );
     }
 
     if (controller.controladorBusqueda.text.isEmpty) {
-      return SliverFillRemaining(child: _buildEstadoInicial(controller));
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _buildEstadoInicial(controller),
+      );
     }
 
     if (controller.resultados.isEmpty) {
-      return SliverFillRemaining(child: _buildSinResultados());
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _buildSinResultados(),
+      );
     }
 
     return _buildListaResultados(controller);
   }
 
   Widget _buildEstadoInicial(BusquedaController controller) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Búsquedas recientes
           if (controller.historialBusqueda.isNotEmpty) ...[
@@ -210,7 +229,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: JPCupertinoColors.label(context),
+                    color: AppColorsSupport.textPrimary,
                   ),
                 ),
                 CupertinoButton(
@@ -219,7 +238,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                   child: Text(
                     'Limpiar todo',
                     style: TextStyle(
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                       fontSize: 14,
                     ),
                   ),
@@ -252,7 +271,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                         child: Text(
                           query,
                           style: TextStyle(
-                            color: JPCupertinoColors.label(context),
+                            color: AppColorsSupport.textPrimary,
                             fontSize: 15,
                           ),
                         ),
@@ -357,7 +376,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: JPCupertinoColors.label(context),
+                color: AppColorsSupport.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
@@ -457,12 +476,10 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+            color: AppColorsPrimary.main.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: JPCupertinoColors.systemBlue(
-                context,
-              ).withValues(alpha: 0.3),
+              color: AppColorsPrimary.main.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -470,17 +487,17 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
             children: [
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: JPCupertinoColors.systemBlue(context),
+                  color: AppColorsPrimary.main,
                 ),
               ),
               const SizedBox(width: 6),
-              Icon(
+              const Icon(
                 CupertinoIcons.xmark,
                 size: 14,
-                color: JPCupertinoColors.systemBlue(context),
+                color: AppColorsPrimary.main,
               ),
             ],
           ),
@@ -506,7 +523,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: JPCupertinoColors.label(context),
+            color: AppColorsSupport.textPrimary,
           ),
         ),
       ),
@@ -544,9 +561,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Cancelar',
-                        style: TextStyle(
-                          color: JPCupertinoColors.systemBlue(context),
-                        ),
+                        style: TextStyle(color: AppColorsPrimary.main),
                       ),
                     ),
                     const Spacer(),
@@ -555,7 +570,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
-                        color: JPCupertinoColors.label(context),
+                        color: AppColorsSupport.textPrimary,
                       ),
                     ),
                     const Spacer(),
@@ -567,7 +582,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                       child: Text(
                         'Aplicar',
                         style: TextStyle(
-                          color: JPCupertinoColors.systemBlue(context),
+                          color: AppColorsPrimary.main,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -612,7 +627,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 15,
-            color: JPCupertinoColors.label(context),
+            color: AppColorsSupport.textPrimary,
           ),
         ),
         const SizedBox(height: 12),
@@ -647,7 +662,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? JPCupertinoColors.systemBlue(context)
+              ? AppColorsPrimary.main
               : JPCupertinoColors.systemGrey6(context),
           borderRadius: BorderRadius.circular(16),
         ),
@@ -658,7 +673,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
             fontWeight: FontWeight.w600,
             color: selected
                 ? CupertinoColors.white
-                : JPCupertinoColors.label(context),
+                : AppColorsSupport.textPrimary,
           ),
         ),
       ),
@@ -674,7 +689,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 15,
-            color: JPCupertinoColors.label(context),
+            color: AppColorsSupport.textPrimary,
           ),
         ),
         const SizedBox(height: 12),
@@ -706,7 +721,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: JPCupertinoColors.label(context),
+                      color: AppColorsSupport.textPrimary,
                     ),
                   ),
                 ],
@@ -739,7 +754,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: JPCupertinoColors.label(context),
+                      color: AppColorsSupport.textPrimary,
                     ),
                   ),
                 ],
@@ -760,7 +775,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 15,
-            color: JPCupertinoColors.label(context),
+            color: AppColorsSupport.textPrimary,
           ),
         ),
         const SizedBox(height: 12),
@@ -804,7 +819,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                     child: Icon(
                       CupertinoIcons.check_mark,
                       size: 18,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                     ),
                   ),
               ],
@@ -825,7 +840,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                     child: Icon(
                       CupertinoIcons.check_mark,
                       size: 18,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                     ),
                   ),
               ],
@@ -846,7 +861,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                     child: Icon(
                       CupertinoIcons.check_mark,
                       size: 18,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                     ),
                   ),
               ],
@@ -867,7 +882,7 @@ class _PantallaBusquedaState extends State<PantallaBusqueda> {
                     child: Icon(
                       CupertinoIcons.check_mark,
                       size: 18,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                     ),
                   ),
               ],
@@ -1000,7 +1015,7 @@ class _ProductoCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                         height: 1.2,
-                        color: JPCupertinoColors.label(context),
+                        color: AppColorsSupport.textPrimary,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -1034,7 +1049,7 @@ class _ProductoCard extends StatelessWidget {
                             producto.rating.toStringAsFixed(1),
                             style: TextStyle(
                               fontSize: 13,
-                              color: JPCupertinoColors.label(context),
+                              color: AppColorsSupport.textPrimary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1064,10 +1079,10 @@ class _ProductoCard extends StatelessWidget {
                             ],
                             Text(
                               producto.precioFormateado,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                color: JPCupertinoColors.systemBlue(context),
+                                color: AppColorsSupport.price,
                               ),
                             ),
                           ],
@@ -1187,7 +1202,7 @@ class _AgregarAlCarritoButtonState extends State<_AgregarAlCarritoButton> {
     return CupertinoButton(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       color: widget.producto.disponible
-          ? JPCupertinoColors.systemBlue(context)
+          ? AppColorsPrimary.main
           : JPCupertinoColors.systemGrey4(context),
       borderRadius: BorderRadius.circular(10),
       onPressed: widget.producto.disponible ? _agregarAlCarrito : null,

@@ -1,6 +1,7 @@
 // lib/screens/user/carrito/carrito_direccion_card.dart
 
 import 'package:flutter/cupertino.dart';
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
 
 class CarritoDireccionCard extends StatelessWidget {
@@ -31,14 +32,12 @@ class CarritoDireccionCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: JPCupertinoColors.systemBlue(
-                context,
-              ).withValues(alpha: 0.1),
+              color: AppColorsPrimary.main.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               CupertinoIcons.location_solid,
-              color: JPCupertinoColors.systemBlue(context),
+              color: AppColorsPrimary.main,
             ),
           ),
           const SizedBox(width: 10),
@@ -77,16 +76,14 @@ class CarritoDireccionCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: JPCupertinoColors.systemBlue(
-                        context,
-                      ).withValues(alpha: 0.1),
+                      color: AppColorsPrimary.main.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       'Predeterminada',
                       style: TextStyle(
                         fontSize: 10,
-                        color: JPCupertinoColors.systemBlue(context),
+                        color: AppColorsPrimary.main,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

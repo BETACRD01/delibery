@@ -1,6 +1,7 @@
 // lib/screens/user/carrito/carrito_header.dart
 
 import 'package:flutter/cupertino.dart';
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
 
 class CarritoHeader extends StatelessWidget {
@@ -30,7 +31,7 @@ class CarritoHeader extends StatelessWidget {
         children: [
           Icon(
             CupertinoIcons.cart_fill,
-            color: JPCupertinoColors.systemBlue(context),
+            color: AppColorsPrimary.main,
           ),
           const SizedBox(width: 12),
           Text(

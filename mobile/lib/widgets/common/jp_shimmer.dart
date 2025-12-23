@@ -2,6 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:shimmer/shimmer.dart';
+
 import '../../theme/jp_theme.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -313,6 +314,330 @@ class JPShimmerText extends StatelessWidget {
             ),
           );
         }),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🛒 SHIMMER PRODUCT CARD - Card de producto shimmer
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Shimmer que simula una card de producto
+class JPShimmerProductCard extends StatelessWidget {
+  final double width;
+  final double height;
+
+  const JPShimmerProductCard({super.key, this.width = 160, this.height = 220});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: JPConstants.subtleShadow(context),
+      ),
+      child: JPShimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Imagen del producto
+            Container(
+              height: height * 0.55,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+              ),
+            ),
+            // Info del producto
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Título
+                  Container(
+                    width: double.infinity,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: JPCupertinoColors.systemGrey6(context),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  // Título segunda línea
+                  Container(
+                    width: width * 0.6,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: JPCupertinoColors.systemGrey6(context),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Precio
+                  Container(
+                    width: width * 0.4,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: JPCupertinoColors.systemGrey6(context),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Lista de shimmers de productos horizontal
+class JPShimmerProductList extends StatelessWidget {
+  final int itemCount;
+  final double itemWidth;
+  final double itemHeight;
+
+  const JPShimmerProductList({
+    super.key,
+    this.itemCount = 4,
+    this.itemWidth = 160,
+    this.itemHeight = 220,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: itemHeight,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: itemCount,
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (_, _) =>
+            JPShimmerProductCard(width: itemWidth, height: itemHeight),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 📁 SHIMMER CATEGORY - Shimmer de categoría
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Shimmer que simula un chip de categoría
+class JPShimmerCategoryItem extends StatelessWidget {
+  const JPShimmerCategoryItem({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return JPShimmer(
+      child: Column(
+        children: [
+          // Círculo de la categoría
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: JPCupertinoColors.systemGrey6(context),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Nombre
+          Container(
+            width: 50,
+            height: 12,
+            decoration: BoxDecoration(
+              color: JPCupertinoColors.systemGrey6(context),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lista de shimmers de categorías horizontal
+class JPShimmerCategoryList extends StatelessWidget {
+  final int itemCount;
+
+  const JPShimmerCategoryList({super.key, this.itemCount = 5});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 100,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: itemCount,
+        separatorBuilder: (_, _) => const SizedBox(width: 16),
+        itemBuilder: (_, _) => const JPShimmerCategoryItem(),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 📦 SHIMMER ORDER CARD - Card de pedido shimmer
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Shimmer que simula una card de pedido
+class JPShimmerOrderCard extends StatelessWidget {
+  const JPShimmerOrderCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: JPConstants.subtleShadow(context),
+      ),
+      child: JPShimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: número de pedido + estado
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 100,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: JPCupertinoColors.systemGrey6(context),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                Container(
+                  width: 80,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: JPCupertinoColors.systemGrey6(context),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Línea de info
+            Container(
+              width: double.infinity,
+              height: 14,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Segunda línea
+            Container(
+              width: 180,
+              height: 14,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Footer: precio
+            Container(
+              width: 80,
+              height: 18,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 📄 SHIMMER DETAIL SCREEN - Shimmer para pantalla de detalle
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Shimmer que simula una pantalla de detalle de producto
+class JPShimmerProductDetail extends StatelessWidget {
+  const JPShimmerProductDetail({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: JPShimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Imagen principal
+            Container(
+              width: screenWidth,
+              height: screenWidth * 0.8,
+              color: JPCupertinoColors.systemGrey6(context),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Título
+                  Container(
+                    width: screenWidth * 0.8,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: JPCupertinoColors.systemGrey6(context),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Precio
+                  Container(
+                    width: 100,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: JPCupertinoColors.systemGrey6(context),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Descripción
+                  ...List.generate(
+                    4,
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        width: i == 3 ? screenWidth * 0.6 : double.infinity,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: JPCupertinoColors.systemGrey6(context),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

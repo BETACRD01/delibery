@@ -1,7 +1,12 @@
 // lib/screens/user/inicio/widgets/seccion_destacados.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../../../../theme/jp_theme.dart';
+import 'package:mobile/theme/app_colors_primary.dart';
+import 'package:mobile/theme/app_colors_secondary.dart';
+import 'package:mobile/theme/app_colors_support.dart';
+import 'package:mobile/theme/app_theme.dart';
+
 import '../../../../../models/producto_model.dart';
 
 /// Sección de productos destacados en la pantalla Home
@@ -42,26 +47,33 @@ class SeccionDestacados extends StatelessWidget {
       child: Text(
         'Más Populares',
         style: TextStyle(
-          fontSize: 18,
+          fontSize: 20, // Slightly larger for iOS feel
           fontWeight: FontWeight.bold,
-          color: JPColors.textPrimary,
+          color: AppColorsSupport.textPrimary,
+          letterSpacing: -0.5,
         ),
       ),
     );
   }
 
   Widget _buildProductosList() {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return ListView.builder(
+      // Use builder for clean index access
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 8,
+      ), // Add vertical padding for shadows
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: productos.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return _ProductoCard(
-          producto: productos[index],
-          onTap: () => onProductoPressed?.call(productos[index]),
-          onAgregarCarrito: () => onAgregarCarrito?.call(productos[index]),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16), // Spacing between cards
+          child: _ProductoCard(
+            producto: productos[index],
+            onTap: () => onProductoPressed?.call(productos[index]),
+            onAgregarCarrito: () => onAgregarCarrito?.call(productos[index]),
+          ),
         );
       },
     );
@@ -73,13 +85,13 @@ class SeccionDestacados extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: 3,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         return Container(
           height: 104,
           decoration: BoxDecoration(
             color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppConstants.radiusCard),
           ),
         );
       },
@@ -92,7 +104,7 @@ class SeccionDestacados extends StatelessWidget {
       child: Center(
         child: Text(
           'No hay productos destacados',
-          style: TextStyle(color: JPColors.textSecondary),
+          style: TextStyle(color: AppColorsSupport.textSecondary),
         ),
       ),
     );
@@ -115,13 +127,11 @@ class _ProductoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.grey[200]!),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radiusCard),
+          boxShadow: AppConstants.cardShadow(context), // iOS-style shadow
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -130,7 +140,7 @@ class _ProductoCard extends StatelessWidget {
               // Imagen del producto (OPTIMIZADA)
               _buildProductImage(),
               const SizedBox(width: 16),
-              
+
               // Información del producto
               Expanded(
                 child: Column(
@@ -139,26 +149,29 @@ class _ProductoCard extends StatelessWidget {
                     Text(
                       producto.nombre,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: JPColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: AppColorsSupport.textPrimary,
+                        letterSpacing: -0.3,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     _buildProveedorBadge(),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       producto.descripcion,
                       style: const TextStyle(
                         fontSize: 13,
-                        color: JPColors.textSecondary,
+                        color: AppColorsSupport.textSecondary,
+                        height: 1.3,
                       ),
-                      maxLines: 1,
+                      maxLines:
+                          2, // Allow 2 lines for better description visibility
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -166,23 +179,24 @@ class _ProductoCard extends StatelessWidget {
                           producto.precioFormateado,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: JPColors.primary,
+                            fontSize: 16,
+                            color: AppColorsSupport.price, // Soft red for price
                           ),
                         ),
+                        // Rating removed to clean up UI or moved, let's keep it minimal
                         Row(
                           children: [
                             const Icon(
                               Icons.star_rounded,
-                              size: 16,
-                              color: JPColors.secondary,
+                              size: 18,
+                              color: AppColorsSecondary.main, // Orange
                             ),
                             Text(
                               ' ${producto.ratingFormateado}',
                               style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: JPColors.textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColorsSupport.textPrimary,
                               ),
                             ),
                           ],
@@ -192,21 +206,32 @@ class _ProductoCard extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Botón agregar al carrito
-              if (onAgregarCarrito != null && producto.disponible) ...[
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: onAgregarCarrito,
-                  icon: const Icon(
-                    Icons.add_shopping_cart_rounded,
-                    color: JPColors.primary,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: JPColors.primary.withValues(alpha: 0.1),
+              const SizedBox(width: 12),
+              if (onAgregarCarrito != null && producto.disponible)
+                Hero(
+                  tag: 'add_to_cart_${producto.id}',
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onAgregarCarrito,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColorsPrimary.main.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.cart_fill_badge_plus, // iOS icon
+                          color: AppColorsPrimary.main,
+                          size: 20,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ],
             ],
           ),
         ),
@@ -217,82 +242,95 @@ class _ProductoCard extends StatelessWidget {
   // ✅ MÉTODO ACTUALIZADO Y OPTIMIZADO
   Widget _buildProductImage() {
     if (producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          producto.imagenUrl!,
-          width: 80,
-          height: 80,
-          fit: BoxFit.cover,
-          
-          // 🚀 OPTIMIZACIÓN DE MEMORIA
-          // Esto evita que la app intente cargar una imagen 4K completa en RAM
-          // La reduce a un tamaño manejable (200px de ancho) antes de mostrarla
-          cacheWidth: 200,
-          
-          // Manejo de errores de carga
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              width: 80,
-              height: 80,
-              color: JPColors.background,
-              child: const Icon(
-                Icons.broken_image_outlined,
-                color: JPColors.textHint,
-                size: 24,
-              ),
-            );
-          },
+      return Hero(
+        tag: 'product_image_${producto.id}',
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
+          child: Image.network(
+            producto.imagenUrl!,
+            width: 90,
+            height: 90,
+            fit: BoxFit.cover,
+            cacheWidth: 300,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 90,
+                height: 90,
+                color: AppColorsSupport.background,
+                child: const Icon(
+                  Icons.broken_image_outlined,
+                  color: AppColorsSupport.textHint,
+                  size: 24,
+                ),
+              );
+            },
+          ),
         ),
       );
     }
 
     // Fallback si no hay URL (producto sin imagen)
     return Container(
-      width: 80,
-      height: 80,
+      width: 90,
+      height: 90,
       decoration: BoxDecoration(
-        color: JPColors.background,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColorsSupport.background,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
       ),
       child: const Icon(
         Icons.fastfood_outlined,
-        color: JPColors.textHint,
+        color: AppColorsSupport.textHint,
         size: 32,
       ),
     );
   }
 
   Widget _buildProveedorBadge() {
-    final tieneLogo = producto.proveedorLogoUrl != null && producto.proveedorLogoUrl!.isNotEmpty;
+    final tieneLogo =
+        producto.proveedorLogoUrl != null &&
+        producto.proveedorLogoUrl!.isNotEmpty;
     final tieneNombre = (producto.proveedorNombre ?? '').isNotEmpty;
     if (!tieneLogo && !tieneNombre) return const SizedBox.shrink();
 
     return Row(
       children: [
-        CircleAvatar(
-          radius: 10,
-          backgroundColor: Colors.grey[200],
-          backgroundImage: tieneLogo ? NetworkImage(producto.proveedorLogoUrl!) : null,
-          child: !tieneLogo
-              ? const Icon(Icons.storefront_outlined, size: 12, color: Colors.grey)
-              : null,
-        ),
-        if (tieneNombre) ...[
-          const SizedBox(width: 6),
+        if (tieneLogo)
+          Container(
+            width: 20,
+            height: 20,
+            margin: const EdgeInsets.only(right: 6),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              image: DecorationImage(
+                image: NetworkImage(producto.proveedorLogoUrl!),
+                fit: BoxFit.cover,
+              ),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.only(right: 6),
+            child: Icon(
+              Icons.storefront_outlined,
+              size: 16,
+              color: Colors.grey,
+            ),
+          ),
+
+        if (tieneNombre)
           Expanded(
             child: Text(
               producto.proveedorNombre!,
               style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[700],
+                fontSize: 12,
+                color: AppColorsSupport.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-        ],
       ],
     );
   }

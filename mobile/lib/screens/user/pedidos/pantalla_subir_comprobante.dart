@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../services/pago_service.dart';
 import '../../../models/datos_bancarios.dart';
@@ -135,7 +136,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
               children: <Widget>[
                 Icon(
                   CupertinoIcons.camera_fill,
-                  color: JPCupertinoColors.systemBlue(context),
+                  color: AppColorsPrimary.main,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -153,7 +154,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
               children: <Widget>[
                 Icon(
                   CupertinoIcons.photo_fill,
-                  color: JPCupertinoColors.systemBlue(context),
+                  color: AppColorsPrimary.main,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -207,7 +208,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
             },
             child: Icon(
               CupertinoIcons.back,
-              color: JPCupertinoColors.systemBlue(context),
+              color: AppColorsPrimary.main,
               size: 28,
             ),
           ),
@@ -264,10 +265,8 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: <Color>[
-                      JPCupertinoColors.systemBlue(context),
-                      JPCupertinoColors.systemBlue(
-                        context,
-                      ).withValues(alpha: 0.7),
+                      AppColorsPrimary.main,
+                      AppColorsPrimary.main.withValues(alpha: 0.7),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -275,9 +274,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: <BoxShadow>[
                     BoxShadow(
-                      color: JPCupertinoColors.systemBlue(
-                        context,
-                      ).withValues(alpha: 0.3),
+                      color: AppColorsPrimary.main.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -344,17 +341,15 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: <Color>[
-                  JPCupertinoColors.systemBlue(context).withValues(alpha: 0.12),
-                  JPCupertinoColors.systemBlue(context).withValues(alpha: 0.08),
+                  AppColorsPrimary.main.withValues(alpha: 0.12),
+                  AppColorsPrimary.main.withValues(alpha: 0.08),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: JPCupertinoColors.systemBlue(
-                  context,
-                ).withValues(alpha: 0.2),
+                color: AppColorsPrimary.main.withValues(alpha: 0.2),
                 width: 1.5,
               ),
             ),
@@ -362,7 +357,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
               children: <Widget>[
                 Icon(
                   CupertinoIcons.money_dollar_circle_fill,
-                  color: JPCupertinoColors.systemBlue(context),
+                  color: AppColorsPrimary.main,
                   size: 24,
                 ),
                 const SizedBox(width: 10),
@@ -383,7 +378,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
-                    color: JPCupertinoColors.systemBlue(context),
+                    color: AppColorsPrimary.main,
                     letterSpacing: -1,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -427,14 +422,14 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                   Icon(
                     CupertinoIcons.arrow_2_circlepath,
                     size: 18,
-                    color: JPCupertinoColors.systemBlue(context),
+                    color: AppColorsPrimary.main,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Cambiar imagen',
                     style: TextStyle(
                       fontSize: 16,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -460,16 +455,14 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _imagenComprobante != null
-                ? JPCupertinoColors.systemBlue(context).withValues(alpha: 0.4)
+                ? AppColorsPrimary.main.withValues(alpha: 0.4)
                 : JPCupertinoColors.separator(context).withValues(alpha: 0.3),
             width: _imagenComprobante != null ? 2.5 : 1.5,
           ),
           boxShadow: _imagenComprobante != null
               ? <BoxShadow>[
                   BoxShadow(
-                    color: JPCupertinoColors.systemBlue(
-                      context,
-                    ).withValues(alpha: 0.1),
+                    color: AppColorsPrimary.main.withValues(alpha: 0.1),
                     blurRadius: 15,
                     offset: const Offset(0, 4),
                   ),
@@ -580,9 +573,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
         boxShadow: !_isLoading
             ? <BoxShadow>[
                 BoxShadow(
-                  color: JPCupertinoColors.systemBlue(
-                    context,
-                  ).withValues(alpha: 0.3),
+                  color: AppColorsPrimary.main.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -597,7 +588,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
           borderRadius: BorderRadius.circular(16),
           color: _isLoading
               ? JPCupertinoColors.systemGrey4(context)
-              : JPCupertinoColors.systemBlue(context),
+              : AppColorsPrimary.main,
           disabledColor: JPCupertinoColors.systemGrey4(context),
           onPressed: _isLoading ? null : _subirComprobante,
           child: _isLoading

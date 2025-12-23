@@ -1,8 +1,12 @@
 // lib/theme/jp_theme.dart
 
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
+import 'app_colors_primary.dart';
+import 'app_colors_secondary.dart';
+import 'app_colors_support.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 🎨 COLORES JP EXPRESS
@@ -10,25 +14,25 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 class JPColors {
   // ✅ MARCA PRINCIPAL
-  static const primary = Color(0xFF0cb7f2);      // Azul Principal
-  static const primaryLight = Color(0xFFC7EBFD); // Azul claro
-  static const secondary = Color(0xFFFF7B00);    // Naranja Acción
+  static const primary = AppColorsPrimary.main; // Azul Principal
+  static const primaryLight = AppColorsPrimary.light; // Azul claro
+  static const secondary = AppColorsSecondary.main; // Naranja Acción
 
   // FONDOS NEUTROS
-  static const background = Color(0xFFF8F9FA); // Gris muy claro
-  static const surface = Colors.white;         // Blanco puro
-  static const inputBg = Color(0xFFFAFAFA);    // Fondo inputs
+  static const background = AppColorsSupport.background; // Gris muy claro
+  static const surface = AppColorsSupport.surface; // Blanco puro
+  static const inputBg = AppColorsSupport.inputBg; // Fondo inputs
 
   // TEXTOS
-  static const textPrimary = Color(0xFF1A202C);
-  static const textSecondary = Color(0xFF718096);
-  static const textHint = Color(0xFFA0AEC0);
+  static const textPrimary = AppColorsSupport.textPrimary;
+  static const textSecondary = AppColorsSupport.textSecondary;
+  static const textHint = AppColorsSupport.textHint;
 
   // ESTADOS
-  static const success = Color(0xFF38A169);
-  static const warning = Color(0xFFDD6B20);
-  static const error = Color(0xFFE53E3E);
-  static const info = Color(0xFF3182CE);
+  static const success = AppColorsSupport.success;
+  static const warning = AppColorsSupport.warning;
+  static const error = AppColorsSupport.error;
+  static const info = AppColorsSupport.info;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -85,17 +89,18 @@ class JPTheme {
       brightness: Brightness.light,
 
       // 🎨 ColorScheme corregido (background eliminado → usar surface)
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: JPColors.primary,
-        primary: JPColors.primary,
-        secondary: JPColors.secondary,
-        surface: JPColors.surface,
-        error: JPColors.error,
-      ).copyWith(
-        // Surface principal
-        surface: JPColors.surface,
-        surfaceContainerLowest: JPColors.background,
-      ),
+      colorScheme:
+          ColorScheme.fromSeed(
+            seedColor: JPColors.primary,
+            primary: JPColors.primary,
+            secondary: JPColors.secondary,
+            surface: JPColors.surface,
+            error: JPColors.error,
+          ).copyWith(
+            // Surface principal
+            surface: JPColors.surface,
+            surfaceContainerLowest: JPColors.background,
+          ),
 
       scaffoldBackgroundColor: JPColors.background,
 
@@ -121,10 +126,7 @@ class JPTheme {
         margin: const EdgeInsets.only(bottom: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(
-            color: Color(0xFFE2E8F0),
-            width: 1,
-          ),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
         ),
       ),
 
@@ -176,12 +178,7 @@ class JPAvatar extends StatelessWidget {
   final double radius;
   final VoidCallback? onTap;
 
-  const JPAvatar({
-    super.key,
-    this.imageUrl,
-    this.radius = 40,
-    this.onTap,
-  });
+  const JPAvatar({super.key, this.imageUrl, this.radius = 40, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +241,12 @@ class JPSnackbar {
   }
 
   static void success(BuildContext context, String message) {
-    show(context, message, color: JPColors.success, icon: Icons.check_circle_outline);
+    show(
+      context,
+      message,
+      color: JPColors.success,
+      icon: Icons.check_circle_outline,
+    );
   }
 
   static void error(BuildContext context, String message) {
@@ -252,7 +254,12 @@ class JPSnackbar {
   }
 
   static void info(BuildContext context, String message) {
-    show(context, message, color: JPColors.info, icon: Icons.info_outline);
+    show(
+      context,
+      message,
+      color: const Color.fromARGB(255, 59, 159, 226),
+      icon: Icons.info_outline,
+    );
   }
 }
 
@@ -334,7 +341,9 @@ class JPConstants {
 
     return [
       BoxShadow(
-        color: CupertinoColors.systemGrey.resolveFrom(context).withValues(alpha: opacity),
+        color: CupertinoColors.systemGrey
+            .resolveFrom(context)
+            .withValues(alpha: opacity),
         blurRadius: 10,
         offset: const Offset(0, 4),
       ),
@@ -347,7 +356,9 @@ class JPConstants {
 
     return [
       BoxShadow(
-        color: CupertinoColors.systemGrey.resolveFrom(context).withValues(alpha: opacity),
+        color: CupertinoColors.systemGrey
+            .resolveFrom(context)
+            .withValues(alpha: opacity),
         blurRadius: 8,
         offset: const Offset(0, 2),
       ),

@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:mobile/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../controllers/user/perfil_controller.dart';
@@ -135,7 +136,7 @@ class _MyAppState extends State<MyApp> {
           ],
           supportedLocales: AppLocalizations.supportedLocales,
           locale: localeProvider.locale ?? const Locale('es'),
-          theme: _buildTheme(),
+          theme: AppTheme.lightTheme,
           navigatorKey: Rutas.navigatorKey,
           initialRoute: widget.initialRoute,
           routes: Rutas.obtenerRutas(),
@@ -145,39 +146,6 @@ class _MyAppState extends State<MyApp> {
             builder: (_) => _PantallaError(ruta: s.name ?? 'desconocida'),
           ),
         ),
-      ),
-    );
-  }
-
-  ThemeData _buildTheme() {
-    final radius = BorderRadius.circular(12);
-    return ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4FC3F7)),
-      useMaterial3: true,
-      appBarTheme: const AppBarTheme(
-        centerTitle: true,
-        elevation: 0,
-        foregroundColor: Colors.white,
-      ),
-      cardTheme: CardThemeData(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: radius),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: radius),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: radius),
-        ),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

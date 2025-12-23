@@ -1,22 +1,25 @@
 // lib/screens/user/inicio/pantalla_home.dart
 
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../providers/proveedor_carrito.dart';
-import '../../../controllers/user/perfil_controller.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:mobile/theme/app_colors_primary.dart';
+import 'package:mobile/theme/app_colors_support.dart';
+import 'package:provider/provider.dart';
+
 import '../../../config/rutas.dart';
 import '../../../controllers/user/home_controller.dart';
+import '../../../controllers/user/perfil_controller.dart';
 import '../../../models/producto_model.dart';
-import '../../../widgets/cards/jp_product_card.dart';
-import '../../../widgets/common/jp_shimmer.dart';
-import '../busqueda/pantalla_busqueda.dart';
 import '../../../providers/notificaciones_provider.dart';
+import '../../../providers/proveedor_carrito.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/session_cleanup.dart';
 import '../../../services/toast_service.dart';
+import '../../../widgets/cards/jp_product_card.dart';
+import '../../../widgets/common/jp_shimmer.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
+import '../busqueda/pantalla_busqueda.dart';
 import 'widgets/inicio/home_app_bar.dart';
 
 class PantallaHome extends StatefulWidget {
@@ -266,23 +269,23 @@ class _SeccionCategorias extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Categorías',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: CupertinoColors.label.resolveFrom(context),
+                  color: AppColorsSupport.textPrimary,
+                  letterSpacing: -0.5,
                 ),
               ),
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                minimumSize: Size.zero,
-                onPressed: onVerTodo,
-                child: Text(
+              GestureDetector(
+                onTap: onVerTodo,
+                child: const Text(
                   'Ver todo',
                   style: TextStyle(
-                    fontSize: 14,
-                    color: CupertinoColors.systemBlue.resolveFrom(context),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColorsPrimary.main,
                   ),
                 ),
               ),
@@ -290,7 +293,7 @@ class _SeccionCategorias extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 100,
+          height: 110,
           child: loading
               ? _buildLoading(context)
               : ListView.separated(
@@ -317,7 +320,7 @@ class _SeccionCategorias extends StatelessWidget {
       itemWidth: 72,
       itemHeight: 100,
       spacing: 12,
-      borderRadius: 18,
+      borderRadius: 20,
       padding: EdgeInsets.symmetric(horizontal: 20),
     );
   }
@@ -335,6 +338,9 @@ class _CategoriaChip extends StatelessWidget {
     final icono = categoria.icono?.toString();
     final imagen = categoria.imagenUrl?.toString();
 
+    // Determine color based on category data if available or default
+    final Color baseColor = AppColorsPrimary.light;
+
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
@@ -345,28 +351,22 @@ class _CategoriaChip extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: CupertinoColors.systemBackground.resolveFrom(context),
-                borderRadius: BorderRadius.circular(18),
+                color: (imagen != null && imagen.isNotEmpty)
+                    ? Colors.white
+                    : baseColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20), // Squaricle
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: imagen != null && imagen.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: imagen,
-                        fit: BoxFit.cover,
-                        placeholder: (_, _) =>
-                            const CupertinoActivityIndicator(),
-                        errorWidget: (_, _, _) =>
-                            _buildIconFallback(context, icono),
-                      )
-                    : _buildIconFallback(context, icono),
+                borderRadius: BorderRadius.circular(20),
+                child: _buildContent(context, imagen, icono, baseColor),
               ),
             ),
             const SizedBox(height: 8),
@@ -375,10 +375,11 @@ class _CategoriaChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
+              style: const TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: CupertinoColors.label.resolveFrom(context),
+                color: AppColorsSupport.textSecondary,
+                letterSpacing: -0.2,
               ),
             ),
           ],
@@ -387,9 +388,37 @@ class _CategoriaChip extends StatelessWidget {
     );
   }
 
-  Widget _buildIconFallback(BuildContext context, String? icono) {
+  Widget _buildContent(
+    BuildContext context,
+    String? imagen,
+    String? icono,
+    Color baseColor,
+  ) {
+    if (imagen != null && imagen.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: imagen,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => const CupertinoActivityIndicator(),
+        errorWidget: (_, _, _) => _buildIconFallback(context, icono, baseColor),
+      );
+    }
+    return _buildIconFallback(context, icono, baseColor);
+  }
+
+  Widget _buildIconFallback(
+    BuildContext context,
+    String? icono,
+    Color baseColor,
+  ) {
+    if (icono != null && icono.isNotEmpty) {
+      return Center(child: Text(icono, style: const TextStyle(fontSize: 28)));
+    }
     return Center(
-      child: Text(icono ?? '🍽️', style: const TextStyle(fontSize: 28)),
+      child: Icon(
+        Icons.category_outlined, // Default icon
+        color: AppColorsPrimary.main,
+        size: 30,
+      ),
     );
   }
 }
@@ -414,12 +443,13 @@ class _SeccionPromociones extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: Text(
+          child: const Text(
             'Promociones',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: CupertinoColors.label.resolveFrom(context),
+              color: AppColorsSupport.textPrimary,
+              letterSpacing: -0.5,
             ),
           ),
         ),
@@ -469,6 +499,10 @@ class _PromoCard extends StatelessWidget {
     final imagen = promo.imagenUrl?.toString();
     final descuento = promo.descuento?.toString();
 
+    // Determine colors
+    // Use consistent blue/purple gradient if no color provided, or use brand logic if desired.
+    // Assuming iOS-like vibrant gradient.
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -483,7 +517,7 @@ class _PromoCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF667eea).withValues(alpha: 0.3),
-              blurRadius: 12,
+              blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
@@ -499,6 +533,8 @@ class _PromoCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     color: Colors.black.withValues(alpha: 0.3),
                     colorBlendMode: BlendMode.darken,
+                    placeholder: (_, _) => const CupertinoActivityIndicator(),
+                    errorWidget: (_, _, _) => const SizedBox(),
                   ),
                 ),
               ),
@@ -533,9 +569,17 @@ class _PromoCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
+                      letterSpacing: -0.5,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black45,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -595,10 +639,10 @@ class _SeccionProductos extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 titulo,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: CupertinoColors.label.resolveFrom(context),
+                  color: AppColorsSupport.textPrimary,
                 ),
               ),
             ],
@@ -700,7 +744,7 @@ class _CarritoFAB extends StatelessWidget {
                   children: [
                     Icon(
                       CupertinoIcons.cart_fill,
-                      color: CupertinoColors.systemBlue.resolveFrom(context),
+                      color: AppColorsPrimary.main,
                       size: 24,
                     ),
                     if (cantidad > 0)
@@ -736,7 +780,7 @@ class _CarritoFAB extends StatelessWidget {
                 Text(
                   'Mi Pedido',
                   style: TextStyle(
-                    color: CupertinoColors.systemBlue.resolveFrom(context),
+                    color: AppColorsPrimary.main,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),

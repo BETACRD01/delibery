@@ -1,18 +1,15 @@
 // lib/widgets/common/jp_cupertino_button.dart
 
 import 'package:flutter/cupertino.dart';
+
+import '../../theme/app_colors_primary.dart';
 import '../../theme/jp_theme.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 🔘 CUPERTINO BUTTON - Botones unificados estilo iOS
 // ══════════════════════════════════════════════════════════════════════════════
 
-enum JPButtonSize {
-  small,
-  compact,
-  medium,
-  large,
-}
+enum JPButtonSize { small, compact, medium, large }
 
 /// Botón base iOS con variantes: filled, outlined y text
 class JPCupertinoButton extends StatelessWidget {
@@ -59,18 +56,18 @@ class JPCupertinoButton extends StatelessWidget {
     bool fullWidth = false,
     bool loading = false,
   }) : this._(
-          key: key,
-          text: text,
-          child: child,
-          icon: icon,
-          onPressed: onPressed,
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          size: size,
-          fullWidth: fullWidth,
-          loading: loading,
-          variant: _ButtonVariant.filled,
-        );
+         key: key,
+         text: text,
+         child: child,
+         icon: icon,
+         onPressed: onPressed,
+         backgroundColor: backgroundColor,
+         foregroundColor: foregroundColor,
+         size: size,
+         fullWidth: fullWidth,
+         loading: loading,
+         variant: _ButtonVariant.filled,
+       );
 
   /// Botón outlined (borde, texto coloreado)
   const JPCupertinoButton.outlined({
@@ -85,18 +82,18 @@ class JPCupertinoButton extends StatelessWidget {
     bool fullWidth = false,
     bool loading = false,
   }) : this._(
-          key: key,
-          text: text,
-          child: child,
-          icon: icon,
-          onPressed: onPressed,
-          borderColor: borderColor,
-          foregroundColor: foregroundColor,
-          size: size,
-          fullWidth: fullWidth,
-          loading: loading,
-          variant: _ButtonVariant.outlined,
-        );
+         key: key,
+         text: text,
+         child: child,
+         icon: icon,
+         onPressed: onPressed,
+         borderColor: borderColor,
+         foregroundColor: foregroundColor,
+         size: size,
+         fullWidth: fullWidth,
+         loading: loading,
+         variant: _ButtonVariant.outlined,
+       );
 
   /// Botón text (solo texto, sin fondo ni borde)
   const JPCupertinoButton.text({
@@ -110,17 +107,17 @@ class JPCupertinoButton extends StatelessWidget {
     bool fullWidth = false,
     bool loading = false,
   }) : this._(
-          key: key,
-          text: text,
-          child: child,
-          icon: icon,
-          onPressed: onPressed,
-          foregroundColor: foregroundColor,
-          size: size,
-          fullWidth: fullWidth,
-          loading: loading,
-          variant: _ButtonVariant.text,
-        );
+         key: key,
+         text: text,
+         child: child,
+         icon: icon,
+         onPressed: onPressed,
+         foregroundColor: foregroundColor,
+         size: size,
+         fullWidth: fullWidth,
+         loading: loading,
+         variant: _ButtonVariant.text,
+       );
 
   /// Botón destructive (estilo iOS para acciones destructivas)
   const JPCupertinoButton.destructive({
@@ -133,16 +130,16 @@ class JPCupertinoButton extends StatelessWidget {
     bool fullWidth = false,
     bool loading = false,
   }) : this._(
-          key: key,
-          text: text,
-          child: child,
-          icon: icon,
-          onPressed: onPressed,
-          size: size,
-          fullWidth: fullWidth,
-          loading: loading,
-          variant: _ButtonVariant.destructive,
-        );
+         key: key,
+         text: text,
+         child: child,
+         icon: icon,
+         onPressed: onPressed,
+         size: size,
+         fullWidth: fullWidth,
+         loading: loading,
+         variant: _ButtonVariant.destructive,
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -208,16 +205,15 @@ class JPCupertinoButton extends StatelessWidget {
   BoxDecoration _getDecoration(BuildContext context) {
     switch (_variant) {
       case _ButtonVariant.filled:
-        final bgColor = backgroundColor ?? JPCupertinoColors.systemBlue(context);
+        final bgColor = backgroundColor ?? AppColorsPrimary.main;
         return BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(JPConstants.radiusButton),
         );
 
       case _ButtonVariant.outlined:
-        final lineColor = borderColor ??
-                         foregroundColor ??
-                         JPCupertinoColors.systemBlue(context);
+        final lineColor =
+            borderColor ?? foregroundColor ?? AppColorsPrimary.main;
         return BoxDecoration(
           border: Border.all(color: lineColor, width: 1.5),
           borderRadius: BorderRadius.circular(JPConstants.radiusButton),
@@ -242,10 +238,10 @@ class JPCupertinoButton extends StatelessWidget {
         return CupertinoColors.white;
 
       case _ButtonVariant.outlined:
-        return JPCupertinoColors.systemBlue(context);
+        return AppColorsPrimary.main;
 
       case _ButtonVariant.text:
-        return JPCupertinoColors.systemBlue(context);
+        return AppColorsPrimary.main;
 
       case _ButtonVariant.destructive:
         return CupertinoColors.white;
@@ -327,9 +323,4 @@ class JPCupertinoButton extends StatelessWidget {
 // 🎯 BUTTON VARIANT - Enum interno para variantes
 // ══════════════════════════════════════════════════════════════════════════════
 
-enum _ButtonVariant {
-  filled,
-  outlined,
-  text,
-  destructive,
-}
+enum _ButtonVariant { filled, outlined, text, destructive }

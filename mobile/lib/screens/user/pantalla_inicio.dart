@@ -1,17 +1,19 @@
 // lib/screens/user/pantalla_inicio.dart
 
+import 'dart:developer' as developer;
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'dart:developer' as developer;
+
+import '../../config/rutas.dart';
+import '../../providers/proveedor_pedido.dart';
+import '../../services/toast_service.dart';
+import '../../theme/jp_theme.dart';
 import 'inicio/pantalla_home.dart';
-import 'super/pantalla_super.dart';
 import 'pedidos/pantalla_mis_pedidos.dart';
 import 'perfil/pantalla_perfil.dart';
-import '../../providers/proveedor_pedido.dart';
-import '../../theme/jp_theme.dart';
-import '../../services/toast_service.dart';
-import '../../config/rutas.dart';
+import 'super/pantalla_super.dart';
 
 /// Pantalla principal que contiene el CupertinoTabBar y gestiona
 /// la navegación entre las 4 pantallas principales de la aplicación
@@ -24,7 +26,7 @@ class PantallaInicio extends StatefulWidget {
 
 class _PantallaInicioState extends State<PantallaInicio> {
   /// Índice de la pantalla actualmente seleccionada
-  int _indiceActual = 0;
+  late int _indiceActual;
 
   /// Lista de pantallas que se mantienen en memoria
   final List<Widget> _pantallas = const [
@@ -36,13 +38,41 @@ class _PantallaInicioState extends State<PantallaInicio> {
     PantallaPerfil(),
   ];
 
+  /// Navigator keys para cada tab - permite hacer pop a root en cada tab
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = [
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+  ];
+
   @override
   void initState() {
     super.initState();
-    // Configurar listener de notificaciones push para clientes
+    // Inicializar con tab por defecto
+    _indiceActual = 0;
+
+    // Leer el tab inicial de los argumentos de la ruta
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _leerTabIndexDeArgumentos();
       _configurarNotificacionesPush();
     });
+  }
+
+  /// Lee el tabIndex de los argumentos de la ruta y actualiza el índice si es necesario
+  void _leerTabIndexDeArgumentos() {
+    if (!mounted) return;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      final tabIndex = args['tabIndex'] as int?;
+      if (tabIndex != null && tabIndex >= 0 && tabIndex < _pantallas.length) {
+        if (_indiceActual != tabIndex) {
+          setState(() => _indiceActual = tabIndex);
+          _refrescarPedidosSiEsTab(tabIndex);
+        }
+      }
+    }
   }
 
   /// Configura el listener de Firebase Cloud Messaging para actualizaciones de pedidos
@@ -80,12 +110,14 @@ class _PantallaInicioState extends State<PantallaInicio> {
     );
 
     // CASO 1: Actualización de estado de pedido
-    if (tipoEvento == 'pedido_actualizado' || accion == 'actualizar_estado_pedido') {
+    if (tipoEvento == 'pedido_actualizado' ||
+        accion == 'actualizar_estado_pedido') {
       final pedidoIdRaw = data['pedido_id'];
       final nuevoEstado = data['nuevo_estado']?.toString();
       final estadoDisplay = data['estado_display']?.toString();
       final numeroPedido = data['numero_pedido']?.toString() ?? '';
-      final repartidorNombre = data['repartidor_nombre']?.toString() ?? 'Repartidor';
+      final repartidorNombre =
+          data['repartidor_nombre']?.toString() ?? 'Repartidor';
 
       if (pedidoIdRaw != null && nuevoEstado != null && estadoDisplay != null) {
         final pedidoId = int.tryParse(pedidoIdRaw.toString());
@@ -177,8 +209,14 @@ class _PantallaInicioState extends State<PantallaInicio> {
   }
 
   /// Cambia la pantalla activa cuando el usuario toca un item del navbar
+  /// Primero hace pop a root en el tab actual, luego cambia al nuevo tab
   void _cambiarPantalla(int indice) {
+    // Primero hacer pop a root en el tab actual (si hay pantallas apiladas)
+    _popToRootOnTab(_indiceActual);
+
     if (_indiceActual != indice) {
+      // También hacer pop a root en el tab destino (por si acaso quedó algo)
+      _popToRootOnTab(indice);
       setState(() {
         _indiceActual = indice;
       });
@@ -189,6 +227,16 @@ class _PantallaInicioState extends State<PantallaInicio> {
     }
   }
 
+  /// Hace pop a la pantalla root del tab especificado
+  void _popToRootOnTab(int tabIndex) {
+    if (tabIndex >= 0 && tabIndex < _navigatorKeys.length) {
+      final navigator = _navigatorKeys[tabIndex].currentState;
+      if (navigator != null && navigator.canPop()) {
+        navigator.popUntil((route) => route.isFirst);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CupertinoTabScaffold(
@@ -196,7 +244,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
         currentIndex: _indiceActual,
         onTap: _cambiarPantalla,
         backgroundColor: JPCupertinoColors.surface(context),
-        activeColor: JPCupertinoColors.systemBlue(context),
+        activeColor: JPCupertinoColors.primary(context),
         inactiveColor: JPCupertinoColors.systemGrey(context),
         iconSize: 24.0,
         border: Border(
@@ -230,6 +278,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
       ),
       tabBuilder: (context, index) {
         return CupertinoTabView(
+          navigatorKey: _navigatorKeys[index],
           routes: Rutas.obtenerRutas(),
           builder: (context) {
             return _pantallas[index];

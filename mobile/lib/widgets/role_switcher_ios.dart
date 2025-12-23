@@ -4,6 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../theme/app_colors_primary.dart';
+
 class RoleSwitcherIOS extends StatefulWidget {
   final Map<String, String> opciones;
   final String? rolSeleccionado;
@@ -89,22 +91,18 @@ class _RoleSwitcherIOSState extends State<RoleSwitcherIOS>
     _animationController.stop();
   }
 
-  void _onHorizontalDragUpdate(
-    DragUpdateDetails details,
-    double trackWidth,
-  ) {
+  void _onHorizontalDragUpdate(DragUpdateDetails details, double trackWidth) {
     setState(() {
       final pixelPosition = _dragPositionFraction * trackWidth;
-      final newPixelPosition =
-          (pixelPosition + details.delta.dx).clamp(0.0, trackWidth);
+      final newPixelPosition = (pixelPosition + details.delta.dx).clamp(
+        0.0,
+        trackWidth,
+      );
       _dragPositionFraction = newPixelPosition / trackWidth;
     });
   }
 
-  void _onHorizontalDragEnd(
-    DragEndDetails details,
-    double trackWidth,
-  ) {
+  void _onHorizontalDragEnd(DragEndDetails details, double trackWidth) {
     final keys = widget.opciones.keys.toList();
     if (keys.length < 2) return;
 
@@ -165,13 +163,10 @@ class _RoleSwitcherIOSState extends State<RoleSwitcherIOS>
     final targetFraction = index == 0 ? 0.0 : 1.0;
     final startFraction = _dragPositionFraction;
 
-    _animation = Tween<double>(
-      begin: startFraction,
-      end: targetFraction,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
+    _animation = Tween<double>(begin: startFraction, end: targetFraction)
+        .animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+        );
 
     _animationController.forward(from: 0.0).then((_) {
       if (mounted) {
@@ -193,13 +188,13 @@ class _RoleSwitcherIOSState extends State<RoleSwitcherIOS>
   void _animateToCenterPosition() {
     final startFraction = _dragPositionFraction;
 
-    _animation = Tween<double>(
-      begin: startFraction,
-      end: 0.5, // Volver al centro
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
+    _animation =
+        Tween<double>(
+          begin: startFraction,
+          end: 0.5, // Volver al centro
+        ).animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+        );
 
     _animationController.forward(from: 0.0).then((_) {
       if (mounted) {
@@ -252,7 +247,8 @@ class _RoleSwitcherIOSState extends State<RoleSwitcherIOS>
   }
 
   void _mostrarMensajeRolBloqueado() {
-    final mensaje = widget.mensajeRolBloqueado ??
+    final mensaje =
+        widget.mensajeRolBloqueado ??
         'Este rol no está disponible. Solicita la aprobación desde la sección de Solicitudes.';
 
     showCupertinoDialog(
@@ -378,17 +374,13 @@ class _RoleSwitcherIOSState extends State<RoleSwitcherIOS>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      CupertinoColors.systemBlue.resolveFrom(context),
-                      CupertinoColors.systemBlue
-                          .resolveFrom(context)
-                          .withValues(alpha: 0.8),
+                      AppColorsPrimary.main,
+                      AppColorsPrimary.main.withValues(alpha: 0.8),
                     ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: CupertinoColors.systemBlue
-                          .resolveFrom(context)
-                          .withValues(alpha: 0.3),
+                      color: AppColorsPrimary.main.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -438,11 +430,9 @@ class _RoleSwitcherIOSState extends State<RoleSwitcherIOS>
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected
-                    ? CupertinoColors.systemBlue.resolveFrom(context)
-                    : (isDisabled
-                        ? CupertinoColors.systemGrey.resolveFrom(context)
-                        : CupertinoColors.secondaryLabel.resolveFrom(context)),
+                color: isDisabled
+                    ? CupertinoColors.systemGrey.resolveFrom(context)
+                    : CupertinoColors.secondaryLabel.resolveFrom(context),
               ),
             ),
           ),
@@ -490,11 +480,7 @@ class _RoleSwitcherIOSState extends State<RoleSwitcherIOS>
               color: CupertinoColors.systemBlue.resolveFrom(context),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              _iconForRole(entry.key),
-              size: 20,
-              color: Colors.white,
-            ),
+            child: Icon(_iconForRole(entry.key), size: 20, color: Colors.white),
           ),
           const SizedBox(width: 12),
           Text(

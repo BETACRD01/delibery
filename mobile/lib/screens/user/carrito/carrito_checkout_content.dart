@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Divider;
 import '../../../models/usuario.dart';
 import '../../../providers/proveedor_carrito.dart';
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
 import 'carrito_direccion_card.dart';
 import 'carrito_resumen_row.dart';
@@ -161,9 +162,7 @@ class CarritoCheckoutContent extends StatelessWidget {
                     horizontal: 16,
                     vertical: 10,
                   ),
-                  color: JPCupertinoColors.systemBlue(
-                    context,
-                  ).withValues(alpha: 0.1),
+                  color: AppColorsPrimary.main.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                   onPressed: tieneDirecciones
                       ? onElegirDireccion
@@ -174,7 +173,7 @@ class CarritoCheckoutContent extends StatelessWidget {
                       Icon(
                         CupertinoIcons.location,
                         size: 16,
-                        color: JPCupertinoColors.systemBlue(context),
+                        color: AppColorsPrimary.main,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -183,7 +182,7 @@ class CarritoCheckoutContent extends StatelessWidget {
                             : 'Agregar dirección',
                         style: TextStyle(
                           fontSize: 13,
-                          color: JPCupertinoColors.systemBlue(context),
+                          color: AppColorsPrimary.main,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

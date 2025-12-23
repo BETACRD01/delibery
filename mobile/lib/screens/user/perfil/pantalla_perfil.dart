@@ -1,29 +1,32 @@
 // lib/screens/user/perfil/pantalla_perfil.dart
 
 import 'dart:async';
-import 'package:flutter/material.dart';
+
 import 'package:flutter/cupertino.dart';
-import '../../../theme/jp_theme.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../config/rutas.dart';
 import '../../../controllers/user/perfil_controller.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/role_manager.dart';
 import '../../../services/toast_service.dart';
-import '../../../config/rutas.dart';
-import '../../../switch/roles.dart';
 import '../../../switch/role_router.dart';
-import 'package:provider/provider.dart';
-import 'editar/pantalla_editar_informacion.dart';
-import 'editar/pantalla_editar_foto.dart';
+import '../../../switch/roles.dart';
+import '../../../theme/app_colors_primary.dart';
+import '../../../theme/jp_theme.dart';
+import '../../../widgets/ratings/rating_summary_card.dart';
+import '../../../widgets/role_switcher_ios.dart';
 import '../../raffles/pantalla_rifa_activa.dart';
-import 'configuracion/direcciones/pantalla_lista_direcciones.dart';
-import 'configuracion/notificaciones/pantalla_notificaciones.dart';
-import 'configuracion/idioma/pantalla_idioma.dart';
+import '../../solicitudes_rol/pantalla_solicitar_rol.dart';
 import 'configuracion/ayuda/pantalla_ayuda_soporte.dart';
 import 'configuracion/ayuda/pantalla_terminos.dart';
+import 'configuracion/direcciones/pantalla_lista_direcciones.dart';
+import 'configuracion/idioma/pantalla_idioma.dart';
+import 'configuracion/notificaciones/pantalla_notificaciones.dart';
 import 'configuracion/seguridad/dialogo_cambiar_password.dart';
-import '../../solicitudes_rol/pantalla_solicitar_rol.dart';
-import '../../../widgets/role_switcher_ios.dart';
-import '../../../widgets/ratings/rating_summary_card.dart';
+import 'editar/pantalla_editar_foto.dart';
+import 'editar/pantalla_editar_informacion.dart';
 
 class PantallaPerfil extends StatefulWidget {
   const PantallaPerfil({super.key});
@@ -241,10 +244,13 @@ class _PantallaPerfilState extends State<PantallaPerfil>
                       children: [
                         Container(
                           padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
-                              colors: [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+                              colors: [
+                                AppColorsPrimary.main,
+                                AppColorsPrimary.main.withValues(alpha: 0.8),
+                              ],
                             ),
                           ),
                           child: Container(
@@ -799,7 +805,8 @@ class _PantallaPerfilState extends State<PantallaPerfil>
       final exito = await roleManager.switchRole(destino);
 
       if (!exito) {
-        final errorRol = roleManager.error ?? 'No se pudo cambiar al rol $rolDestino';
+        final errorRol =
+            roleManager.error ?? 'No se pudo cambiar al rol $rolDestino';
         throw Exception(errorRol);
       }
 

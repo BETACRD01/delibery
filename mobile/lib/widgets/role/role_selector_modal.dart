@@ -3,7 +3,7 @@
 // Reemplaza los selectores duplicados en drawers y pantallas
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Colors;
+import 'package:flutter/material.dart' show Colors, Material, MaterialType;
 import 'package:provider/provider.dart';
 import '../../services/role_manager.dart';
 import '../../switch/roles.dart';
@@ -41,28 +41,31 @@ class _RoleSelectorModalState extends State<_RoleSelectorModal> {
         color: JPCupertinoColors.surface(context),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            _buildHeader(context),
-            Expanded(
-              child: AnimatedBuilder(
-                animation: widget.roleManager,
-                builder: (context, _) {
-                  if (widget.roleManager.isLoading) {
-                    return _buildLoadingState();
-                  }
+      child: Material(
+        type: MaterialType.transparency,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              _buildHeader(context),
+              Expanded(
+                child: AnimatedBuilder(
+                  animation: widget.roleManager,
+                  builder: (context, _) {
+                    if (widget.roleManager.isLoading) {
+                      return _buildLoadingState();
+                    }
 
-                  if (widget.roleManager.error != null && !_isChanging) {
-                    return _buildErrorState(widget.roleManager.error!);
-                  }
+                    if (widget.roleManager.error != null && !_isChanging) {
+                      return _buildErrorState(widget.roleManager.error!);
+                    }
 
-                  return _buildRolesList();
-                },
+                    return _buildRolesList();
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

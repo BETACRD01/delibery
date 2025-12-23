@@ -1,8 +1,10 @@
 // lib/screens/user/perfil/solicitudes_rol/pantalla_mis_solicitudes.dart
 
 import 'package:flutter/cupertino.dart';
-import '../../../../services/solicitudes_service.dart';
+import 'package:flutter/material.dart';
+
 import '../../../../models/solicitud_cambio_rol.dart';
+import '../../../../services/solicitudes_service.dart';
 import 'pantalla_solicitar_rol.dart';
 
 /// 📋 PANTALLA DE MIS SOLICITUDES
@@ -101,7 +103,9 @@ class _PantallaMisSolicitudesState extends State<PantallaMisSolicitudes> {
           ),
         ),
       ),
-      child: SafeArea(child: _buildBody()),
+      child: SafeArea(
+        child: Material(type: MaterialType.transparency, child: _buildBody()),
+      ),
     );
   }
 

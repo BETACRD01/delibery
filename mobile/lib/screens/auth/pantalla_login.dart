@@ -1,13 +1,13 @@
 // lib/screens/auth/pantalla_login.dart
 
 import 'package:flutter/material.dart';
-import '../../theme/jp_theme.dart';
-import '../../services/auth_service.dart';
-import '../../config/rutas.dart';
-import './pantalla_registro.dart';
-import './pantalla_recuperar_password.dart';
-import '../../apis/helpers/api_exception.dart';
 
+import '../../apis/helpers/api_exception.dart';
+import '../../config/rutas.dart';
+import '../../services/auth_service.dart';
+import '../../theme/jp_theme.dart';
+import './pantalla_recuperar_password.dart';
+import './pantalla_registro.dart';
 
 class PantallaLogin extends StatefulWidget {
   const PantallaLogin({super.key});
@@ -182,7 +182,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
 
   Widget _buildHeader() {
     return const Column(
-      children:[
+      children: [
         Text(
           'Bienvenido',
           textAlign: TextAlign.center,
@@ -197,10 +197,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
         Text(
           'Ingresa a tu cuenta JP Express',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 15,
-            color: JPColors.textSecondary,
-          ),
+          style: TextStyle(fontSize: 15, color: JPColors.textSecondary),
         ),
       ],
     );
@@ -222,7 +219,8 @@ class _PantallaLoginState extends State<PantallaLogin> {
           icon: Icons.lock_outline,
           isPassword: true,
           isObscure: _obscurePassword,
-          onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+          onToggleVisibility: () =>
+              setState(() => _obscurePassword = !_obscurePassword),
         ),
         const SizedBox(height: 12),
         Align(
@@ -266,14 +264,19 @@ class _PantallaLoginState extends State<PantallaLogin> {
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
-                  isObscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  isObscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                   size: 20,
                   color: JPColors.textSecondary,
                 ),
                 onPressed: onToggleVisibility,
               )
             : null,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 16,
+        ),
         // Borde limpio y minimalista
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -307,7 +310,11 @@ class _PantallaLoginState extends State<PantallaLogin> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.error_outline_rounded, size: 20, color: JPColors.error),
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 20,
+                  color: JPColors.error,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -323,7 +330,10 @@ class _PantallaLoginState extends State<PantallaLogin> {
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 'Intentos restantes: $_intentosRestantes',
-                style: const TextStyle(fontSize: 12, color: JPColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: JPColors.textSecondary,
+                ),
               ),
             ),
         ],
@@ -337,30 +347,21 @@ class _PantallaLoginState extends State<PantallaLogin> {
       child: ElevatedButton(
         onPressed: _loading ? null : _login,
         style: ElevatedButton.styleFrom(
-          backgroundColor: JPColors.primary, // Tu azul oscuro profesional
-          elevation: 0, // Sin elevación para diseño "flat"
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+          backgroundColor: _loading
+              ? JPColors.primary.withValues(alpha: 0.7)
+              : JPColors.primary,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text(
+          'INICIAR SESIÓN',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 0.5,
           ),
         ),
-        child: _loading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : const Text(
-                'INICIAR SESIÓN',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 0.5,
-                ),
-              ),
       ),
     );
   }

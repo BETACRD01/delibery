@@ -7,6 +7,7 @@ import '../../../models/producto_model.dart';
 import '../../../models/promocion_model.dart';
 import '../../../providers/proveedor_carrito.dart';
 import '../../../services/toast_service.dart';
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
 
 class ItemCarritoCard extends StatefulWidget {
@@ -47,14 +48,12 @@ class _ItemCarritoCardState extends State<ItemCarritoCard> {
         color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.3),
+          color: AppColorsPrimary.main.withValues(alpha: 0.3),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: JPCupertinoColors.systemBlue(
-              context,
-            ).withValues(alpha: 0.08),
+            color: AppColorsPrimary.main.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -85,7 +84,7 @@ class _ItemCarritoCardState extends State<ItemCarritoCard> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: JPCupertinoColors.systemBlue(context),
+                                color: AppColorsPrimary.main,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
@@ -136,9 +135,7 @@ class _ItemCarritoCardState extends State<ItemCarritoCard> {
                                   '\$${widget.item.precioUnitario.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     fontSize: 15,
-                                    color: JPCupertinoColors.systemBlue(
-                                      context,
-                                    ),
+                                    color: AppColorsPrimary.main,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -166,7 +163,7 @@ class _ItemCarritoCardState extends State<ItemCarritoCard> {
                         _isExpanded
                             ? CupertinoIcons.chevron_up
                             : CupertinoIcons.chevron_down,
-                        color: JPCupertinoColors.systemBlue(context),
+                        color: AppColorsPrimary.main,
                         size: 24,
                       ),
                     ],
@@ -411,7 +408,7 @@ class _ItemCarritoCardState extends State<ItemCarritoCard> {
                             '\$${widget.item.precioUnitario.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 15,
-                              color: JPCupertinoColors.systemBlue(context),
+                              color: AppColorsPrimary.main,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -562,7 +559,7 @@ class _ItemCarritoCardState extends State<ItemCarritoCard> {
               CupertinoIcons.minus,
               size: 18,
               color: widget.item.cantidad > 1
-                  ? JPCupertinoColors.systemBlue(context)
+                  ? AppColorsPrimary.main
                   : JPCupertinoColors.systemGrey3(context),
             ),
           ),
@@ -584,7 +581,7 @@ class _ItemCarritoCardState extends State<ItemCarritoCard> {
             child: Icon(
               CupertinoIcons.plus,
               size: 18,
-              color: JPCupertinoColors.systemBlue(context),
+              color: AppColorsPrimary.main,
             ),
           ),
         ],

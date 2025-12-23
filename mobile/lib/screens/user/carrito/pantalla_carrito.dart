@@ -1,14 +1,17 @@
 // lib/screens/user/carrito/pantalla_carrito.dart
 
 import 'package:flutter/cupertino.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/material.dart' show Material, MaterialType;
 import 'package:geocoding/geocoding.dart';
-import '../../../theme/jp_theme.dart';
+import 'package:provider/provider.dart';
+
+import '../../../../../theme/app_colors_primary.dart';
+import '../../../models/usuario.dart';
 import '../../../providers/proveedor_carrito.dart';
 import '../../../services/envio_service.dart';
-import '../../../services/usuarios_service.dart';
-import '../../../models/usuario.dart';
 import '../../../services/toast_service.dart';
+import '../../../services/usuarios_service.dart';
+import '../../../theme/jp_theme.dart';
 import '../../user/perfil/configuracion/direcciones/pantalla_mis_direcciones.dart';
 import 'carrito_bottom_bar.dart';
 import 'carrito_checkout_content.dart';
@@ -187,259 +190,264 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                   top: Radius.circular(20),
                 ),
               ),
-              child: SafeArea(
-                child: Column(
-                  children: [
-                    // Handle
-                    Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: JPCupertinoColors.systemGrey4(context),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    // Título
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'Mis direcciones guardadas',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: JPCupertinoColors.label(context),
+              child: Material(
+                type: MaterialType.transparency,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      // Handle
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: JPCupertinoColors.systemGrey4(context),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Lista de direcciones
-                    Expanded(
-                      child: ListView.separated(
+                      // Título
+                      Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _direccionesGuardadas.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final direccion = _direccionesGuardadas[index];
-                          final nombreAmigable = _nombreDireccionVisible(
-                            direccion,
-                          );
-                          final isSelected =
-                              seleccionTemporal?.id == direccion.id;
+                        child: Text(
+                          'Mis direcciones guardadas',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: JPCupertinoColors.label(context),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Lista de direcciones
+                      Expanded(
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _direccionesGuardadas.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final direccion = _direccionesGuardadas[index];
+                            final nombreAmigable = _nombreDireccionVisible(
+                              direccion,
+                            );
+                            final isSelected =
+                                seleccionTemporal?.id == direccion.id;
 
-                          return GestureDetector(
-                            onTap: () {
-                              setSheetState(() {
-                                seleccionTemporal = direccion;
-                              });
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? JPCupertinoColors.systemBlue(
-                                        context,
-                                      ).withValues(alpha: 0.1)
-                                    : JPCupertinoColors.systemGrey6(context),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
+                            return GestureDetector(
+                              onTap: () {
+                                setSheetState(() {
+                                  seleccionTemporal = direccion;
+                                });
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
                                   color: isSelected
-                                      ? JPCupertinoColors.systemBlue(context)
-                                      : JPCupertinoColors.separator(context),
-                                  width: isSelected ? 2 : 0.5,
-                                ),
-                              ),
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    isSelected
-                                        ? CupertinoIcons.checkmark_circle_fill
-                                        : CupertinoIcons.circle,
+                                      ? AppColorsPrimary.main.withValues(
+                                          alpha: 0.1,
+                                        )
+                                      : JPCupertinoColors.systemGrey6(context),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
                                     color: isSelected
-                                        ? JPCupertinoColors.systemBlue(context)
-                                        : JPCupertinoColors.systemGrey(context),
-                                    size: 24,
+                                        ? AppColorsPrimary.main
+                                        : JPCupertinoColors.separator(context),
+                                    width: isSelected ? 2 : 0.5,
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          nombreAmigable,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                            color: JPCupertinoColors.label(
+                                ),
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isSelected
+                                          ? CupertinoIcons.checkmark_circle_fill
+                                          : CupertinoIcons.circle,
+                                      color: isSelected
+                                          ? AppColorsPrimary.main
+                                          : JPCupertinoColors.systemGrey(
                                               context,
                                             ),
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        if (direccion.etiqueta.isNotEmpty &&
-                                            !_esPlaceholder(
-                                              direccion.etiqueta,
-                                            )) ...[
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                CupertinoIcons.tag,
-                                                size: 14,
-                                                color:
-                                                    JPCupertinoColors.secondaryLabel(
-                                                      context,
-                                                    ),
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            nombreAmigable,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                              color: JPCupertinoColors.label(
+                                                context,
                                               ),
-                                              const SizedBox(width: 4),
-                                              Flexible(
-                                                child: Text(
-                                                  direccion.etiqueta,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color:
-                                                        JPCupertinoColors.secondaryLabel(
-                                                          context,
-                                                        ),
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (direccion.etiqueta.isNotEmpty &&
+                                              !_esPlaceholder(
+                                                direccion.etiqueta,
+                                              )) ...[
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  CupertinoIcons.tag,
+                                                  size: 14,
+                                                  color:
+                                                      JPCupertinoColors.secondaryLabel(
+                                                        context,
+                                                      ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Flexible(
+                                                  child: Text(
+                                                    direccion.etiqueta,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          JPCupertinoColors.secondaryLabel(
+                                                            context,
+                                                          ),
+                                                    ),
                                                   ),
                                                 ),
+                                              ],
+                                            ),
+                                          ],
+                                          if (direccion.esPredeterminada) ...[
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: AppColorsPrimary.main
+                                                    .withValues(alpha: 0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                               ),
-                                            ],
-                                          ),
-                                        ],
-                                        if (direccion.esPredeterminada) ...[
-                                          const SizedBox(height: 4),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  JPCupertinoColors.systemBlue(
-                                                    context,
-                                                  ).withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              'Predeterminada',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                color:
-                                                    JPCupertinoColors.systemBlue(
-                                                      context,
-                                                    ),
-                                                fontWeight: FontWeight.w600,
+                                              child: Text(
+                                                'Predeterminada',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: AppColorsPrimary.main,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                               ),
                                             ),
-                                          ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
                                     ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Agregar nueva
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () async {
+                            // Cerrar el bottom sheet de direcciones guardadas
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            }
+                            // Cerrar el bottom sheet de resumen de compra
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            }
+                            // Luego navegar a agregar dirección
+                            await _irAAgregarDireccion();
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                CupertinoIcons.add_circled,
+                                color: AppColorsPrimary.main,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Agregar nueva dirección',
+                                style: TextStyle(
+                                  color: AppColorsPrimary.main,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Botones
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: CupertinoButton(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                color: JPCupertinoColors.systemGrey5(context),
+                                onPressed: () => Navigator.pop(context),
+                                child: Text(
+                                  'Cancelar',
+                                  style: TextStyle(
+                                    color: JPCupertinoColors.label(context),
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ],
+                                ),
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Agregar nueva
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () async {
-                          // Cerrar el bottom sheet de direcciones guardadas
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          }
-                          // Cerrar el bottom sheet de resumen de compra
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          }
-                          // Luego navegar a agregar dirección
-                          await _irAAgregarDireccion();
-                        },
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              CupertinoIcons.add_circled,
-                              color: JPCupertinoColors.systemBlue(context),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Agregar nueva dirección',
-                              style: TextStyle(
-                                color: JPCupertinoColors.systemBlue(context),
-                                fontWeight: FontWeight.w600,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: CupertinoButton(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                color: seleccionTemporal == null
+                                    ? JPCupertinoColors.systemGrey4(context)
+                                    : AppColorsPrimary.main,
+                                onPressed: seleccionTemporal == null
+                                    ? null
+                                    : () {
+                                        Navigator.pop(context);
+                                        _aplicarDireccionGuardada(
+                                          seleccionTemporal!,
+                                          safeSetModalState,
+                                          carritoProvider,
+                                        );
+                                      },
+                                child: const Text(
+                                  'Seleccionar',
+                                  style: TextStyle(
+                                    color: CupertinoColors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Botones
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: CupertinoButton(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              color: JPCupertinoColors.systemGrey5(context),
-                              onPressed: () => Navigator.pop(context),
-                              child: Text(
-                                'Cancelar',
-                                style: TextStyle(
-                                  color: JPCupertinoColors.label(context),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: CupertinoButton(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              color: seleccionTemporal == null
-                                  ? JPCupertinoColors.systemGrey4(context)
-                                  : JPCupertinoColors.systemBlue(context),
-                              onPressed: seleccionTemporal == null
-                                  ? null
-                                  : () {
-                                      Navigator.pop(context);
-                                      _aplicarDireccionGuardada(
-                                        seleccionTemporal!,
-                                        safeSetModalState,
-                                        carritoProvider,
-                                      );
-                                    },
-                              child: const Text(
-                                'Seleccionar',
-                                style: TextStyle(
-                                  color: CupertinoColors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      SizedBox(
+                        height: MediaQuery.of(context).viewInsets.bottom + 16,
                       ),
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).viewInsets.bottom + 16,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -458,33 +466,36 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
         estaVacio: carritoProvider.estaVacio,
         onLimpiar: () => _mostrarDialogoLimpiar(carritoProvider),
       ),
-      child: Builder(
-        builder: (context) {
-          if (carritoProvider.loading) {
-            return const CarritoLoadingState();
-          }
+      child: Material(
+        type: MaterialType.transparency,
+        child: Builder(
+          builder: (context) {
+            if (carritoProvider.loading) {
+              return const CarritoLoadingState();
+            }
 
-          if (carritoProvider.estaVacio) {
-            return const CarritoEmptyState();
-          }
+            if (carritoProvider.estaVacio) {
+              return const CarritoEmptyState();
+            }
 
-          return Stack(
-            children: [
-              _buildCarritoContent(carritoProvider),
-              if (!carritoProvider.estaVacio)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: CarritoBottomBar(
-                    subtotalText: carritoProvider.totalFormateado,
-                    loading: carritoProvider.loading,
-                    onContinuar: () => _mostrarCheckout(carritoProvider),
+            return Stack(
+              children: [
+                _buildCarritoContent(carritoProvider),
+                if (!carritoProvider.estaVacio)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: CarritoBottomBar(
+                      subtotalText: carritoProvider.totalFormateado,
+                      loading: carritoProvider.loading,
+                      onContinuar: () => _mostrarCheckout(carritoProvider),
+                    ),
                   ),
-                ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -611,41 +622,45 @@ class _PantallaCarritoState extends State<PantallaCarrito> {
                   top: Radius.circular(20),
                 ),
               ),
-              child: SafeArea(
-                child: CarritoCheckoutContent(
-                  items: carritoProvider.items,
-                  subtotal: subtotal,
-                  envio: envio,
-                  recargoMulti: recargoMulti,
-                  recargoNocturno: recargoNocturno,
-                  total: total,
-                  tieneDirecciones: _direccionesGuardadas.isNotEmpty,
-                  onElegirDireccion: () => _mostrarSelectorDireccionesGuardadas(
-                    safeSetModalState,
-                    carritoProvider,
+              child: Material(
+                type: MaterialType.transparency,
+                child: SafeArea(
+                  child: CarritoCheckoutContent(
+                    items: carritoProvider.items,
+                    subtotal: subtotal,
+                    envio: envio,
+                    recargoMulti: recargoMulti,
+                    recargoNocturno: recargoNocturno,
+                    total: total,
+                    tieneDirecciones: _direccionesGuardadas.isNotEmpty,
+                    onElegirDireccion: () =>
+                        _mostrarSelectorDireccionesGuardadas(
+                          safeSetModalState,
+                          carritoProvider,
+                        ),
+                    onAgregarDireccion: _irAAgregarDireccion,
+                    direccionSeleccionada: direccionSeleccionada,
+                    direccionTitulo: tituloDireccion,
+                    direccionCompleta: direccionCompleta,
+                    mostrarInstrucciones: _mostrarInstrucciones,
+                    instruccionesController: _instruccionesController,
+                    metodoPago: _metodoPago,
+                    onMetodoPagoChanged: (value) {
+                      safeSetModalState(() => _metodoPago = value);
+                    },
+                    onConfirmar: () {
+                      if (_direccionSeleccionada == null ||
+                          _destLat == null ||
+                          _destLng == null) {
+                        ToastService().showWarning(
+                          context,
+                          'Selecciona o agrega una dirección para continuar',
+                        );
+                        return;
+                      }
+                      Navigator.pop(context, true);
+                    },
                   ),
-                  onAgregarDireccion: _irAAgregarDireccion,
-                  direccionSeleccionada: direccionSeleccionada,
-                  direccionTitulo: tituloDireccion,
-                  direccionCompleta: direccionCompleta,
-                  mostrarInstrucciones: _mostrarInstrucciones,
-                  instruccionesController: _instruccionesController,
-                  metodoPago: _metodoPago,
-                  onMetodoPagoChanged: (value) {
-                    safeSetModalState(() => _metodoPago = value);
-                  },
-                  onConfirmar: () {
-                    if (_direccionSeleccionada == null ||
-                        _destLat == null ||
-                        _destLng == null) {
-                      ToastService().showWarning(
-                        context,
-                        'Selecciona o agrega una dirección para continuar',
-                      );
-                      return;
-                    }
-                    Navigator.pop(context, true);
-                  },
                 ),
               ),
             );

@@ -1,16 +1,19 @@
 // lib/screens/user/catalogo/pantalla_categoria_detalle.dart
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Material, MaterialType;
 import 'package:provider/provider.dart';
-import '../../../../../theme/jp_theme.dart';
+
 import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
+import '../../../../../services/productos_service.dart';
+import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/jp_theme.dart';
 import '../../../models/categoria_model.dart';
 import '../../../models/producto_model.dart';
-import '../../../../../services/productos_service.dart';
 import '../../../services/toast_service.dart';
-import '../../../widgets/util/add_to_cart_debounce.dart';
 import '../../../widgets/cards/jp_product_card.dart';
+import '../../../widgets/util/add_to_cart_debounce.dart';
 
 /// Pantalla que muestra todos los productos de una categoría específica
 class PantallaCategoriaDetalle extends StatefulWidget {
@@ -112,53 +115,56 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
 
     return CupertinoPageScaffold(
       backgroundColor: JPCupertinoColors.background(context),
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
-        slivers: [
-          // AppBar iOS
-          CupertinoSliverNavigationBar(
-            backgroundColor: JPCupertinoColors.surface(context),
-            largeTitle: Text(categoria?.nombre ?? 'Categoría'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: _mostrarBusqueda,
-                  child: Icon(
-                    CupertinoIcons.search,
-                    size: 22,
-                    color: JPCupertinoColors.label(context),
+      child: Material(
+        type: MaterialType.transparency,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            // AppBar iOS
+            CupertinoSliverNavigationBar(
+              backgroundColor: JPCupertinoColors.surface(context),
+              largeTitle: Text(categoria?.nombre ?? 'Categoría'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: _mostrarBusqueda,
+                    child: Icon(
+                      CupertinoIcons.search,
+                      size: 22,
+                      color: JPCupertinoColors.label(context),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: _mostrarFiltros,
-                  child: Icon(
-                    CupertinoIcons.slider_horizontal_3,
-                    size: 22,
-                    color: JPCupertinoColors.label(context),
+                  const SizedBox(width: 8),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: _mostrarFiltros,
+                    child: Icon(
+                      CupertinoIcons.slider_horizontal_3,
+                      size: 22,
+                      color: JPCupertinoColors.label(context),
+                    ),
                   ),
+                ],
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: JPCupertinoColors.separator(context),
+                  width: 0.5,
                 ),
-              ],
-            ),
-            border: Border(
-              bottom: BorderSide(
-                color: JPCupertinoColors.separator(context),
-                width: 0.5,
               ),
             ),
-          ),
 
-          // Refresh Control iOS
-          CupertinoSliverRefreshControl(onRefresh: _cargarProductos),
+            // Refresh Control iOS
+            CupertinoSliverRefreshControl(onRefresh: _cargarProductos),
 
-          // Body content
-          _buildSliverBody(categoria),
-        ],
+            // Body content
+            _buildSliverBody(categoria),
+          ],
+        ),
       ),
     );
   }
@@ -359,7 +365,7 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
                     child: Icon(
                       CupertinoIcons.check_mark,
                       size: 18,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                     ),
                   ),
               ],
@@ -381,7 +387,7 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
                     child: Icon(
                       CupertinoIcons.check_mark,
                       size: 18,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                     ),
                   ),
               ],
@@ -403,7 +409,7 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
                     child: Icon(
                       CupertinoIcons.check_mark,
                       size: 18,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                     ),
                   ),
               ],
@@ -425,7 +431,7 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
                     child: Icon(
                       CupertinoIcons.check_mark,
                       size: 18,
-                      color: JPCupertinoColors.systemBlue(context),
+                      color: AppColorsPrimary.main,
                     ),
                   ),
               ],

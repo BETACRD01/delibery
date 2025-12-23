@@ -9,6 +9,7 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../../apis/helpers/api_exception.dart';
 import '../../../../models/usuario.dart';
 import '../../../../services/usuarios_service.dart';
+import '../../../../theme/app_colors_primary.dart';
 import '../../../../theme/jp_theme.dart';
 import '../../../../widgets/util/phone_normalizer.dart';
 
@@ -118,14 +119,14 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
         return Theme(
           data: ThemeData.light().copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF007AFF),
+              primary: AppColorsPrimary.main,
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Color(0xFF1C1C1E),
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF007AFF),
+                foregroundColor: AppColorsPrimary.main,
                 textStyle: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -141,7 +142,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             ),
             datePickerTheme: const DatePickerThemeData(
               backgroundColor: Colors.white,
-              headerBackgroundColor: Color(0xFF007AFF),
+              headerBackgroundColor: AppColorsPrimary.main,
               headerForegroundColor: Colors.white,
               dayForegroundColor: WidgetStatePropertyAll(Color(0xFF1C1C1E)),
               yearForegroundColor: WidgetStatePropertyAll(Color(0xFF1C1C1E)),
@@ -354,7 +355,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
                             style: const TextStyle(
                               fontSize: 40,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF007AFF),
+                              color: AppColorsPrimary.main,
                             ),
                           ),
                         )
@@ -367,12 +368,12 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF007AFF),
+                      color: AppColorsPrimary.main,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF007AFF).withValues(alpha: 0.3),
+                          color: AppColorsPrimary.main.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -426,12 +427,12 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF007AFF).withValues(alpha: 0.1),
+                    color: AppColorsPrimary.main.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
                     Icons.person,
-                    color: Color(0xFF007AFF),
+                    color: AppColorsPrimary.main,
                     size: 20,
                   ),
                 ),
@@ -622,7 +623,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF007AFF), width: 2),
+              borderSide: const BorderSide(color: AppColorsPrimary.main, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -681,7 +682,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF007AFF), width: 2),
+              borderSide: const BorderSide(color: AppColorsPrimary.main, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -775,7 +776,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF007AFF).withValues(alpha: 0.1),
+                          color: AppColorsPrimary.main.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -783,7 +784,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF007AFF),
+                            color: AppColorsPrimary.main,
                           ),
                         ),
                       ),
@@ -812,7 +813,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             ? []
             : [
                 BoxShadow(
-                  color: const Color(0xFF007AFF).withValues(alpha: 0.3),
+                  color: AppColorsPrimary.main.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -824,7 +825,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
         child: ElevatedButton(
           onPressed: _guardando ? null : _guardarCambios,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF007AFF),
+            backgroundColor: AppColorsPrimary.main,
             disabledBackgroundColor: const Color(0xFFE5E5EA),
             elevation: 0,
             shape: RoundedRectangleBorder(

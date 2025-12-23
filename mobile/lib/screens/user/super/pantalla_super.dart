@@ -1,13 +1,16 @@
 // lib/screens/user/super/pantalla_super.dart
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Material, MaterialType;
 import 'package:provider/provider.dart';
+
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../controllers/user/super_controller.dart';
 import '../../../models/categoria_super_model.dart';
-import '../../../widgets/cards/jp_category_card.dart';
-import '../../../widgets/common/jp_shimmer.dart';
-import '../../../widgets/common/jp_empty_state.dart';
 import '../../../theme/jp_theme.dart';
+import '../../../widgets/cards/jp_category_card.dart';
+import '../../../widgets/common/jp_empty_state.dart';
+import '../../../widgets/common/jp_shimmer.dart';
 import 'pantalla_categoria_detalle.dart';
 
 /// Pantalla Super - Categorías de servicios
@@ -39,50 +42,55 @@ class _PantallaSuperState extends State<PantallaSuper> {
       value: _controller,
       child: CupertinoPageScaffold(
         backgroundColor: JPCupertinoColors.background(context),
-        child: SafeArea(
-          child: Consumer<SuperController>(
-            builder: (context, controller, _) {
-              if (controller.categorias.isEmpty && controller.loading) {
-                return const _SuperSkeleton();
-              }
+        child: Material(
+          type: MaterialType.transparency,
+          child: SafeArea(
+            child: Consumer<SuperController>(
+              builder: (context, controller, _) {
+                if (controller.categorias.isEmpty && controller.loading) {
+                  return const _SuperSkeleton();
+                }
 
-              if (controller.categorias.isEmpty) {
-                return _buildSinCategorias(context);
-              }
+                if (controller.categorias.isEmpty) {
+                  return _buildSinCategorias(context);
+                }
 
-              return CustomScrollView(
-                physics: const ClampingScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'JP Súper',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: JPCupertinoColors.label(context),
+                return CustomScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'JP Súper',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: JPCupertinoColors.label(context),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Farmacia, envíos y súper en un solo lugar',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: JPCupertinoColors.secondaryLabel(context),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Farmacia, envíos y súper en un solo lugar',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: JPCupertinoColors.secondaryLabel(
+                                  context,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  _buildGridCategorias(controller),
-                ],
-              );
-            },
+                    _buildGridCategorias(controller),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -92,9 +100,10 @@ class _PantallaSuperState extends State<PantallaSuper> {
   Widget _buildSinCategorias(BuildContext context) {
     return JPEmptyState(
       icon: CupertinoIcons.bag,
-      iconColor: JPCupertinoColors.systemBlue(context),
+      iconColor: AppColorsPrimary.main,
       title: 'No hay categorías',
-      message: 'Las categorías de servicios aparecerán aquí cuando estén disponibles',
+      message:
+          'Las categorías de servicios aparecerán aquí cuando estén disponibles',
     );
   }
 

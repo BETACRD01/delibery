@@ -1,40 +1,37 @@
 // lib/screens/user/catalogo/pantalla_todas_categorias.dart
 
-import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../../theme/jp_theme.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart'
+    show Material, MaterialType, Curves, KeyedSubtree;
 import '../../../../../config/rutas.dart';
 import '../../../../../services/productos_service.dart';
+import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/app_colors_support.dart';
+import '../../../../../theme/jp_theme.dart';
 import '../../../models/categoria_model.dart';
+import '../../../widgets/common/jp_shimmer.dart';
 
 /// Pantalla que muestra todas las categorías en formato grid iOS-style
 class PantallaTodasCategorias extends StatefulWidget {
   const PantallaTodasCategorias({super.key});
 
   @override
-  State<PantallaTodasCategorias> createState() => _PantallaTodasCategoriasState();
+  State<PantallaTodasCategorias> createState() =>
+      _PantallaTodasCategoriasState();
 }
 
 class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
   final _productosService = ProductosService();
-  final _searchController = TextEditingController();
 
   List<CategoriaModel> _categorias = [];
-  List<CategoriaModel> _categoriasFiltradas = [];
   bool _loading = true;
   String _error = '';
-  String _busqueda = '';
 
   @override
   void initState() {
     super.initState();
     _cargarCategorias();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   Future<void> _cargarCategorias() async {
@@ -45,7 +42,6 @@ class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
 
     try {
       _categorias = await _productosService.obtenerCategorias();
-      _categoriasFiltradas = List.from(_categorias);
 
       setState(() {
         _loading = false;
@@ -58,135 +54,116 @@ class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
     }
   }
 
-  void _aplicarBusqueda(String query) {
-    setState(() {
-      _busqueda = query;
-      if (query.isEmpty) {
-        _categoriasFiltradas = List.from(_categorias);
-      } else {
-        _categoriasFiltradas = _categorias.where((categoria) {
-          return categoria.nombre.toLowerCase().contains(query.toLowerCase());
-        }).toList();
-      }
-    });
-  }
-
-  void _limpiarBusqueda() {
-    _searchController.clear();
-    _aplicarBusqueda('');
-  }
-
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       backgroundColor: JPCupertinoColors.background(context),
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        slivers: [
-          // AppBar iOS
-          CupertinoSliverNavigationBar(
-            backgroundColor: JPCupertinoColors.surface(context),
-            largeTitle: const Text('Categorías'),
-            border: Border(
-              bottom: BorderSide(
-                color: JPCupertinoColors.separator(context),
-                width: 0.5,
+      child: Material(
+        type: MaterialType.transparency,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            // AppBar iOS
+            CupertinoSliverNavigationBar(
+              backgroundColor: JPCupertinoColors.surface(context),
+              largeTitle: Text(
+                'Categorías',
+                style: TextStyle(color: AppColorsSupport.textPrimary),
               ),
-            ),
-          ),
-
-          // Refresh Control iOS
-          CupertinoSliverRefreshControl(
-            onRefresh: _cargarCategorias,
-          ),
-
-          // Barra de búsqueda pegajosa
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SearchBarDelegate(
-              child: Container(
-                color: JPCupertinoColors.background(context),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                child: CupertinoTextField(
-                  controller: _searchController,
-                  placeholder: 'Buscar categoría...',
-                  prefix: Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: Icon(
-                      CupertinoIcons.search,
-                      size: 20,
-                      color: JPCupertinoColors.systemGrey(context),
-                    ),
-                  ),
-                  suffix: _busqueda.isNotEmpty
-                      ? CupertinoButton(
-                          padding: const EdgeInsets.only(right: 8),
-                          minimumSize: Size.zero,
-                          onPressed: _limpiarBusqueda,
-                          child: Icon(
-                            CupertinoIcons.clear_circled_solid,
-                            size: 20,
-                            color: JPCupertinoColors.systemGrey(context),
-                          ),
-                        )
-                      : null,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: JPCupertinoColors.systemGrey6(context),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  onChanged: _aplicarBusqueda,
+              border: Border(
+                bottom: BorderSide(
+                  color: JPCupertinoColors.separator(context),
+                  width: 0.5,
                 ),
               ),
             ),
-          ),
 
-          // Contenido
-          _buildBody(),
-        ],
+            // Refresh Control iOS
+            CupertinoSliverRefreshControl(onRefresh: _cargarCategorias),
+
+            // Contenido
+            _buildBody(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildBody() {
+    // Usar AnimatedSwitcher para transiciones suaves
+    return SliverToBoxAdapter(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: _buildBodyContent(),
+      ),
+    );
+  }
+
+  Widget _buildBodyContent() {
     if (_loading) {
-      return SliverFillRemaining(
-        child: Center(
-          child: CupertinoActivityIndicator(
-            radius: 14,
-            color: JPCupertinoColors.systemGrey(context),
-          ),
-        ),
+      return KeyedSubtree(
+        key: const ValueKey('loading'),
+        child: _buildShimmerGrid(),
       );
     }
 
     if (_error.isNotEmpty) {
-      return SliverFillRemaining(
+      return KeyedSubtree(
+        key: const ValueKey('error'),
         child: _buildEstadoError(),
       );
     }
 
-    if (_categoriasFiltradas.isEmpty) {
-      return SliverFillRemaining(
+    if (_categorias.isEmpty) {
+      return KeyedSubtree(
+        key: const ValueKey('empty'),
         child: _buildSinResultados(),
       );
     }
 
-    return SliverPadding(
+    return KeyedSubtree(
+      key: const ValueKey('content'),
+      child: _buildGridContent(),
+    );
+  }
+
+  Widget _buildShimmerGrid() {
+    return Padding(
       padding: const EdgeInsets.all(16),
-      sliver: SliverGrid(
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           childAspectRatio: 0.85,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            return _CategoriaCard(categoria: _categoriasFiltradas[index]);
-          },
-          childCount: _categoriasFiltradas.length,
+        itemCount: 6,
+        itemBuilder: (context, index) => _ShimmerCategoryCard(),
+      ),
+    );
+  }
+
+  Widget _buildGridContent() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.85,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
         ),
+        itemCount: _categorias.length,
+        itemBuilder: (context, index) =>
+            _CategoriaCard(categoria: _categorias[index]),
       ),
     );
   }
@@ -245,30 +222,6 @@ class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
       ),
     );
   }
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-// PERSISTENT HEADER DELEGATE PARA SEARCH BAR
-// ══════════════════════════════════════════════════════════════════════════
-
-class _SearchBarDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-
-  _SearchBarDelegate({required this.child});
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
-  }
-
-  @override
-  double get maxExtent => 60;
-
-  @override
-  double get minExtent => 60;
-
-  @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -343,7 +296,7 @@ class _CategoriaCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: JPCupertinoColors.label(context),
+                  color: AppColorsSupport.textPrimary,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
@@ -355,9 +308,12 @@ class _CategoriaCard extends StatelessWidget {
             // Total productos
             if (categoria.totalProductos != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+                  color: AppColorsPrimary.main.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -365,10 +321,65 @@ class _CategoriaCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: JPCupertinoColors.systemBlue(context),
+                    color: AppColorsPrimary.main,
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SHIMMER CARD - Placeholder de carga para categoría
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _ShimmerCategoryCard extends StatelessWidget {
+  const _ShimmerCategoryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: JPConstants.cardShadow(context),
+      ),
+      child: JPShimmer(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Círculo placeholder
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Nombre placeholder
+            Container(
+              width: 80,
+              height: 16,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Badge placeholder
+            Container(
+              width: 60,
+              height: 22,
+              decoration: BoxDecoration(
+                color: JPCupertinoColors.systemGrey6(context),
+                borderRadius: BorderRadius.circular(11),
+              ),
+            ),
           ],
         ),
       ),

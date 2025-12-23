@@ -5,6 +5,7 @@ import '../../../providers/proveedor_pedido.dart';
 import '../../../widgets/cards/jp_order_card.dart';
 import '../../../widgets/common/jp_empty_state.dart';
 import '../../../widgets/common/jp_cupertino_button.dart';
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
 import 'pedido_detalle_screen.dart'; 
 
@@ -86,7 +87,7 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
           child: Icon(
             CupertinoIcons.refresh,
             size: 22,
-            color: JPCupertinoColors.systemBlue(context),
+            color: AppColorsPrimary.main,
           ),
         ),
       ),

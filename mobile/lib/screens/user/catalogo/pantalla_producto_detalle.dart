@@ -1,17 +1,21 @@
 // lib/screens/user/catalogo/pantalla_producto_detalle.dart
 
+import 'dart:math';
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math';
-import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../../theme/jp_theme.dart';
 import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
+import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/app_colors_support.dart';
+import '../../../../../theme/jp_theme.dart';
 import '../../../models/producto_model.dart';
 import '../../../services/productos_service.dart';
 import '../../../services/toast_service.dart';
-import '../../../widgets/util/add_to_cart_debounce.dart';
 import '../../../widgets/ratings/star_rating_display.dart';
+import '../../../widgets/util/add_to_cart_debounce.dart';
 
 /// Pantalla de detalle completo de un producto
 class PantallaProductoDetalle extends StatefulWidget {
@@ -186,7 +190,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                 style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: JPColors.primary,
+                  color: AppColorsSupport.price,
                 ),
               ),
               const Spacer(),
@@ -285,27 +289,44 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
   Widget _buildCantidadSelector() {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+        color: CupertinoColors.systemGrey6,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.remove),
+          CupertinoButton(
+            padding: const EdgeInsets.all(10),
             onPressed: _cantidad > 1 ? () => setState(() => _cantidad--) : null,
-            iconSize: 20,
+            minimumSize: Size(0, 0),
+            child: Icon(
+              CupertinoIcons.minus,
+              size: 18,
+              color: _cantidad > 1
+                  ? AppColorsPrimary.main
+                  : CupertinoColors.systemGrey3,
+            ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               _cantidad.toString(),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColorsSupport.textPrimary,
+              ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
+          CupertinoButton(
+            padding: const EdgeInsets.all(10),
             onPressed: () => setState(() => _cantidad++),
-            iconSize: 20,
+            minimumSize: Size(0, 0),
+            child: Icon(
+              CupertinoIcons.plus,
+              size: 18,
+              color: AppColorsPrimary.main,
+            ),
           ),
         ],
       ),
@@ -499,7 +520,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                                 style: const TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
-                                  color: JPColors.primary,
+                                  color: AppColorsSupport.price,
                                 ),
                               ),
                             ],
@@ -551,7 +572,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: JPColors.primary,
+                      color: AppColorsSupport.price,
                     ),
                   ),
                 ],

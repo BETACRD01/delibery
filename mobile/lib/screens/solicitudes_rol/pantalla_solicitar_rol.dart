@@ -1,9 +1,12 @@
 // lib/screens/user/perfil/solicitudes_rol/pantalla_solicitar_rol.dart
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
+import '../../../theme/app_colors_primary.dart';
+import 'pantalla_mis_solicitudes.dart';
 import 'widgets/formulario_proveedor.dart';
 import 'widgets/formulario_repartidor.dart';
-import 'pantalla_mis_solicitudes.dart';
 
 /// 🎯 PANTALLA PARA SOLICITAR CAMBIO DE ROL
 /// Permite elegir entre Proveedor o Repartidor y llenar el formulario
@@ -60,11 +63,14 @@ class _PantallaSolicitarRolState extends State<PantallaSolicitarRol> {
       ),
       navigationBar: _buildNavigationBar(),
       child: SafeArea(
-        child: PageView(
-          controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          onPageChanged: (index) => setState(() => _currentPage = index),
-          children: [_buildPaginaSeleccion(), _buildPaginaFormulario()],
+        child: Material(
+          type: MaterialType.transparency,
+          child: PageView(
+            controller: _pageController,
+            physics: const NeverScrollableScrollPhysics(),
+            onPageChanged: (index) => setState(() => _currentPage = index),
+            children: [_buildPaginaSeleccion(), _buildPaginaFormulario()],
+          ),
         ),
       ),
     );
@@ -147,12 +153,12 @@ class _PantallaSolicitarRolState extends State<PantallaSolicitarRol> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemBlue.withValues(alpha: 0.12),
+                    color: AppColorsPrimary.main.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
                     CupertinoIcons.doc_text_search,
-                    color: CupertinoColors.systemBlue,
+                    color: AppColorsPrimary.main,
                     size: 20,
                   ),
                 ),
@@ -163,14 +169,14 @@ class _PantallaSolicitarRolState extends State<PantallaSolicitarRol> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: CupertinoColors.systemBlue,
+                      color: AppColorsPrimary.main,
                     ),
                   ),
                 ),
                 const Icon(
                   CupertinoIcons.chevron_forward,
                   size: 16,
-                  color: CupertinoColors.systemBlue,
+                  color: AppColorsPrimary.main,
                 ),
               ],
             ),
@@ -183,7 +189,7 @@ class _PantallaSolicitarRolState extends State<PantallaSolicitarRol> {
             icon: CupertinoIcons.building_2_fill,
             titulo: 'Proveedor',
             descripcion: 'Ofrece tus productos y servicios a la comunidad',
-            color: CupertinoColors.systemBlue,
+            color: AppColorsPrimary.main,
             seleccionado: _rolSeleccionado == 'PROVEEDOR',
             onTap: () => setState(() => _rolSeleccionado = 'PROVEEDOR'),
           ),
@@ -209,10 +215,10 @@ class _PantallaSolicitarRolState extends State<PantallaSolicitarRol> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               gradient: _rolSeleccionado != null
-                  ? const LinearGradient(
+                  ? LinearGradient(
                       colors: [
-                        CupertinoColors.activeBlue,
-                        CupertinoColors.systemBlue,
+                        AppColorsPrimary.main.withValues(alpha: 0.8),
+                        AppColorsPrimary.main,
                       ],
                     )
                   : null,
@@ -405,9 +411,7 @@ class _PantallaSolicitarRolState extends State<PantallaSolicitarRol> {
   void _irAMisSolicitudes() {
     Navigator.push(
       context,
-      CupertinoPageRoute(
-        builder: (_) => const PantallaMisSolicitudes(),
-      ),
+      CupertinoPageRoute(builder: (_) => const PantallaMisSolicitudes()),
     );
   }
 }

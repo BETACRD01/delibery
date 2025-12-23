@@ -1,23 +1,15 @@
 // lib/widgets/cards/jp_product_card.dart
 
-import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../theme/jp_theme.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:mobile/theme/app_colors_primary.dart';
+import 'package:mobile/theme/app_colors_secondary.dart';
+import 'package:mobile/theme/app_colors_support.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 🛍️ PRODUCT CARD - Card de producto unificada estilo iOS
 // ══════════════════════════════════════════════════════════════════════════════
 
-/// Card de producto con estilo iOS consistente
-///
-/// Características:
-/// - Width fijo 160px, BorderRadius 16px
-/// - Imagen superior con AspectRatio 1.2
-/// - Badge dinámico top-left (oferta/nuevo/popular)
-/// - Rating badge top-right con fondo semitransparente
-/// - Info: nombre (max 2 lines), precio
-/// - Botón "+" circular para agregar al carrito
-/// - Scale animation al presionar
 class JPProductCard extends StatefulWidget {
   final String nombre;
   final double precio;
@@ -92,47 +84,58 @@ class _JPProductCardState extends State<JPProductCard>
         child: Container(
           width: 160,
           decoration: BoxDecoration(
-            color: JPCupertinoColors.surface(context),
-            borderRadius: BorderRadius.circular(JPConstants.radiusLarge),
-            boxShadow: JPConstants.cardShadow(context),
+            color: CupertinoColors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: CupertinoColors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
               // Imagen con badges
               _buildImageWithBadges(context),
-              // Info del producto
-              Flexible(
+              // Info del producto - Expanded para tomar el espacio restante
+              Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Nombre
-                      Text(
-                        widget.nombre,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: JPCupertinoColors.label(context),
-                          height: 1.2,
+                      // Nombre - con Expanded para que tome espacio disponible
+                      Expanded(
+                        child: Text(
+                          widget.nombre,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColorsSupport.textPrimary,
+                            height: 1.2,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       // Precio y botón
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Expanded(
                             child: Text(
                               '\$${widget.precio.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: JPCupertinoColors.systemBlue(context),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColorsSupport
+                                    .price, // Updated price color
+                                letterSpacing: -0.5,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -143,17 +146,18 @@ class _JPProductCardState extends State<JPProductCard>
                             GestureDetector(
                               onTap: widget.onAddToCart,
                               child: Container(
-                                width: 26,
-                                height: 26,
+                                width: 28,
+                                height: 28,
                                 decoration: BoxDecoration(
-                                  color: JPCupertinoColors.systemBlue(context),
-                                  borderRadius: BorderRadius.circular(
-                                    JPConstants.radiusButton,
+                                  color: AppColorsPrimary.main.withValues(
+                                    alpha: 0.1,
                                   ),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: const Icon(
-                                  CupertinoIcons.add,
-                                  color: CupertinoColors.white,
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  CupertinoIcons.cart_fill_badge_plus,
+                                  color: AppColorsPrimary.main,
                                   size: 14,
                                 ),
                               ),
@@ -178,31 +182,30 @@ class _JPProductCardState extends State<JPProductCard>
         AspectRatio(
           aspectRatio: 1.2,
           child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(JPConstants.radiusLarge),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: widget.imagenUrl != null
                 ? CachedNetworkImage(
                     imageUrl: widget.imagenUrl!,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
-                      color: JPCupertinoColors.systemGrey6(context),
+                      color: AppColorsSupport.surface,
+                      child: const CupertinoActivityIndicator(),
                     ),
                     errorWidget: (context, url, error) => Container(
-                      color: JPCupertinoColors.systemGrey6(context),
-                      child: Icon(
+                      color: AppColorsSupport.surface,
+                      child: const Icon(
                         CupertinoIcons.photo,
-                        size: 48,
-                        color: JPCupertinoColors.systemGrey3(context),
+                        size: 40,
+                        color: AppColorsSupport.textHint,
                       ),
                     ),
                   )
                 : Container(
-                    color: JPCupertinoColors.systemGrey6(context),
-                    child: Icon(
+                    color: AppColorsSupport.surface,
+                    child: const Icon(
                       CupertinoIcons.photo,
-                      size: 48,
-                      color: JPCupertinoColors.systemGrey3(context),
+                      size: 40,
+                      color: AppColorsSupport.textHint,
                     ),
                   ),
           ),
@@ -224,19 +227,19 @@ class _JPProductCardState extends State<JPProductCard>
 
     switch (widget.badgeType) {
       case 'oferta':
-        bgColor = JPCupertinoColors.systemRed(context);
+        bgColor = const Color(0xFFFF5252);
         textColor = CupertinoColors.white;
         text = widget.porcentajeDescuento != null
             ? '-${widget.porcentajeDescuento}%'
             : 'OFERTA';
         break;
       case 'nuevo':
-        bgColor = JPCupertinoColors.systemGreen(context);
+        bgColor = const Color(0xFF4CAF50);
         textColor = CupertinoColors.white;
         text = 'NUEVO';
         break;
       case 'popular':
-        bgColor = JPCupertinoColors.systemOrange(context);
+        bgColor = AppColorsSecondary.main; // Orange
         textColor = CupertinoColors.white;
         text = 'POPULAR';
         break;
@@ -248,7 +251,7 @@ class _JPProductCardState extends State<JPProductCard>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(JPConstants.radiusBadge),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         text,
@@ -266,7 +269,7 @@ class _JPProductCardState extends State<JPProductCard>
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: CupertinoColors.black.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(JPConstants.radiusBadge),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

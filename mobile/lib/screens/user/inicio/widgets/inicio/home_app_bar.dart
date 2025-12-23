@@ -1,6 +1,9 @@
 // lib/screens/user/inicio/widgets/inicio/home_app_bar.dart
-import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:mobile/theme/app_colors_primary.dart';
+import 'package:mobile/theme/app_colors_support.dart';
+import 'package:mobile/theme/app_theme.dart';
 
 /// AppBar estilo iOS para Home.
 class HomeAppBar extends StatelessWidget {
@@ -31,14 +34,8 @@ class HomeAppBar extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.fromLTRB(20, topPadding + 12, 20, 16),
         decoration: BoxDecoration(
-          color: CupertinoColors.systemBackground.resolveFrom(context),
-          boxShadow: [
-            BoxShadow(
-              color: CupertinoColors.systemGrey.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: AppColorsSupport.surface, // Use app surface color
+          boxShadow: AppConstants.subtleShadow(context),
         ),
         child: Column(
           children: [
@@ -58,10 +55,10 @@ class HomeAppBar extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: CupertinoColors.label.resolveFrom(context),
-                      letterSpacing: -0.5,
+                      fontSize: 24, // Matches iOS big title better
+                      fontWeight: FontWeight.w800,
+                      color: AppColorsPrimary.main, // Corporate Celeste
+                      letterSpacing: -0.8,
                     ),
                   ),
                 ),
@@ -70,6 +67,7 @@ class HomeAppBar extends StatelessWidget {
                 _ActionButton(
                   icon: CupertinoIcons.bell_fill,
                   badge: unreadCount,
+                  color: AppColorsPrimary.main, // Corporate Celeste
                   onTap: onNotificationTap,
                 ),
                 const SizedBox(width: 8),
@@ -195,12 +193,14 @@ class _ActionButton extends StatelessWidget {
   final int badge;
   final bool isDestructive;
   final VoidCallback? onTap;
+  final Color? color;
 
   const _ActionButton({
     required this.icon,
     this.badge = 0,
     this.isDestructive = false,
     this.onTap,
+    this.color,
   });
 
   @override
@@ -223,7 +223,7 @@ class _ActionButton extends StatelessWidget {
               icon,
               color: isDestructive
                   ? CupertinoColors.systemRed
-                  : CupertinoColors.label.resolveFrom(context),
+                  : (color ?? CupertinoColors.label.resolveFrom(context)),
               size: 22,
             ),
             if (badge > 0)

@@ -1,8 +1,12 @@
 // lib/widgets/common/app_toast.dart
 
 import 'package:flutter/cupertino.dart';
-import '../../theme/jp_theme.dart';
+import 'package:flutter/material.dart' show Material, MaterialType;
+
 import '../../services/toast_service.dart';
+import '../../theme/app_colors_primary.dart';
+import '../../theme/app_colors_secondary.dart';
+import '../../theme/jp_theme.dart';
 
 /// Widget de toast unificado estilo iOS
 ///
@@ -71,11 +75,11 @@ class _AppToastState extends State<AppToast>
   Color _getBackgroundColor(BuildContext context) {
     switch (widget.type) {
       case ToastType.success:
-        return JPCupertinoColors.systemGreen(context);
+        return AppColorsPrimary.main;
       case ToastType.error:
         return JPCupertinoColors.systemRed(context);
       case ToastType.warning:
-        return JPCupertinoColors.systemOrange(context);
+        return AppColorsSecondary.main;
       case ToastType.info:
         return JPCupertinoColors.systemBlue(context);
     }
@@ -108,73 +112,75 @@ class _AppToastState extends State<AppToast>
           ),
           child: FadeTransition(
             opacity: _controller,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-              decoration: BoxDecoration(
-                color: _getBackgroundColor(context),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: _getBackgroundColor(context).withValues(alpha: 0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Ícono
-                  Icon(
-                    _getIcon(),
-                    color: CupertinoColors.white,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Mensaje
-                  Expanded(
-                    child: Text(
-                      widget.message,
-                      style: const TextStyle(
-                        color: CupertinoColors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-
-                  // Botón de acción (opcional)
-                  if (widget.actionLabel != null && widget.onActionTap != null) ...[
-                    const SizedBox(width: 12),
-                    CupertinoButton(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      minimumSize: Size.zero,
-                      color: CupertinoColors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(8),
-                      onPressed: () {
-                        widget.onActionTap!();
-                        widget.onDismiss();
-                      },
-                      child: Text(
-                        widget.actionLabel!,
-                        style: const TextStyle(
-                          color: CupertinoColors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: _getBackgroundColor(context),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _getBackgroundColor(
+                        context,
+                      ).withValues(alpha: 0.4),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
                   ],
-                ],
+                ),
+                child: Row(
+                  children: [
+                    // Ícono
+                    Icon(_getIcon(), color: CupertinoColors.white, size: 22),
+                    const SizedBox(width: 12),
+
+                    // Mensaje
+                    Expanded(
+                      child: Text(
+                        widget.message,
+                        style: const TextStyle(
+                          color: CupertinoColors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+
+                    // Botón de acción (opcional)
+                    if (widget.actionLabel != null &&
+                        widget.onActionTap != null) ...[
+                      const SizedBox(width: 12),
+                      CupertinoButton(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        minimumSize: Size.zero,
+                        color: CupertinoColors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(8),
+                        onPressed: () {
+                          widget.onActionTap!();
+                          widget.onDismiss();
+                        },
+                        child: Text(
+                          widget.actionLabel!,
+                          style: const TextStyle(
+                            color: CupertinoColors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),

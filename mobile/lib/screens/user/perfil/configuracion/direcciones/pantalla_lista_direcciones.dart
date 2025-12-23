@@ -1,17 +1,21 @@
 // lib/screens/user/perfil/configuracion/direcciones/pantalla_lista_direcciones.dart
 
 import 'package:flutter/cupertino.dart';
-import '../../../../../theme/jp_theme.dart';
-import '../../../../../services/usuarios_service.dart';
-import '../../../../../services/toast_service.dart';
+import 'package:flutter/material.dart';
+
 import '../../../../../models/usuario.dart';
+import '../../../../../services/toast_service.dart';
+import '../../../../../services/usuarios_service.dart';
+import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/jp_theme.dart';
 import 'pantalla_mis_direcciones.dart';
 
 class PantallaListaDirecciones extends StatefulWidget {
   const PantallaListaDirecciones({super.key});
 
   @override
-  State<PantallaListaDirecciones> createState() => _PantallaListaDireccionesState();
+  State<PantallaListaDirecciones> createState() =>
+      _PantallaListaDireccionesState();
 }
 
 class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
@@ -35,7 +39,9 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
       final data = await _usuarioService.listarDirecciones(forzarRecarga: true);
       if (mounted) setState(() => _direcciones = data);
     } catch (e) {
-      if (mounted) setState(() => _error = 'No se pudieron cargar tus direcciones');
+      if (mounted) {
+        setState(() => _error = 'No se pudieron cargar tus direcciones');
+      }
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
@@ -56,7 +62,9 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
   Future<void> _editarDireccion(DireccionModel dir) async {
     final resultado = await Navigator.push<bool>(
       context,
-      CupertinoPageRoute(builder: (_) => PantallaAgregarDireccion(direccion: dir)),
+      CupertinoPageRoute(
+        builder: (_) => PantallaAgregarDireccion(direccion: dir),
+      ),
     );
 
     // Recargar lista si hubo cambios
@@ -69,7 +77,10 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
     try {
       await _usuarioService.eliminarDireccion(dir.id);
       if (mounted) {
-        ToastService().showSuccess(context, 'Dirección eliminada correctamente');
+        ToastService().showSuccess(
+          context,
+          'Dirección eliminada correctamente',
+        );
         await _cargarDirecciones();
       }
     } catch (e) {
@@ -130,57 +141,63 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
           ),
         ),
       ),
-      child: Stack(
-        children: [
-          // Contenido principal
-          SafeArea(
-            child: _cargando
-                ? Center(
-                    child: CupertinoActivityIndicator(
-                      radius: 14,
-                      color: JPCupertinoColors.systemGrey(context),
-                    ),
-                  )
-                : _error != null
-                    ? _buildError()
-                    : _direcciones.isEmpty
-                        ? _buildEmpty()
-                        : _buildLista(),
-          ),
-
-          // Botón flotante iOS-style
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: SafeArea(
-              child: CupertinoButton(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                color: JPCupertinoColors.systemBlue(context),
-                borderRadius: BorderRadius.circular(24),
-                onPressed: _nuevaDireccion,
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      CupertinoIcons.location_fill,
-                      color: CupertinoColors.white,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Nueva dirección',
-                      style: TextStyle(
-                        color: CupertinoColors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          children: [
+            // Contenido principal
+            SafeArea(
+              child: _cargando
+                  ? Center(
+                      child: CupertinoActivityIndicator(
+                        radius: 14,
+                        color: JPCupertinoColors.systemGrey(context),
                       ),
-                    ),
-                  ],
+                    )
+                  : _error != null
+                  ? _buildError()
+                  : _direcciones.isEmpty
+                  ? _buildEmpty()
+                  : _buildLista(),
+            ),
+
+            // Botón flotante iOS-style
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: SafeArea(
+                child: CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  color: AppColorsPrimary.main,
+                  borderRadius: BorderRadius.circular(24),
+                  onPressed: _nuevaDireccion,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        CupertinoIcons.location_fill,
+                        color: CupertinoColors.white,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Nueva dirección',
+                        style: TextStyle(
+                          color: CupertinoColors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -244,13 +261,13 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+                color: AppColorsPrimary.main.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 CupertinoIcons.location_slash,
                 size: 64,
-                color: JPCupertinoColors.systemBlue(context),
+                color: AppColorsPrimary.main,
               ),
             ),
             const SizedBox(height: 24),
@@ -303,9 +320,7 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        CupertinoSliverRefreshControl(
-          onRefresh: _cargarDirecciones,
-        ),
+        CupertinoSliverRefreshControl(onRefresh: _cargarDirecciones),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
           sliver: SliverList(
@@ -343,7 +358,7 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
                 height: 48,
                 decoration: BoxDecoration(
                   color: dir.esPredeterminada
-                      ? JPCupertinoColors.systemBlue(context).withValues(alpha: 0.15)
+                      ? AppColorsPrimary.main.withValues(alpha: 0.15)
                       : JPCupertinoColors.systemGrey6(context),
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -352,7 +367,7 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
                       ? CupertinoIcons.star_fill
                       : CupertinoIcons.location,
                   color: dir.esPredeterminada
-                      ? JPCupertinoColors.systemBlue(context)
+                      ? AppColorsPrimary.main
                       : JPCupertinoColors.systemGrey(context),
                   size: 24,
                 ),
@@ -385,14 +400,16 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+                              color: AppColorsPrimary.main.withValues(
+                                alpha: 0.1,
+                              ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               'Principal',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: JPCupertinoColors.systemBlue(context),
+                                color: AppColorsPrimary.main,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -512,7 +529,7 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
                     children: [
                       Icon(
                         CupertinoIcons.pencil,
-                        color: JPCupertinoColors.systemBlue(context),
+                        color: AppColorsPrimary.main,
                         size: 22,
                       ),
                       const SizedBox(width: 16),
@@ -577,7 +594,8 @@ class _PantallaListaDireccionesState extends State<PantallaListaDirecciones> {
     if (dir.direccion.isNotEmpty && !_esPlaceholder(dir.direccion)) {
       return dir.direccion;
     }
-    if (dir.direccionCompleta.isNotEmpty && !_esPlaceholder(dir.direccionCompleta)) {
+    if (dir.direccionCompleta.isNotEmpty &&
+        !_esPlaceholder(dir.direccionCompleta)) {
       return dir.direccionCompleta;
     }
     if (dir.ciudad != null && dir.ciudad!.isNotEmpty) {
