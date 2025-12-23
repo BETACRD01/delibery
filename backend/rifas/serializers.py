@@ -34,10 +34,18 @@ class UsuarioSimpleSerializer(serializers.ModelSerializer):
     """
 
     nombre_completo = serializers.CharField(source="get_full_name", read_only=True)
+    celular = serializers.CharField(read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "nombre_completo"]
+        fields = [
+            "id",
+            "email",
+            "celular",
+            "first_name",
+            "last_name",
+            "nombre_completo",
+        ]
         read_only_fields = fields
 
 
@@ -169,6 +177,297 @@ class RifaListSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.imagen.url)
             return obj.imagen.url
         return None
+
+
+# ============================================
+# SERIALIZERS: APP (MES ACTUAL / DETALLE)
+# ============================================
+
+
+class _RifaAppMixin:
+    def _get_request_user(self):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        return request.user
+
+    def _get_participacion(self, obj):
+        cache = getattr(self, "_participacion_cache", {})
+        if obj.pk in cache:
+            return cache[obj.pk]
+
+        user = self._get_request_user()
+        if not user:
+            cache[obj.pk] = None
+        else:
+            cache[obj.pk] = (
+                Participacion.objects.filter(rifa=obj, usuario=user).first()
+            )
+        self._participacion_cache = cache
+        return cache[obj.pk]
+
+    def _get_elegibilidad(self, obj):
+        cache = getattr(self, "_elegibilidad_cache", {})
+        if obj.pk in cache:
+            return cache[obj.pk]
+
+        user = self._get_request_user()
+        if not user:
+            elegibilidad = {
+                "elegible": False,
+                "pedidos": 0,
+                "faltantes": obj.pedidos_minimos,
+            }
+        else:
+            elegibilidad = obj.usuario_es_elegible(user)
+
+        cache[obj.pk] = elegibilidad
+        self._elegibilidad_cache = cache
+        return elegibilidad
+
+    def _get_ya_participa(self, obj):
+        cache = getattr(self, "_ya_participa_cache", {})
+        if obj.pk in cache:
+            return cache[obj.pk]
+
+        cache[obj.pk] = self._get_participacion(obj) is not None
+        self._ya_participa_cache = cache
+        return cache[obj.pk]
+
+    def _build_imagen_url(self, imagen):
+        if not imagen:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(imagen.url)
+        return imagen.url
+
+    def _build_premios_imagenes(self, obj, limite=3):
+        imagenes = []
+        for premio in obj.premios.all().order_by("posicion")[:limite]:
+            if premio.imagen:
+                imagenes.append(self._build_imagen_url(premio.imagen))
+        return imagenes
+
+    def _rifa_activa_ahora(self, obj):
+        return obj.esta_vigente()
+
+
+class RifaMesActualSerializer(_RifaAppMixin, serializers.ModelSerializer):
+    imagen_principal = serializers.SerializerMethodField()
+    imagen_url = serializers.SerializerMethodField()
+    premios_imagenes = serializers.SerializerMethodField()
+    meta_pedidos = serializers.IntegerField(
+        source="pedidos_minimos", read_only=True
+    )
+    pedidos_usuario_mes = serializers.SerializerMethodField()
+    pedidos_faltantes = serializers.SerializerMethodField()
+    puede_participar = serializers.SerializerMethodField()
+    ya_participa = serializers.SerializerMethodField()
+    progreso = serializers.SerializerMethodField()
+    razon = serializers.SerializerMethodField()
+    estado_display = serializers.CharField(
+        source="get_estado_display", read_only=True
+    )
+
+    class Meta:
+        model = Rifa
+        fields = [
+            "id",
+            "titulo",
+            "imagen_principal",
+            "imagen_url",
+            "premios_imagenes",
+            "estado",
+            "estado_display",
+            "meta_pedidos",
+            "pedidos_minimos",
+            "fecha_inicio",
+            "fecha_fin",
+            "pedidos_usuario_mes",
+            "pedidos_faltantes",
+            "puede_participar",
+            "ya_participa",
+            "progreso",
+            "razon",
+        ]
+        read_only_fields = fields
+
+    def get_imagen_principal(self, obj):
+        return self._build_imagen_url(obj.imagen)
+
+    def get_imagen_url(self, obj):
+        return self._build_imagen_url(obj.imagen)
+
+    def get_premios_imagenes(self, obj):
+        return self._build_premios_imagenes(obj)
+
+    def get_pedidos_usuario_mes(self, obj):
+        return self._get_elegibilidad(obj).get("pedidos", 0)
+
+    def get_pedidos_faltantes(self, obj):
+        return self._get_elegibilidad(obj).get("faltantes", obj.pedidos_minimos)
+
+    def get_puede_participar(self, obj):
+        elegibilidad = self._get_elegibilidad(obj).get("elegible", False)
+        if not self._rifa_activa_ahora(obj):
+            return False
+        return elegibilidad and not self.get_ya_participa(obj)
+
+    def get_ya_participa(self, obj):
+        return self._get_ya_participa(obj)
+
+    def get_progreso(self, obj):
+        pedidos = self.get_pedidos_usuario_mes(obj)
+        meta = obj.pedidos_minimos or 0
+        if meta <= 0:
+            return 0
+        return min(1.0, pedidos / meta)
+
+    def get_razon(self, obj):
+        return self._get_elegibilidad(obj).get("razon", "")
+
+
+class RifaDetalleAppSerializer(_RifaAppMixin, serializers.ModelSerializer):
+    imagen_principal = serializers.SerializerMethodField()
+    imagen_url = serializers.SerializerMethodField()
+    premios_imagenes = serializers.SerializerMethodField()
+    premios = PremioSerializer(many=True, read_only=True)
+    meta_pedidos = serializers.IntegerField(
+        source="pedidos_minimos", read_only=True
+    )
+    pedidos_usuario_mes = serializers.SerializerMethodField()
+    pedidos_faltantes = serializers.SerializerMethodField()
+    puede_participar = serializers.SerializerMethodField()
+    ya_participa = serializers.SerializerMethodField()
+    progreso = serializers.SerializerMethodField()
+    razon = serializers.SerializerMethodField()
+    participa_usuario = serializers.SerializerMethodField()
+    gano_usuario = serializers.SerializerMethodField()
+    premio_ganado = serializers.SerializerMethodField()
+    mensaje_usuario = serializers.SerializerMethodField()
+    estado_display = serializers.CharField(
+        source="get_estado_display", read_only=True
+    )
+
+    class Meta:
+        model = Rifa
+        fields = [
+            "id",
+            "titulo",
+            "descripcion",
+            "imagen_principal",
+            "imagen_url",
+            "premios",
+            "premios_imagenes",
+            "estado",
+            "estado_display",
+            "fecha_inicio",
+            "fecha_fin",
+            "meta_pedidos",
+            "pedidos_minimos",
+            "pedidos_usuario_mes",
+            "pedidos_faltantes",
+            "puede_participar",
+            "ya_participa",
+            "progreso",
+            "razon",
+            "participa_usuario",
+            "gano_usuario",
+            "premio_ganado",
+            "mensaje_usuario",
+        ]
+        read_only_fields = fields
+
+    def get_imagen_principal(self, obj):
+        return self._build_imagen_url(obj.imagen)
+
+    def get_imagen_url(self, obj):
+        return self._build_imagen_url(obj.imagen)
+
+    def get_premios_imagenes(self, obj):
+        return self._build_premios_imagenes(obj)
+
+    def get_pedidos_usuario_mes(self, obj):
+        return self._get_elegibilidad(obj).get("pedidos", 0)
+
+    def get_pedidos_faltantes(self, obj):
+        return self._get_elegibilidad(obj).get("faltantes", obj.pedidos_minimos)
+
+    def get_puede_participar(self, obj):
+        elegibilidad = self._get_elegibilidad(obj).get("elegible", False)
+        if not self._rifa_activa_ahora(obj):
+            return False
+        return elegibilidad and not self.get_ya_participa(obj)
+
+    def get_ya_participa(self, obj):
+        return self._get_ya_participa(obj)
+
+    def get_progreso(self, obj):
+        pedidos = self.get_pedidos_usuario_mes(obj)
+        meta = obj.pedidos_minimos or 0
+        if meta <= 0:
+            return 0
+        return min(1.0, pedidos / meta)
+
+    def get_razon(self, obj):
+        return self._get_elegibilidad(obj).get("razon", "")
+
+    def get_participa_usuario(self, obj):
+        return self._get_participacion(obj) is not None
+
+    def get_gano_usuario(self, obj):
+        participacion = self._get_participacion(obj)
+        return bool(participacion and participacion.ganador)
+
+    def get_premio_ganado(self, obj):
+        participacion = self._get_participacion(obj)
+        if not participacion or not participacion.ganador:
+            return None
+
+        premio = obj.premios.filter(posicion=participacion.posicion_premio).first()
+        return {
+            "posicion": participacion.posicion_premio,
+            "descripcion": premio.descripcion if premio else None,
+            "imagen_url": (
+                self._build_imagen_url(premio.imagen)
+                if premio and premio.imagen
+                else None
+            ),
+        }
+
+    def get_mensaje_usuario(self, obj):
+        participacion = self._get_participacion(obj)
+        if obj.estado == EstadoRifa.FINALIZADA:
+            if participacion and participacion.ganador:
+                premio_data = self.get_premio_ganado(obj) or {}
+                descripcion = premio_data.get("descripcion") or "Premio"
+                posicion = participacion.posicion_premio
+                posicion_label = (
+                    "1er lugar"
+                    if posicion == 1
+                    else "2do lugar"
+                    if posicion == 2
+                    else "3er lugar"
+                    if posicion == 3
+                    else f"{posicion}° lugar"
+                )
+                return (
+                    f"Felicidades, ganaste el {posicion_label}. "
+                    f"Premio: {descripcion}."
+                )
+            if participacion:
+                return "La rifa finalizo. Gracias por participar."
+            return "La rifa finalizo. No participaste."
+
+        if obj.estado == EstadoRifa.CANCELADA:
+            return "La rifa fue cancelada."
+
+        if participacion:
+            return "Ya estas participando. Sigue acumulando pedidos."
+        if self.get_puede_participar(obj):
+            return "Ya puedes participar."
+        return self.get_razon(obj)
 
 
 # ============================================
@@ -590,6 +889,11 @@ class RealizarSorteoSerializer(serializers.Serializer):
 
     confirmar = serializers.BooleanField(
         required=True, help_text="Debe ser true para confirmar el sorteo"
+    )
+    forzar = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Permite sorteo manual antes de fecha_fin",
     )
 
     def validate_confirmar(self, value):

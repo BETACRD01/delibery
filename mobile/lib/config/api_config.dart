@@ -240,10 +240,12 @@ class ApiConfig {
   static String get rifasMisParticipaciones =>
       '$apiUrl/rifas/participaciones/mis-participaciones/';
   static String get rifasActiva => '$apiUrl/rifas/rifas/activa/';
+  static String get rifasMesActual => '$apiUrl/rifas/mes-actual/';
   static String get rifasEstadisticas => '$apiUrl/rifas/rifas/estadisticas/';
   static String get rifasAdminBase => '$apiUrl/rifas/rifas/';
+  static String rifasDetalle(String rifaId) => '$apiUrl/rifas/$rifaId/detalle/';
   static String rifasParticipar(String rifaId) =>
-      '$apiUrl/rifas/rifas/$rifaId/participar/';
+      '$apiUrl/rifas/$rifaId/participar/';
 
   // ============================================================================
   // PRODUCTOS Y CARRITO

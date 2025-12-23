@@ -1,11 +1,16 @@
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../apis/admin/rifas_admin_api.dart';
 import '../../../apis/helpers/api_exception.dart';
 import '../dashboard/constants/dashboard_colors.dart';
+
+enum _AccionConflictoRifa { cancelar, finalizar, descartar }
 
 class PantallaCrearRifa extends StatefulWidget {
   const PantallaCrearRifa({super.key});
@@ -41,11 +46,12 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
 
   void _inicializarFechas() {
     final ahora = DateTime.now();
-    final siguienteMes = ahora.month == 12 ? 1 : ahora.month + 1;
-    final anioSiguienteMes = ahora.month == 12 ? ahora.year + 1 : ahora.year;
+    _fechaInicio = DateTime(ahora.year, ahora.month, 1);
+    _fechaFin = _finDeDia(DateTime(ahora.year, ahora.month + 1, 0));
+  }
 
-    _fechaInicio = DateTime(anioSiguienteMes, siguienteMes, 1);
-    _fechaFin = DateTime(anioSiguienteMes, siguienteMes + 1, 0);
+  DateTime _finDeDia(DateTime fecha) {
+    return DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
   }
 
   @override
@@ -57,30 +63,83 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
   }
 
   Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (picked != null) {
-      setState(() => _imagen = File(picked.path));
+    final imagen = await _seleccionarImagenGaleria();
+    if (imagen != null && mounted) {
+      setState(() => _imagen = imagen);
     }
   }
 
-  Future<void> _seleccionarFecha({
-    required DateTime initial,
-    required ValueChanged<DateTime> onSelected,
-  }) async {
+  Future<File?> _seleccionarImagenGaleria() async {
+    final permiso = await _solicitarPermisoGaleria();
+    if (!permiso) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permiso de galeria denegado')),
+        );
+      }
+      return null;
+    }
+
+    try {
+      final picked =
+          await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      if (picked == null) return null;
+      return File(picked.path);
+    } on PlatformException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_mensajeErrorImagen(e))),
+        );
+      }
+      return null;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir la galeria')),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<bool> _solicitarPermisoGaleria() async {
+    if (Platform.isAndroid) {
+      final permisoFotos = await Permission.photos.request();
+      if (permisoFotos.isGranted) return true;
+      final permisoStorage = await Permission.storage.request();
+      return permisoStorage.isGranted;
+    }
+    final permisoFotos = await Permission.photos.request();
+    return permisoFotos.isGranted;
+  }
+
+  String _mensajeErrorImagen(PlatformException e) {
+    switch (e.code) {
+      case 'photo_access_denied':
+      case 'access_denied':
+        return 'Permiso denegado para acceder a tus fotos';
+      case 'already_active':
+        return 'Espera a que termine la seleccion de imagen';
+      default:
+        return 'Error seleccionando imagen: ${e.message ?? e.code}';
+    }
+  }
+
+  Future<void> _seleccionarFecha({required DateTime initial, required ValueChanged<DateTime> onSelected}) async {
+    final ahora = DateTime.now();
+    final primerDiaMes = DateTime(ahora.year, ahora.month, 1);
     final fecha = await showDatePicker(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initial.isBefore(primerDiaMes) ? primerDiaMes : initial,
+      firstDate: primerDiaMes,
+      lastDate: ahora.add(const Duration(days: 365)),
     );
     if (fecha != null) onSelected(fecha);
   }
 
   void _agregarPremio() {
     if (_premios.length >= 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Máximo 3 premios')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Máximo 3 premios')));
       return;
     }
 
@@ -109,10 +168,10 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-                        if (picked != null) {
-                          setDialogState(() => imagenPremio = File(picked.path));
-                        }
+                        final imagen = await _seleccionarImagenGaleria();
+                        if (imagen == null) return;
+                        if (!context.mounted) return;
+                        setDialogState(() => imagenPremio = imagen);
                       },
                       icon: const Icon(Icons.image),
                       label: Text(imagenPremio == null ? 'Agregar imagen' : 'Imagen seleccionada'),
@@ -128,16 +187,13 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar'),
-                ),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
                 ElevatedButton(
                   onPressed: () {
                     if (descripcionCtrl.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Ingresa la descripción')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('Ingresa la descripción')));
                       return;
                     }
                     setState(() {
@@ -178,7 +234,7 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
     }
   }
 
-  Future<void> _crear() async {
+  Future<void> _crear({bool reintento = false}) async {
     if (!_formKey.currentState!.validate()) return;
     if (_premios.isEmpty) {
       setState(() => _error = 'Debes agregar al menos 1 premio');
@@ -190,9 +246,7 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
       return;
     }
     if (!_fechaFin.isAfter(_fechaInicio)) {
-      setState(
-        () => _error = 'La fecha de fin debe ser posterior a la fecha de inicio',
-      );
+      setState(() => _error = 'La fecha de fin debe ser posterior a la fecha de inicio');
       return;
     }
     _normalizarPremios();
@@ -215,14 +269,18 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Rifa creada correctamente'),
-            backgroundColor: DashboardColors.verde,
-          ),
+          const SnackBar(content: Text('Rifa creada correctamente'), backgroundColor: DashboardColors.verde),
         );
         Navigator.pop(context, true);
       }
     } on ApiException catch (e) {
+      if (!reintento && _esConflictoRifaActiva(e)) {
+        if (mounted) {
+          setState(() => _enviando = false);
+        }
+        final handled = await _manejarConflictoRifaActiva(e);
+        if (handled) return;
+      }
       setState(() => _error = e.getUserFriendlyMessage());
     } catch (e) {
       setState(() => _error = 'No se pudo crear la rifa: ${e.toString()}');
@@ -231,17 +289,160 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
     }
   }
 
+  bool _esConflictoRifaActiva(ApiException e) {
+    final error = e.getFieldError('fecha_inicio') ?? '';
+    return e.isValidationError && error.contains('Ya existe una rifa activa');
+  }
+
+  Future<bool> _manejarConflictoRifaActiva(ApiException e) async {
+    if (!mounted) return false;
+    final mensaje = e.getFieldError('fecha_inicio') ??
+        'Ya existe una rifa activa para este mes. Debes finalizarla o cancelarla antes de crear una nueva.';
+    final rifaActiva = await _buscarRifaActivaDelMes();
+    if (!mounted) return false;
+
+    final tituloActiva = rifaActiva?['titulo'] as String?;
+    final idActiva = rifaActiva?['id']?.toString();
+
+    final accion = await _mostrarDialogoConflicto(
+      mensaje: mensaje,
+      tituloActiva: tituloActiva,
+    );
+
+    if (accion == null) {
+      return true;
+    }
+
+    if (accion == _AccionConflictoRifa.descartar) {
+      if (mounted) {
+        Navigator.pop(context, false);
+      }
+      return true;
+    }
+
+    if (idActiva == null) {
+      if (mounted) {
+        setState(() => _error = 'No se encontró la rifa activa para cancelar.');
+      }
+      return true;
+    }
+
+    if (mounted) {
+      setState(() => _enviando = true);
+    }
+
+    try {
+      if (accion == _AccionConflictoRifa.finalizar) {
+        await _api.finalizarRifa(idActiva);
+      } else {
+        await _api.cancelarRifa(idActiva);
+      }
+    } on ApiException catch (apiError) {
+      if (mounted) {
+        setState(() => _error = apiError.getUserFriendlyMessage());
+      }
+      return true;
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'No se pudo actualizar la rifa activa.');
+      }
+      return true;
+    }
+
+    await _crear(reintento: true);
+    return true;
+  }
+
+  Future<Map<String, dynamic>?> _buscarRifaActivaDelMes() async {
+    try {
+      final response = await _api.listarRifas(
+        estado: 'activa',
+        mes: _fechaInicio.month,
+        anio: _fechaInicio.year,
+        pagina: 1,
+      );
+      final results = response['results'];
+      if (results is List && results.isNotEmpty) {
+        final first = results.first;
+        if (first is Map<String, dynamic>) {
+          return first;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<_AccionConflictoRifa?> _mostrarDialogoConflicto({
+    required String mensaje,
+    String? tituloActiva,
+  }) async {
+    if (Platform.isIOS) {
+      return showCupertinoDialog<_AccionConflictoRifa>(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Rifa activa encontrada'),
+          content: Column(
+            children: [
+              const SizedBox(height: 8),
+              Text(mensaje),
+              if (tituloActiva != null) ...[
+                const SizedBox(height: 8),
+                Text('Activa: $tituloActiva'),
+              ],
+            ],
+          ),
+          actions: [
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () => Navigator.pop(context, _AccionConflictoRifa.cancelar),
+              child: const Text('Cancelar rifa activa'),
+            ),
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(context, _AccionConflictoRifa.finalizar),
+              child: const Text('Finalizar rifa activa'),
+            ),
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(context, _AccionConflictoRifa.descartar),
+              child: const Text('Descartar cambios'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return showDialog<_AccionConflictoRifa>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rifa activa encontrada'),
+        content: Text(
+          tituloActiva == null ? mensaje : '$mensaje\n\nActiva: $tituloActiva',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _AccionConflictoRifa.descartar),
+            child: const Text('Descartar cambios'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _AccionConflictoRifa.finalizar),
+            child: const Text('Finalizar rifa activa'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _AccionConflictoRifa.cancelar),
+            child: const Text('Cancelar rifa activa'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
       appBar: AppBar(
-        title: const Text(
-          'Crear rifa',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Crear rifa', style: TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: const Color(0xFFF2F2F7),
-        foregroundColor: DashboardColors.morado,
+        foregroundColor: const Color.fromARGB(255, 84, 169, 222),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -297,27 +498,27 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Fecha inicio'),
-                      subtitle: Text(
-                        _fechaInicio.toLocal().toString().split(' ').first,
-                      ),
+                      subtitle: Text(_fechaInicio.toLocal().toString().split(' ').first),
                       trailing: const Icon(Icons.calendar_today),
-                      onTap: () => _seleccionarFecha(
-                        initial: _fechaInicio,
-                        onSelected: (f) => setState(() => _fechaInicio = f),
-                      ),
+                      onTap: () =>
+                          _seleccionarFecha(
+                            initial: _fechaInicio,
+                            onSelected: (f) =>
+                                setState(() => _fechaInicio = f),
+                          ),
                     ),
                     const Divider(height: 1),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Fecha fin'),
-                      subtitle: Text(
-                        _fechaFin.toLocal().toString().split(' ').first,
-                      ),
+                      subtitle: Text(_fechaFin.toLocal().toString().split(' ').first),
                       trailing: const Icon(Icons.calendar_today),
-                      onTap: () => _seleccionarFecha(
-                        initial: _fechaFin,
-                        onSelected: (f) => setState(() => _fechaFin = f),
-                      ),
+                      onTap: () =>
+                          _seleccionarFecha(
+                            initial: _fechaFin,
+                            onSelected: (f) =>
+                                setState(() => _fechaFin = _finDeDia(f)),
+                          ),
                     ),
                   ],
                 ),
@@ -339,17 +540,10 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _imagen == null
-                          ? const Text(
-                              'Sin imagen seleccionada',
-                              style: TextStyle(color: Colors.grey),
-                            )
+                          ? const Text('Sin imagen seleccionada', style: TextStyle(color: Colors.grey))
                           : ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.file(
-                                _imagen!,
-                                height: 72,
-                                fit: BoxFit.cover,
-                              ),
+                              child: Image.file(_imagen!, height: 72, fit: BoxFit.cover),
                             ),
                     ),
                   ],
@@ -365,7 +559,7 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                     icon: const Icon(Icons.add),
                     label: Text('Agregar (${_premios.length}/3)'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: DashboardColors.morado,
+                      backgroundColor: const Color.fromARGB(255, 71, 190, 223),
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -377,10 +571,7 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                   child: const Center(
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
-                        'No hay premios agregados',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                      child: Text('No hay premios agregados', style: TextStyle(color: Colors.grey)),
                     ),
                   ),
                 )
@@ -392,10 +583,7 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                 }),
               if (_error != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: DashboardColors.rojo),
-                ),
+                Text(_error!, style: const TextStyle(color: DashboardColors.rojo)),
               ],
               const SizedBox(height: 16),
               SizedBox(
@@ -406,20 +594,15 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.save),
                   label: Text(_enviando ? 'Creando...' : 'Crear rifa'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: DashboardColors.morado,
+                    backgroundColor: const Color.fromARGB(255, 90, 154, 238),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -435,12 +618,7 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 12,
-          letterSpacing: 1.1,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF8E8E93),
-        ),
+        style: const TextStyle(fontSize: 12, letterSpacing: 1.1, fontWeight: FontWeight.w600, color: Color(0xFF8E8E93)),
       ),
     );
   }
@@ -451,13 +629,7 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))],
       ),
       child: child,
     );
@@ -479,16 +651,13 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: DashboardColors.morado.withValues(alpha: 0.12),
+              color: const Color.fromARGB(255, 52, 170, 206).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
             child: Text(
               _getNombrePosicion(premio['posicion']),
-              style: const TextStyle(
-                color: DashboardColors.morado,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(color: Color.fromARGB(255, 42, 161, 229), fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 12),
@@ -496,28 +665,15 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  premio['descripcion'],
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(premio['descripcion'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 if (imagen != null && imagen is File)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: Image.file(
-                      imagen,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    ),
+                    child: Image.file(imagen, height: 60, fit: BoxFit.cover),
                   )
                 else
-                  const Text(
-                    'Sin imagen',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                  const Text('Sin imagen', style: TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
           ),

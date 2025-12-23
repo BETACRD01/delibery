@@ -20,12 +20,36 @@ class RifasUsuariosApi {
     }
   }
 
+  Future<Map<String, dynamic>> obtenerRifasMesActual() async {
+    try {
+      return await _client.get(ApiConfig.rifasMesActual);
+    } catch (e) {
+      developer.log(
+        'Error obteniendo rifas del mes: $e',
+        name: 'RifasUsuariosApi',
+      );
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> participarEnRifa(String rifaId) async {
     try {
       return await _client.post(ApiConfig.rifasParticipar(rifaId), {});
     } catch (e) {
       developer.log(
         'Error participando en rifa $rifaId: $e',
+        name: 'RifasUsuariosApi',
+      );
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerDetalleRifa(String rifaId) async {
+    try {
+      return await _client.get(ApiConfig.rifasDetalle(rifaId));
+    } catch (e) {
+      developer.log(
+        'Error obteniendo detalle de rifa $rifaId: $e',
         name: 'RifasUsuariosApi',
       );
       rethrow;

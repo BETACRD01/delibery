@@ -223,6 +223,25 @@ class Rifa(models.Model):
     # MÉTODOS DE NEGOCIO
     # ============================================
 
+    def _rango_pedidos_mes(self):
+        """Rango del mes de la rifa en zona horaria local."""
+        mes = self.mes or self.fecha_inicio.month
+        anio = self.anio or self.fecha_inicio.year
+        tz = timezone.get_current_timezone()
+        inicio = datetime(anio, mes, 1)
+        if timezone.is_naive(inicio):
+            inicio = timezone.make_aware(inicio, tz)
+
+        if mes == 12:
+            siguiente = datetime(anio + 1, 1, 1)
+        else:
+            siguiente = datetime(anio, mes + 1, 1)
+        if timezone.is_naive(siguiente):
+            siguiente = timezone.make_aware(siguiente, tz)
+
+        fin = siguiente - timedelta(microseconds=1)
+        return inicio, fin
+
     def obtener_participantes_elegibles(self):
         """
         Obtiene usuarios elegibles para participar
@@ -230,6 +249,21 @@ class Rifa(models.Model):
         Returns:
             QuerySet: Usuarios con pedidos mínimos entregados
         """
+        rango_inicio, rango_fin = self._rango_pedidos_mes()
+        rango_entregado = Q(
+            perfil__pedidos__fecha_entregado__gte=rango_inicio,
+            perfil__pedidos__fecha_entregado__lte=rango_fin,
+        )
+        rango_fallback = Q(
+            perfil__pedidos__fecha_entregado__isnull=True,
+            perfil__pedidos__actualizado_en__gte=rango_inicio,
+            perfil__pedidos__actualizado_en__lte=rango_fin,
+        )
+        rango_creado = Q(
+            perfil__pedidos__fecha_entregado__isnull=True,
+            perfil__pedidos__creado_en__gte=rango_inicio,
+            perfil__pedidos__creado_en__lte=rango_fin,
+        )
         usuarios_elegibles = (
             User.objects.filter(
                 rol_activo=User.RolChoices.CLIENTE,
@@ -240,10 +274,9 @@ class Rifa(models.Model):
                 pedidos_completados=Count(
                     "perfil__pedidos",
                     filter=Q(
-                        perfil__pedidos__estado=EstadoPedido.ENTREGADO,
-                        perfil__pedidos__fecha_entregado__gte=self.fecha_inicio,
-                        perfil__pedidos__fecha_entregado__lte=self.fecha_fin,
-                    ),
+                        perfil__pedidos__estado=EstadoPedido.ENTREGADO
+                    )
+                    & (rango_entregado | rango_fallback | rango_creado),
                 )
             )
             .filter(pedidos_completados__gte=self.pedidos_minimos)
@@ -271,24 +304,39 @@ class Rifa(models.Model):
         Returns:
             dict: {'elegible': bool, 'pedidos': int, 'faltantes': int}
         """
+        rango_inicio, rango_fin = self._rango_pedidos_mes()
+        rango_entregado = Q(
+            fecha_entregado__gte=rango_inicio,
+            fecha_entregado__lte=rango_fin,
+        )
+        rango_fallback = Q(
+            fecha_entregado__isnull=True,
+            actualizado_en__gte=rango_inicio,
+            actualizado_en__lte=rango_fin,
+        )
+        rango_creado = Q(
+            fecha_entregado__isnull=True,
+            creado_en__gte=rango_inicio,
+            creado_en__lte=rango_fin,
+        )
         # Contar pedidos entregados en el rango
+        filtro_usuario = Q(cliente__user=usuario) | Q(repartidor__user=usuario)
         pedidos_completados = Pedido.objects.filter(
-            cliente__user=usuario,
+            filtro_usuario,
             estado=EstadoPedido.ENTREGADO,
-            fecha_entregado__gte=self.fecha_inicio,
-            fecha_entregado__lte=self.fecha_fin,
-        ).count()
+        ).filter(rango_entregado | rango_fallback | rango_creado).count()
 
         faltantes = max(0, self.pedidos_minimos - pedidos_completados)
 
-        if usuario.rol_activo != User.RolChoices.CLIENTE:
+        perfil = getattr(usuario, "perfil", None)
+        if not perfil:
             return {
                 "elegible": False,
                 "pedidos": pedidos_completados,
                 "faltantes": faltantes,
-                "razon": "Solo usuarios regulares pueden participar",
+                "razon": "Tu perfil no está disponible para rifas",
             }
-        if not usuario.perfil.participa_en_sorteos:
+        if not perfil.participa_en_sorteos:
             return {
                 "elegible": False,
                 "pedidos": pedidos_completados,
@@ -406,11 +454,13 @@ class Rifa(models.Model):
         Returns:
             Rifa: Rifa activa o None
         """
-        return (
-            cls.objects.filter(estado=EstadoRifa.ACTIVA)
-            .order_by("-fecha_inicio")
-            .first()
-        )
+        ahora = timezone.now()
+        for rifa in cls.objects.filter(estado=EstadoRifa.ACTIVA).order_by(
+            "-fecha_inicio"
+        ):
+            if rifa.esta_vigente(ahora):
+                return rifa
+        return None
 
     @classmethod
     def obtener_historial_ganadores(cls, limit=10):
@@ -437,6 +487,24 @@ class Rifa(models.Model):
     def esta_activa(self):
         """Verifica si la rifa está activa"""
         return self.estado == EstadoRifa.ACTIVA
+
+    def esta_vigente(self, ahora=None):
+        """Verifica si la rifa esta activa y dentro del rango de fechas."""
+        if self.estado != EstadoRifa.ACTIVA:
+            return False
+
+        ahora = ahora or timezone.now()
+        inicio = self.fecha_inicio
+        fin = self.fecha_fin
+
+        if inicio and fin:
+            if (
+                inicio.time() == datetime.min.time()
+                and fin.time() == datetime.min.time()
+            ):
+                return inicio.date() <= ahora.date() <= fin.date()
+
+        return inicio <= ahora <= fin
 
     @property
     def dias_restantes(self):

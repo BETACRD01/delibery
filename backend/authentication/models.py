@@ -24,8 +24,21 @@ def validar_celular(value):
     - Internacional: +1234567890, +521234567890, etc.
     """
     try:
+        if not value:
+            raise ValidationError("El número es requerido")
+
+        raw = str(value).strip()
+
+        # Aceptar formato local ecuatoriano 09xxxxxxxx (solo para validación)
+        if re.match(r'^09\d{8}$', raw):
+            return
+
+        # Aceptar formato internacional ecuatoriano +5939xxxxxxxx
+        if re.match(r'^\+5939\d{8}$', raw):
+            return
+
         # Intentar parsear primero como ecuatoriano
-        numero = phonenumbers.parse(value, "EC")
+        numero = phonenumbers.parse(raw, "EC")
         
         # Validar que sea un número válido
         if not phonenumbers.is_valid_number(numero):

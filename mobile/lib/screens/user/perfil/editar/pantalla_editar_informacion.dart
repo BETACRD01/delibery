@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'dart:ui';
 import '../../../../theme/jp_theme.dart';
 import '../../../../services/usuarios_service.dart';
@@ -27,6 +28,8 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
   late final TextEditingController _apellidoCtrl;
   late final TextEditingController _emailCtrl;
   late final TextEditingController _telefonoCtrl;
+  String _telefonoNumero = '';
+  String _dialCode = '+593';
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -76,7 +79,11 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
     _nombreCtrl = TextEditingController(text: nombreInicial);
     _apellidoCtrl = TextEditingController(text: apellidoInicial);
     _emailCtrl = TextEditingController(text: widget.perfil.usuarioEmail);
-    _telefonoCtrl = TextEditingController(text: widget.perfil.telefono);
+    _telefonoCtrl = TextEditingController(
+      text: _telefonoNacionalDesdePerfil(widget.perfil.telefono),
+    );
+    _telefonoNumero = _telefonoCtrl.text;
+    _dialCode = _dialCodeDesdePerfil(widget.perfil.telefono);
     _fechaNacimiento = widget.perfil.fechaNacimiento;
 
     _animationController.forward();
@@ -172,14 +179,8 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
         datos['email'] = _emailCtrl.text.trim();
       }
 
-      final telefono = _telefonoCtrl.text.trim();
+      final telefono = _telefonoParaGuardar();
       if (telefono != widget.perfil.telefono) {
-        if (telefono.isNotEmpty && !RegExp(r'^09\d{8}$').hasMatch(telefono)) {
-          throw ApiException(
-            statusCode: 400,
-            message: 'Celular inválido (debe ser 09xxxxxxxx)',
-          );
-        }
         datos['telefono'] = telefono.isEmpty ? null : telefono;
       }
 
@@ -202,8 +203,18 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
       }
 
       await _usuarioService.actualizarPerfil(datos);
+      final perfilActualizado =
+          await _usuarioService.obtenerPerfil(forzarRecarga: true);
 
       if (!mounted) return;
+      _nombreCtrl.text = perfilActualizado.firstName;
+      _apellidoCtrl.text = perfilActualizado.lastName;
+      _emailCtrl.text = perfilActualizado.usuarioEmail;
+      _telefonoCtrl.text =
+          _telefonoNacionalDesdePerfil(perfilActualizado.telefono);
+      _telefonoNumero = _telefonoCtrl.text;
+      _fechaNacimiento = perfilActualizado.fechaNacimiento;
+
       JPSnackbar.success(context, 'Información actualizada correctamente');
       Navigator.pop(context, true);
     } on ApiException catch (e) {
@@ -541,16 +552,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
               ],
             ),
             const SizedBox(height: 20),
-            _buildIOSTextField(
-              controller: _telefonoCtrl,
-              label: 'Teléfono Celular',
-              placeholder: '09xxxxxxxx',
-              keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
-              ],
-            ),
+            _buildPhoneField(),
             const SizedBox(height: 16),
             _buildFechaField(),
           ],
@@ -627,6 +629,88 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             ),
             errorStyle: const TextStyle(fontSize: 12, color: Color(0xFFFF3B30)),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 6),
+          child: Text(
+            'TELÉFONO CELULAR',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF8E8E93),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        IntlPhoneField(
+          controller: _telefonoCtrl,
+          initialCountryCode: _paisInicialDesdePerfil(widget.perfil.telefono),
+          disableLengthCheck: true,
+          decoration: InputDecoration(
+            hintText: 'Número de celular',
+            hintStyle: const TextStyle(
+              color: Color(0xFFC7C7CC),
+              fontWeight: FontWeight.w400,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF2F2F7),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF007AFF), width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFFF3B30), width: 2),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFFF3B30), width: 2),
+            ),
+            errorStyle: const TextStyle(fontSize: 12, color: Color(0xFFFF3B30)),
+          ),
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(15),
+          ],
+          onChanged: (phone) {
+            _telefonoNumero = phone.number;
+          },
+          onCountryChanged: (country) {
+            final dial = country.dialCode.replaceAll(RegExp(r'\D'), '');
+            _dialCode = dial.isEmpty ? '+593' : '+$dial';
+          },
+          validator: (phone) {
+            final digits =
+                phone?.number.replaceAll(RegExp(r'\D'), '') ?? '';
+            if (digits.isEmpty) {
+              return 'Requerido';
+            }
+            if (digits.length == 9 || digits.length == 10) {
+              return null;
+            }
+            return 'Número inválido';
+          },
         ),
       ],
     );
@@ -769,5 +853,54 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
       edad--;
     }
     return edad.toString();
+  }
+
+  String _telefonoNacionalDesdePerfil(String? telefono) {
+    if (telefono == null || telefono.trim().isEmpty) return '';
+    final limpio = telefono.trim();
+    if (limpio.startsWith('+593')) {
+      final local = limpio.replaceFirst('+593', '');
+      if (local.startsWith('0')) return local;
+      return '0$local';
+    }
+    if (limpio.startsWith('+')) {
+      return limpio.replaceFirst(RegExp(r'^\+\d+'), '');
+    }
+    return limpio;
+  }
+
+  String _dialCodeDesdePerfil(String? telefono) {
+    if (telefono == null || telefono.trim().isEmpty) return '+593';
+    final limpio = telefono.trim();
+    if (limpio.startsWith('+')) {
+      final match = RegExp(r'^\+\d+').firstMatch(limpio);
+      if (match != null) return match.group(0) ?? '+593';
+    }
+    return '+593';
+  }
+
+  String _paisInicialDesdePerfil(String? telefono) {
+    if (telefono == null || telefono.trim().isEmpty) return 'EC';
+    final limpio = telefono.trim();
+    if (limpio.startsWith('+593')) return 'EC';
+    return 'EC';
+  }
+
+  String _telefonoParaGuardar() {
+    final numero = _telefonoNumero.trim().isNotEmpty
+        ? _telefonoNumero.trim()
+        : _telefonoCtrl.text.trim();
+    if (numero.isEmpty) return '';
+
+    var digits = numero.replaceAll(RegExp(r'\D'), '');
+    final dial = _dialCode.replaceAll(RegExp(r'\D'), '');
+    if (dial.isEmpty) return digits;
+
+    // Ecuador: si viene con 0 inicial, lo removemos para construir +5939...
+    if (dial == '593' && digits.startsWith('0')) {
+      digits = digits.replaceFirst(RegExp(r'^0+'), '');
+    }
+
+    return '+$dial$digits';
   }
 }

@@ -161,11 +161,17 @@ class RifasAdminApi {
   // REALIZAR SORTEO
   // ============================================
 
-  Future<Map<String, dynamic>> realizarSorteo(String rifaId) async {
+  Future<Map<String, dynamic>> realizarSorteo(
+    String rifaId, {
+    bool forzar = false,
+  }) async {
     try {
       return await _client.post(
         '${ApiConfig.rifasAdminBase}$rifaId/sortear/',
-        {},
+        {
+          'confirmar': true,
+          if (forzar) 'forzar': true,
+        },
       );
     } catch (e) {
       developer.log('Error realizando sorteo de rifa $rifaId: $e', name: 'RifasAdminApi');
@@ -214,6 +220,19 @@ class RifasAdminApi {
       );
     } catch (e) {
       developer.log('Error finalizando rifa $rifaId: $e', name: 'RifasAdminApi');
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // ELIMINAR RIFA
+  // ============================================
+
+  Future<Map<String, dynamic>> eliminarRifa(String rifaId) async {
+    try {
+      return await _client.delete('${ApiConfig.rifasAdminBase}$rifaId/');
+    } catch (e) {
+      developer.log('Error eliminando rifa $rifaId: $e', name: 'RifasAdminApi');
       rethrow;
     }
   }

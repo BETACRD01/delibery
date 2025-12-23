@@ -129,6 +129,9 @@ def actualizar_perfil(request):
         with transaction.atomic():
             # 1. Actualización de Celular (Modelo User)
             if nuevo_celular:
+                nuevo_celular = str(nuevo_celular).strip()
+                if re.match(r'^09\d{8}$', nuevo_celular):
+                    nuevo_celular = '+593' + nuevo_celular[1:]
                 try:
                     validar_celular(nuevo_celular)
                 except DjangoValidationError as exc:

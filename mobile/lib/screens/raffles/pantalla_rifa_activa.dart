@@ -1,8 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:intl/intl.dart';
 import '../../services/usuarios_service.dart';
 import '../../apis/helpers/api_exception.dart';
+import '../../config/api_config.dart';
+import 'pantalla_rifa_detalle_usuario.dart';
 
 class PantallaRifaActiva extends StatefulWidget {
   const PantallaRifaActiva({super.key});
@@ -14,9 +16,8 @@ class PantallaRifaActiva extends StatefulWidget {
 class _PantallaRifaActivaState extends State<PantallaRifaActiva>
     with SingleTickerProviderStateMixin {
   final _usuarioService = UsuarioService();
-  Map<String, dynamic>? _rifa;
+  List<Map<String, dynamic>> _rifas = [];
   bool _loading = true;
-  bool _participando = false;
   String? _error;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -54,10 +55,9 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
       _error = null;
     });
     try {
-      final data = await _usuarioService.obtenerRifaActiva(forzarRecarga: true);
-      _rifa =
-          (data?['rifa'] ?? data?['rifa_activa'] ?? data)
-              as Map<String, dynamic>?;
+      _rifas = await _usuarioService.obtenerRifasMesActual(
+        forzarRecarga: true,
+      );
       await _animationController.forward();
     } on ApiException catch (e) {
       _error = e.message;
@@ -72,45 +72,6 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
     }
   }
 
-  Future<void> _participar() async {
-    final rifaId = _rifa?['id']?.toString();
-    if (rifaId == null) return;
-
-    setState(() => _participando = true);
-    try {
-      await _usuarioService.participarEnRifa(rifaId);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Participación registrada')));
-      await _cargar();
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo registrar la participación')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _participando = false);
-      }
-    }
-  }
-
-  String _formatFecha(String? fechaIso) {
-    if (fechaIso == null || fechaIso.isEmpty) return '';
-    try {
-      final fecha = DateTime.parse(fechaIso);
-      return DateFormat('dd/MM/yyyy').format(fecha);
-    } catch (_) {
-      return fechaIso;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,7 +79,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
-          'Rifa del mes',
+          'Rifas del mes',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
@@ -158,7 +119,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
     if (_error != null) {
       return _buildErrorState();
     }
-    if (_rifa == null) {
+    if (_rifas.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -260,7 +221,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
             ),
             const SizedBox(height: 24),
             const Text(
-              'No hay rifas activas',
+              'No hay rifas activas este mes',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
@@ -285,577 +246,236 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
   }
 
   Widget _buildContent() {
-    final titulo = _rifa!['titulo'] ?? 'Rifa';
-    final premios = (_rifa!['premios'] as List<dynamic>?) ?? [];
-    final premiosOrdenados = List<Map<String, dynamic>>.from(premios)
-      ..sort((a, b) => (a['posicion'] ?? 0).compareTo(b['posicion'] ?? 0));
-    final fechaFin = _formatFecha(_rifa!['fecha_fin']?.toString());
-    final diasRestantes = _rifa!['dias_restantes']?.toString() ?? '';
-    final totalParticipantes = (_rifa!['total_participantes'] ?? 0).toString();
-    final pedidosMinimos =
-        int.tryParse((_rifa!['pedidos_minimos'] ?? 3).toString()) ?? 3;
-    final pedidosCompletados =
-        int.tryParse((_rifa!['mis_pedidos'] ?? 0).toString()) ?? 0;
-    final pedidosFaltantes =
-        int.tryParse((_rifa!['pedidos_faltantes'] ?? 0).toString()) ?? 0;
-    final puedoParticipar = _rifa!['puedo_participar'] == true;
-    final yaParticipa = _rifa!['ya_participa'] == true;
-    final estadoDisplay = (_rifa!['estado_display'] ?? 'Activa')
-        .toString()
-        .toUpperCase();
-    final progreso = (pedidosMinimos > 0)
-        ? (pedidosCompletados / pedidosMinimos).clamp(0.0, 1.0)
-        : 0.0;
-
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: SingleChildScrollView(
+        child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeroCard(
-                titulo: titulo,
-                premios: premiosOrdenados,
-                fechaFin: fechaFin,
-                diasRestantes: diasRestantes,
-                totalParticipantes: totalParticipantes,
-                estadoDisplay: estadoDisplay,
+          slivers: [
+            CupertinoSliverRefreshControl(onRefresh: _cargar),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 120, 20, 32),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildRifaCard(_rifas[index]),
+                  ),
+                  childCount: _rifas.length,
+                ),
               ),
-              const SizedBox(height: 16),
-              _buildElegibilityCard(
-                puedoParticipar: puedoParticipar,
-                yaParticipa: yaParticipa,
-                pedidosCompletados: pedidosCompletados,
-                pedidosMinimos: pedidosMinimos,
-                pedidosFaltantes: pedidosFaltantes,
-                progreso: progreso,
-              ),
-              const SizedBox(height: 16),
-              _buildInstructionsCard(),
-              const SizedBox(height: 32),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeroCard({
-    required String titulo,
-    required List<Map<String, dynamic>> premios,
-    required String fechaFin,
-    required String diasRestantes,
-    required String totalParticipantes,
-    required String estadoDisplay,
-  }) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF007AFF), Color(0xFF0051D5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF007AFF).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -50,
-            right: -50,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
-              ),
+  Widget _buildRifaCard(Map<String, dynamic> rifa) {
+    final titulo = (rifa['titulo'] ?? 'Rifa').toString();
+    final pedidosMinimos =
+        int.tryParse((rifa['meta_pedidos'] ?? rifa['pedidos_minimos'] ?? 3).toString()) ?? 3;
+    final pedidosCompletados = int.tryParse(
+          (rifa['pedidos_usuario_mes'] ?? rifa['mis_pedidos'] ?? 0).toString(),
+        ) ??
+        0;
+    final pedidosMostrados = pedidosMinimos > 0
+        ? pedidosCompletados.clamp(0, pedidosMinimos)
+        : 0;
+    final progreso = (rifa['progreso'] is num)
+        ? (rifa['progreso'] as num).toDouble().clamp(0.0, 1.0)
+        : (pedidosMinimos > 0
+            ? (pedidosMostrados / pedidosMinimos).clamp(0.0, 1.0)
+            : 0.0);
+    final estadoLabel = (rifa['estado_display'] ?? rifa['estado'] ?? 'Activa')
+        .toString();
+    final estadoColor = _colorEstado(estadoLabel);
+    final imagen = _resolveImageUrl(
+      rifa['imagen_principal'] ?? rifa['imagen_url'] ?? rifa['imagen'],
+    );
+
+    return GestureDetector(
+      onTap: () {
+        final rifaId = rifa['id']?.toString();
+        if (rifaId == null) return;
+        Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => PantallaRifaDetalleUsuario(
+              rifaId: rifaId,
+              resumen: rifa,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.auto_awesome,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            estadoDisplay,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
+        ).then((_) => _cargar());
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildRifaCover(imagen, estadoLabel, estadoColor),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titulo,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                      color: Color(0xFF1C1C1E),
                     ),
-                    const Spacer(),
-                    if (diasRestantes.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.schedule,
-                              color: Color(0xFF007AFF),
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$diasRestantes días',
-                              style: const TextStyle(
-                                color: Color(0xFF007AFF),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  titulo,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                    height: 1.1,
                   ),
-                ),
-                if (premios.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: premios
-                        .map(
-                          (premio) => Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Text(
-                              '${premio['posicion_display'] ?? 'Premio'}: ${premio['descripcion'] ?? ''}',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
+                  const SizedBox(height: 16),
+                  _buildProgresoResumen(
+                    pedidosCompletados: pedidosMostrados,
+                    pedidosMinimos: pedidosMinimos,
+                    progreso: progreso,
                   ),
                 ],
-                const SizedBox(height: 24),
-                _buildInfoGrid(fechaFin, totalParticipantes, premios.length),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInfoGrid(
-    String fechaFin,
-    String participantes,
-    int totalPremios,
-  ) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+  Widget _buildRifaCover(String? imagen, String estado, Color estadoColor) {
+    return Stack(
       children: [
-        if (fechaFin.isNotEmpty)
-          SizedBox(
-            width: 150,
-            child: _buildInfoItem(Icons.calendar_today, 'Finaliza', fechaFin),
-          ),
         SizedBox(
-          width: 150,
-          child: _buildInfoItem(Icons.groups, 'Participantes', participantes),
+          height: 160,
+          width: double.infinity,
+          child: imagen != null
+              ? Image.network(
+                  imagen.startsWith('http')
+                      ? imagen
+                      : '${ApiConfig.baseUrl}$imagen',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      _buildImagePlaceholder(),
+                )
+              : _buildImagePlaceholder(),
         ),
-        SizedBox(
-          width: 150,
-          child: _buildInfoItem(
-            Icons.card_giftcard,
-            'Premios',
-            totalPremios.toString(),
+        Positioned(
+          top: 12,
+          right: 12,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: estadoColor.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: estadoColor.withValues(alpha: 0.4)),
+            ),
+            child: Text(
+              estado.toUpperCase(),
+              style: TextStyle(
+                color: estadoColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildInfoItem(IconData icon, String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.white, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildElegibilityCard({
-    required bool puedoParticipar,
-    required bool yaParticipa,
+  Widget _buildProgresoResumen({
     required int pedidosCompletados,
     required int pedidosMinimos,
-    required int pedidosFaltantes,
     required double progreso,
   }) {
-    final estadoColor = (yaParticipa || puedoParticipar)
-        ? const Color(0xFF34C759)
-        : const Color(0xFFFF9500);
-    final estadoIcon = (yaParticipa || puedoParticipar)
-        ? Icons.check_circle
-        : Icons.hourglass_empty;
-    final estadoTitulo = yaParticipa
-        ? 'Ya estás participando'
-        : (puedoParticipar ? '¡Cumples los requisitos!' : 'En progreso');
-    final estadoSubtitulo = yaParticipa
-        ? 'Tu participación está registrada'
-        : (puedoParticipar ? 'Ya puedes participar' : 'Completa más pedidos');
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: estadoColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(estadoIcon, color: estadoColor, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        estadoTitulo,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          color: Color(0xFF1C1C1E),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        estadoSubtitulo,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF8E8E93),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F7),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Pedidos completados',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1C1C1E),
-                        ),
-                      ),
-                      Text(
-                        '$pedidosCompletados / $pedidosMinimos',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF007AFF),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: TweenAnimationBuilder<double>(
-                      duration: const Duration(milliseconds: 1000),
-                      curve: Curves.easeOutCubic,
-                      tween: Tween(begin: 0.0, end: progreso),
-                      builder: (context, value, child) {
-                        return LinearProgressIndicator(
-                          value: value,
-                          minHeight: 8,
-                          backgroundColor: Colors.white,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            (yaParticipa || puedoParticipar)
-                                ? const Color(0xFF34C759)
-                                : const Color(0xFF007AFF),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${(progreso * 100).round()}% completado',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (!yaParticipa && puedoParticipar) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _participando ? null : _participar,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF34C759),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(_participando ? 'Registrando...' : 'Participar'),
-                ),
-              ),
-            ],
-            if (!puedoParticipar && pedidosFaltantes > 0) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Te faltan $pedidosFaltantes pedido(s) para participar',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF8E8E93),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInstructionsCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF007AFF).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.lightbulb,
-                    color: Color(0xFF007AFF),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Cómo participar',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                    color: Color(0xFF1C1C1E),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const _IOSListItem(
-              number: 1,
-              text:
-                  'Realiza tus pedidos habituales hasta cumplir el mínimo requerido',
-            ),
-            const SizedBox(height: 12),
-            const _IOSListItem(
-              number: 2,
-              text:
-                  'Una vez cumplido, presiona el botón Participar para registrarte',
-            ),
-            const SizedBox(height: 12),
-            const _IOSListItem(
-              number: 3,
-              text:
-                  'Revisa esta sección para ver la fecha de sorteo y participantes',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _IOSListItem extends StatelessWidget {
-  final int number;
-  final String text;
-
-  const _IOSListItem({required this.number, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: const Color(0xFF007AFF),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(
-            child: Text(
-              '$number',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Progreso del mes',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF8E8E93),
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              text,
+            Text(
+              '$pedidosCompletados/$pedidosMinimos pedidos',
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
                 color: Color(0xFF1C1C1E),
-                height: 1.4,
-                letterSpacing: -0.2,
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: progreso,
+            minHeight: 8,
+            backgroundColor: const Color(0xFFF2F2F7),
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              Color(0xFF34C759),
             ),
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Container(
+      color: const Color(0xFFF2F2F7),
+      child: const Center(
+        child: Icon(
+          CupertinoIcons.photo,
+          color: Color(0xFF8E8E93),
+          size: 40,
+        ),
+      ),
+    );
+  }
+
+  Color _colorEstado(String estado) {
+    final normalized = estado.toLowerCase();
+    if (normalized.contains('final')) return const Color(0xFF8E8E93);
+    if (normalized.contains('cancel')) return const Color(0xFFFF3B30);
+    return const Color(0xFF34C759);
+  }
+
+  String? _resolveImageUrl(dynamic value) {
+    if (value == null) return null;
+    if (value is String && value.trim().isNotEmpty) return value.trim();
+    if (value is Map<String, dynamic>) {
+      for (final key in ['url', 'imagen', 'image', 'foto', 'ruta']) {
+        final candidate = value[key];
+        if (candidate is String && candidate.trim().isNotEmpty) {
+          return candidate.trim();
+        }
+      }
+    }
+    return null;
   }
 }
 

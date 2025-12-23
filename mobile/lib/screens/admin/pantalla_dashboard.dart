@@ -1,14 +1,15 @@
 // lib/screens/admin/pantalla_dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../config/rutas.dart';
 import '../../controllers/admin/dashboard_controller.dart';
+import '../../services/session_cleanup.dart';
+import 'dashboard/constants/dashboard_colors.dart';
+import 'dashboard/tabs/actividad_tab.dart';
+import 'dashboard/tabs/resumen_tab.dart';
 import 'dashboard/widgets/dashboard_app_bar.dart';
 import 'dashboard/widgets/dashboard_drawer.dart';
-import 'dashboard/tabs/resumen_tab.dart';
-import 'dashboard/tabs/actividad_tab.dart';
-import 'dashboard/constants/dashboard_colors.dart';
-import '../../services/session_cleanup.dart';
 
 class PantallaDashboard extends StatefulWidget {
   const PantallaDashboard({super.key});
@@ -17,8 +18,7 @@ class PantallaDashboard extends StatefulWidget {
   State<PantallaDashboard> createState() => _PantallaDashboardState();
 }
 
-class _PantallaDashboardState extends State<PantallaDashboard>
-    with SingleTickerProviderStateMixin {
+class _PantallaDashboardState extends State<PantallaDashboard> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late DashboardController _controller;
 
@@ -66,8 +66,8 @@ class _PantallaDashboardState extends State<PantallaDashboard>
             body: controller.loading
                 ? _buildCargando()
                 : controller.error != null
-                    ? _buildError(controller)
-                    : _buildContenido(),
+                ? _buildError(controller)
+                : _buildContenido(),
           );
         },
       ),
@@ -75,13 +75,7 @@ class _PantallaDashboardState extends State<PantallaDashboard>
   }
 
   Widget _buildContenido() {
-    return TabBarView(
-      controller: _tabController,
-      children: const [
-        ResumenTab(),
-        ActividadTab(),
-      ],
-    );
+    return TabBarView(controller: _tabController, children: const [ResumenTab(), ActividadTab()]);
   }
 
   Widget _buildCargando() {
@@ -89,7 +83,7 @@ class _PantallaDashboardState extends State<PantallaDashboard>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: DashboardColors.morado),
+          CircularProgressIndicator(color: Color.fromARGB(255, 39, 142, 176)),
           SizedBox(height: 16),
           Text('Cargando dashboard...'),
         ],
@@ -104,11 +98,7 @@ class _PantallaDashboardState extends State<PantallaDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: DashboardColors.rojo.withValues(alpha: 0.5),
-            ),
+            Icon(Icons.error_outline, size: 64, color: DashboardColors.rojo.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               controller.error!,
@@ -129,12 +119,9 @@ class _PantallaDashboardState extends State<PantallaDashboard>
 
   void _mostrarSeccionNoDisponible(String seccion) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$seccion estará disponible pronto'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$seccion estará disponible pronto'), behavior: SnackBarBehavior.floating));
   }
 
   Future<void> _cerrarSesion() async {
@@ -144,15 +131,10 @@ class _PantallaDashboardState extends State<PantallaDashboard>
         title: const Text('Cerrar Sesión'),
         content: const Text('¿Estás seguro que deseas cerrar sesión?'),
         actions: [
-          TextButton(
-            onPressed: () => Rutas.volver(context, false),
-            child: const Text('Cancelar'),
-          ),
+          TextButton(onPressed: () => Rutas.volver(context, false), child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Rutas.volver(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DashboardColors.rojo,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: DashboardColors.rojo),
             child: const Text('Cerrar Sesión'),
           ),
         ],

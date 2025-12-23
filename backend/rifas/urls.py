@@ -53,12 +53,23 @@ router.register(
 )
 
 # ============================================
+#  ENDPOINTS DIRECTOS PARA APP
+# ============================================
+
+rifa_mes_actual = RifaViewSet.as_view({"get": "mes_actual"})
+rifa_detalle = RifaViewSet.as_view({"get": "detalle"})
+rifa_participar = RifaViewSet.as_view({"post": "participar"})
+
+# ============================================
 #  URL PATTERNS
 # ============================================
 
 app_name = 'rifas'
 
 urlpatterns = [
+    path('mes-actual/', rifa_mes_actual, name='rifa-mes-actual'),
+    path('<uuid:pk>/detalle/', rifa_detalle, name='rifa-detalle'),
+    path('<uuid:pk>/participar/', rifa_participar, name='rifa-participar'),
     # Incluir todas las rutas del router
     path('', include(router.urls)),
 ]

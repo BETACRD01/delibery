@@ -76,10 +76,9 @@ class ProfileApi extends BaseApi {
     log('PATCH: Actualizar perfil');
 
     try {
-      final response = await client.patch(
-        ApiConfig.usuariosActualizarPerfil,
-        request.toJson(),
-      );
+      final payload = request.toJson();
+      log('Payload enviado: $payload'); // DIAGNÓSTICO: Ver qué se envía al backend
+      final response = await client.patch(ApiConfig.usuariosActualizarPerfil, payload);
 
       // El backend retorna {perfil: {...}}
       if (response.containsKey('perfil')) {

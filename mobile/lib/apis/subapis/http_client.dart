@@ -410,6 +410,17 @@ class ApiClient {
         }
 
         return _handleResponse(response);
+      } on ApiException catch (e) {
+        // No reintentar errores de validacion/permisos para preservar el mensaje del backend.
+        if (!e.isRecoverable) {
+          rethrow;
+        }
+        attempt++;
+        if (attempt >= ApiConfig.maxRetries) {
+          rethrow;
+        }
+        final delaySeconds = e.retryAfter ?? 2;
+        await Future.delayed(Duration(seconds: delaySeconds));
       } catch (e) {
         attempt++;
         if (attempt >= ApiConfig.maxRetries) {

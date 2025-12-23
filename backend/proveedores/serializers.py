@@ -150,6 +150,8 @@ class RepartidorListSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.SerializerMethodField()
     usuario_email = serializers.SerializerMethodField()
     usuario_id = serializers.IntegerField(source='user_id', read_only=True)
+    created_at = serializers.DateTimeField(source='creado_en', read_only=True)
+    updated_at = serializers.DateTimeField(source='actualizado_en', read_only=True)
     
     class Meta:
         model = Repartidor
@@ -189,6 +191,8 @@ class RepartidorDetalleSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.SerializerMethodField()
     usuario_email = serializers.SerializerMethodField()
     usuario_id = serializers.IntegerField(source='user_id', read_only=True)
+    created_at = serializers.DateTimeField(source='creado_en', read_only=True)
+    updated_at = serializers.DateTimeField(source='actualizado_en', read_only=True)
     
     class Meta:
         model = Repartidor

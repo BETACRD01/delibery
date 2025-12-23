@@ -206,6 +206,50 @@ class EmailService:
             user=user,
             include_unsubscribe=False
         )
+
+    @staticmethod
+    def enviar_rifa_ganada(user, rifa, premio=None, posicion=None):
+        """
+        Envía email al ganador de una rifa
+        """
+        if not user.puede_recibir_emails():
+            logger.info(f"Usuario {user.email} no puede recibir emails")
+            return False
+
+        premio_desc = premio.descripcion if premio else "Premio"
+        if posicion == 1:
+            posicion_label = "1er lugar"
+        elif posicion == 2:
+            posicion_label = "2do lugar"
+        elif posicion == 3:
+            posicion_label = "3er lugar"
+        else:
+            posicion_label = ""
+
+        subject = f'Ganaste la rifa: {rifa.titulo}'
+
+        html_content = f"""
+        <p>Hola {user.first_name or user.email},</p>
+        <p>Felicidades, ganaste la rifa "<strong>{rifa.titulo}</strong>".</p>
+        <p>Premio: <strong>{premio_desc}</strong> {posicion_label}</p>
+        <p>Nos pondremos en contacto contigo para coordinar la entrega.</p>
+        """
+
+        text_content = (
+            f"Hola {user.first_name or user.email},\n"
+            f'Felicidades, ganaste la rifa "{rifa.titulo}".\n'
+            f"Premio: {premio_desc} {posicion_label}\n"
+            "Nos pondremos en contacto contigo para coordinar la entrega."
+        )
+
+        return EmailService._send_email(
+            subject=subject,
+            to_email=user.email,
+            html_content=html_content,
+            text_content=text_content,
+            user=user,
+            include_unsubscribe=True,
+        )
     
     @staticmethod
     def enviar_confirmacion_baja(user):

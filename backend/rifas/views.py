@@ -20,12 +20,14 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from .models import Rifa, Participacion, EstadoRifa, Premio
+from .models import Rifa, Participacion, EstadoRifa, Premio, TipoSorteo
 from .serializers import (
     RifaListSerializer,
     RifaDetailSerializer,
     RifaWriteSerializer,
     RifaActivaAppSerializer,
+    RifaMesActualSerializer,
+    RifaDetalleAppSerializer,
     ParticipacionSerializer,
     ParticipacionSimpleSerializer,
     ElegibilidadSerializer,
@@ -116,6 +118,10 @@ class RifaViewSet(viewsets.ModelViewSet):
             return RifaWriteSerializer
         elif self.action == "activa":
             return RifaActivaAppSerializer
+        elif self.action == "mes_actual":
+            return RifaMesActualSerializer
+        elif self.action == "detalle":
+            return RifaDetalleAppSerializer
         elif self.action == "sortear":
             return SorteoResultadoSerializer
         elif self.action == "participantes":
@@ -253,15 +259,15 @@ class RifaViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """
         Eliminar rifa (solo admin)
-        Solo se pueden eliminar rifas canceladas
+        Solo se pueden eliminar rifas canceladas o finalizadas
         """
         instance = self.get_object()
 
-        if instance.estado != EstadoRifa.CANCELADA:
+        if instance.estado not in [EstadoRifa.CANCELADA, EstadoRifa.FINALIZADA]:
             return Response(
                 {
-                    "error": "Solo se pueden eliminar rifas canceladas",
-                    "detail": "Primero cancela la rifa antes de eliminarla",
+                    "error": "Solo se pueden eliminar rifas canceladas o finalizadas",
+                    "detail": "Cancela o finaliza la rifa antes de eliminarla",
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -299,6 +305,33 @@ class RifaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(rifa)
         return Response(serializer.data)
 
+    @action(detail=False, methods=["get"], url_path="mes-actual")
+    def mes_actual(self, request):
+        """
+        GET /api/rifas/mes-actual/
+
+        Lista rifas del mes actual (app)
+        """
+        ahora = timezone.localtime()
+        queryset = (
+            Rifa.objects.filter(mes=ahora.month, anio=ahora.year)
+            .prefetch_related("premios")
+            .order_by("-fecha_inicio")
+        )
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="detalle")
+    def detalle(self, request, pk=None):
+        """
+        GET /api/rifas/{id}/detalle/
+
+        Detalle de rifa con progreso del usuario
+        """
+        rifa = self.get_object()
+        serializer = self.get_serializer(rifa)
+        return Response(serializer.data)
+
     @action(detail=True, methods=["get"], url_path="elegibilidad")
     def elegibilidad(self, request, pk=None):
         """
@@ -332,11 +365,7 @@ class RifaViewSet(viewsets.ModelViewSet):
         rifa = self.get_object()
         ahora = timezone.now()
 
-        if (
-            rifa.estado != EstadoRifa.ACTIVA
-            or rifa.fecha_inicio > ahora
-            or rifa.fecha_fin < ahora
-        ):
+        if not rifa.esta_vigente(ahora):
             return Response(
                 {
                     "success": False,
@@ -402,21 +431,25 @@ class RifaViewSet(viewsets.ModelViewSet):
         rifa = self.get_object()
         rifa = Rifa.objects.select_for_update().get(pk=pk)
 
+        # Validar input
+        input_serializer = RealizarSorteoSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        forzar = input_serializer.validated_data.get("forzar", False)
+
         if (
-            rifa.tipo_sorteo == Rifa.TipoSorteo.MANUAL
+            rifa.tipo_sorteo == TipoSorteo.MANUAL
             and timezone.now() < rifa.fecha_fin
+            and not forzar
         ):
             return Response(
                 {
                     "success": False,
                     "error": "El sorteo manual solo puede realizarse después de la fecha de finalización de la rifa.",
+                    "puede_forzar": True,
+                    "fecha_fin": rifa.fecha_fin,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Validar input
-        input_serializer = RealizarSorteoSerializer(data=request.data)
-        input_serializer.is_valid(raise_exception=True)
 
         # Verificar estado
         if rifa.estado != EstadoRifa.ACTIVA:

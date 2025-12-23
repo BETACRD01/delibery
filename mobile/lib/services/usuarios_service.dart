@@ -33,6 +33,7 @@ class UsuarioService {
   EstadisticasModel? _estadisticasCache;
   Map<String, dynamic>? _rifasCache;
   Map<String, dynamic>? _rifaActivaCache;
+  List<Map<String, dynamic>>? _rifasMesCache;
   Map<String, bool>? _preferenciasNotificacionesCache;
 
   void _log(String message, {Object? error, StackTrace? stackTrace}) {
@@ -254,11 +255,42 @@ class UsuarioService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> obtenerRifasMesActual({
+    bool forzarRecarga = false,
+  }) async {
+    try {
+      if (!forzarRecarga && _rifasMesCache != null) return _rifasMesCache!;
+      final data = await _rifasUsuariosApi.obtenerRifasMesActual();
+      final payload = data['rifas'] ?? data['data'] ?? data;
+      final rifas = <Map<String, dynamic>>[];
+      if (payload is List) {
+        for (final item in payload) {
+          if (item is Map<String, dynamic>) rifas.add(item);
+        }
+      } else if (payload is Map<String, dynamic> && payload['id'] != null) {
+        rifas.add(payload);
+      }
+      _rifasMesCache = rifas;
+      return rifas;
+    } on ApiException {
+      rethrow;
+    } catch (e, stackTrace) {
+      _log('Error obteniendo rifas del mes', error: e, stackTrace: stackTrace);
+      throw ApiException(
+        statusCode: 0,
+        message: 'Error al obtener rifas del mes',
+        errors: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   Future<Map<String, dynamic>> participarEnRifa(String rifaId) async {
     try {
       final data = await _rifasUsuariosApi.participarEnRifa(rifaId);
       _rifaActivaCache = null;
       _rifasCache = null;
+      _rifasMesCache = null;
       return data;
     } on ApiException {
       rethrow;
@@ -267,6 +299,22 @@ class UsuarioService {
       throw ApiException(
         statusCode: 0,
         message: 'Error al participar en rifa',
+        errors: {'error': e.toString()},
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerDetalleRifa(String rifaId) async {
+    try {
+      return await _rifasUsuariosApi.obtenerDetalleRifa(rifaId);
+    } on ApiException {
+      rethrow;
+    } catch (e, stackTrace) {
+      _log('Error obteniendo detalle de rifa', error: e, stackTrace: stackTrace);
+      throw ApiException(
+        statusCode: 0,
+        message: 'Error al obtener detalle de rifa',
         errors: {'error': e.toString()},
         stackTrace: stackTrace,
       );
