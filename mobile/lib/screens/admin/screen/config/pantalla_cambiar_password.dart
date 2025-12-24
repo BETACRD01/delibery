@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../../../config/rutas.dart';
-import '../../../../services/auth_service.dart';
+import '../../../../services/auth/auth_service.dart';
 import '../../dashboard/constants/dashboard_colors.dart';
 import '../../../../apis/helpers/api_exception.dart';
 
@@ -147,10 +148,7 @@ class _PantallaCambiarPasswordAdminState extends State<PantallaCambiarPasswordAd
                       ? const SizedBox(
                           height: 16,
                           width: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CupertinoActivityIndicator(radius: 14),
                         )
                       : const Icon(Icons.lock_reset),
                   label: Text(_loading ? 'Actualizando...' : 'Actualizar contraseña'),

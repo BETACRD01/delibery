@@ -1,8 +1,9 @@
 // lib/screens/pantalla_router.dart
 
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../services/roles_service.dart';
+import 'package:flutter/cupertino.dart';
+import '../services/auth/auth_service.dart';
+import '../services/roles/roles_service.dart';
 import '../apis/subapis/http_client.dart';
 import './user/pantalla_inicio.dart'; 
 import './supplier/pantalla_inicio_proveedor.dart';
@@ -219,15 +220,10 @@ class _PantallaRouterState extends State<PantallaRouter> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Logo o Spinner
-            SizedBox(
+            const SizedBox(
               width: 50,
               height: 50,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Theme.of(context).primaryColor,
-                ),
-              ),
+              child: CupertinoActivityIndicator(radius: 20),
             ),
             const SizedBox(height: 24),
             // Texto informativo

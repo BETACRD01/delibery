@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/rutas.dart';
 import '../../providers/proveedor_pedido.dart';
-import '../../services/toast_service.dart';
+import '../../services/core/toast_service.dart';
 import '../../theme/jp_theme.dart';
 import 'inicio/pantalla_home.dart';
 import 'pedidos/pantalla_mis_pedidos.dart';

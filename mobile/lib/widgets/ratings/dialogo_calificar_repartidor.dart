@@ -2,7 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../services/pedido_service.dart';
+import '../../services/pedidos/pedido_service.dart';
 import 'star_rating_input.dart';
 
 /// Diálogo para calificar al repartidor después de un pedido

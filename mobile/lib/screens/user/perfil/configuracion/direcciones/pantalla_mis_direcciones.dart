@@ -18,8 +18,8 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 
 import '../../../../../apis/helpers/api_exception.dart';
 import '../../../../../models/usuario.dart';
-import '../../../../../services/toast_service.dart';
-import '../../../../../services/usuarios_service.dart';
+import '../../../../../services/core/toast_service.dart';
+import '../../../../../services/usuarios/usuarios_service.dart';
 import '../../../../../theme/app_colors_primary.dart';
 import '../../../../../theme/jp_theme.dart';
 

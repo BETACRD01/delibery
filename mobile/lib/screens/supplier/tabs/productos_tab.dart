@@ -1,10 +1,14 @@
 // lib/screens/supplier/tabs/productos_tab.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../config/api_config.dart';
 import '../../../controllers/supplier/supplier_controller.dart';
 import '../../../models/producto_model.dart';
+import '../product_detail_screen.dart';
+import '../product_edit_sheet.dart';
 import '../screens/pantalla_productos_proveedor.dart';
 
 /// Tab de productos - Diseño limpio y profesional
@@ -23,7 +27,9 @@ class _ProductosTabState extends State<ProductosTab> {
   final TextEditingController _searchController = TextEditingController();
   String _statusFilter = 'todos';
   bool _stockBajo = false;
+  bool _vistaAgrupada = true; // Vista por categorías habilitada por defecto
   final Set<String> _seleccionados = {};
+  final Set<String> _categoriasExpandidas = {}; // Categorías expandidas
 
   @override
   void dispose() {
@@ -62,10 +68,40 @@ class _ProductosTabState extends State<ProductosTab> {
 
   bool get _modoSeleccion => _seleccionados.isNotEmpty;
 
+  // Agrupa productos por categoría
+  Map<String, List<ProductoModel>> _agruparPorCategoria(
+    List<ProductoModel> productos,
+  ) {
+    final Map<String, List<ProductoModel>> grupos = {};
+    for (final producto in productos) {
+      final categoria = producto.categoriaNombre ?? 'Sin categoría';
+      grupos.putIfAbsent(categoria, () => []).add(producto);
+    }
+    // Ordenar categorías alfabéticamente
+    final sortedKeys = grupos.keys.toList()..sort();
+    return {for (var k in sortedKeys) k: grupos[k]!};
+  }
+
+  void _toggleCategoria(String categoria) {
+    setState(() {
+      if (_categoriasExpandidas.contains(categoria)) {
+        _categoriasExpandidas.remove(categoria);
+      } else {
+        _categoriasExpandidas.add(categoria);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SupplierController>(
       builder: (context, controller, child) {
+        // Primero verificar si está cargando - mostrar loader iOS
+        if (controller.loading) {
+          return const Center(child: CupertinoActivityIndicator(radius: 16));
+        }
+
+        // Luego verificar si la cuenta está verificada
         if (!controller.verificado) {
           return _buildEstadoVacio(
             icono: Icons.verified_user_outlined,
@@ -73,10 +109,6 @@ class _ProductosTabState extends State<ProductosTab> {
             mensaje: 'Tu cuenta debe ser verificada para agregar productos.',
             color: _alerta,
           );
-        }
-
-        if (controller.loading) {
-          return _buildSkeletons();
         }
 
         final productosFiltrados = _filtrarProductos(controller.productos);
@@ -96,10 +128,17 @@ class _ProductosTabState extends State<ProductosTab> {
                   const SizedBox(height: 12),
                   _buildFiltros(),
                   const SizedBox(height: 16),
-                  ...productosFiltrados.map(
-                    (producto) =>
-                        _buildProductoCard(context, controller, producto),
-                  ),
+                  if (_vistaAgrupada)
+                    ..._buildProductosPorCategoria(
+                      context,
+                      controller,
+                      productosFiltrados,
+                    )
+                  else
+                    ...productosFiltrados.map(
+                      (producto) =>
+                          _buildProductoCard(context, controller, producto),
+                    ),
                   const SizedBox(height: 80),
                 ],
               ),
@@ -111,6 +150,30 @@ class _ProductosTabState extends State<ProductosTab> {
                 right: 16,
                 child: _buildAccionesMasivas(controller),
               ),
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: FloatingActionButton(
+                onPressed: () async {
+                  final result = await showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.9,
+                      child: const ProductEditSheet(),
+                    ),
+                  );
+                  if (result == true) {
+                    if (context.mounted) {
+                      await controller.refrescarProductos();
+                    }
+                  }
+                },
+                backgroundColor: const Color(0xFF6366F1),
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
+            ),
           ],
         );
       },
@@ -136,7 +199,22 @@ class _ProductosTabState extends State<ProductosTab> {
         ),
         const SizedBox(width: 10),
         InkWell(
-          onTap: () => _irAGestionProductos(context),
+          onTap: () async {
+            final result = await showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => SizedBox(
+                height: MediaQuery.of(context).size.height * 0.9,
+                child: const ProductEditSheet(),
+              ),
+            );
+            if (result == true) {
+              if (mounted) {
+                await context.read<SupplierController>().refrescarProductos();
+              }
+            }
+          },
           borderRadius: BorderRadius.circular(12),
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -155,32 +233,153 @@ class _ProductosTabState extends State<ProductosTab> {
   }
 
   Widget _buildFiltros() {
-    return Wrap(
-      runSpacing: 8,
-      spacing: 8,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ChoiceChip(
-          label: const Text('Todos'),
-          selected: _statusFilter == 'todos',
-          onSelected: (_) => setState(() => _statusFilter = 'todos'),
+        Wrap(
+          runSpacing: 8,
+          spacing: 8,
+          children: [
+            ChoiceChip(
+              label: const Text('Todos'),
+              selected: _statusFilter == 'todos',
+              onSelected: (_) => setState(() => _statusFilter = 'todos'),
+            ),
+            ChoiceChip(
+              label: const Text('Activos'),
+              selected: _statusFilter == 'activos',
+              onSelected: (_) => setState(() => _statusFilter = 'activos'),
+            ),
+            ChoiceChip(
+              label: const Text('Agotados'),
+              selected: _statusFilter == 'agotados',
+              onSelected: (_) => setState(() => _statusFilter = 'agotados'),
+            ),
+            FilterChip(
+              label: const Text('Stock bajo'),
+              selected: _stockBajo,
+              onSelected: (value) => setState(() => _stockBajo = value),
+            ),
+          ],
         ),
-        ChoiceChip(
-          label: const Text('Activos'),
-          selected: _statusFilter == 'activos',
-          onSelected: (_) => setState(() => _statusFilter = 'activos'),
-        ),
-        ChoiceChip(
-          label: const Text('Agotados'),
-          selected: _statusFilter == 'agotados',
-          onSelected: (_) => setState(() => _statusFilter = 'agotados'),
-        ),
-        FilterChip(
-          label: const Text('Stock bajo'),
-          selected: _stockBajo,
-          onSelected: (value) => setState(() => _stockBajo = value),
+        const SizedBox(height: 12),
+        // Toggle vista agrupada/lista
+        Row(
+          children: [
+            Icon(
+              _vistaAgrupada ? Icons.folder_outlined : Icons.list,
+              size: 18,
+              color: _textoSecundario,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _vistaAgrupada ? 'Por categoría' : 'Lista plana',
+              style: const TextStyle(fontSize: 13, color: _textoSecundario),
+            ),
+            const Spacer(),
+            Switch.adaptive(
+              value: _vistaAgrupada,
+              onChanged: (v) => setState(() => _vistaAgrupada = v),
+              activeTrackColor: _exito,
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  // Genera secciones de productos agrupados por categoría
+  List<Widget> _buildProductosPorCategoria(
+    BuildContext context,
+    SupplierController controller,
+    List<ProductoModel> productos,
+  ) {
+    final grupos = _agruparPorCategoria(productos);
+    final widgets = <Widget>[];
+
+    // Si no hay categorías expandidas, expandir todas por defecto
+    if (_categoriasExpandidas.isEmpty && grupos.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _categoriasExpandidas.addAll(grupos.keys);
+        });
+      });
+    }
+
+    for (final entry in grupos.entries) {
+      final categoria = entry.key;
+      final prods = entry.value;
+      final expandida = _categoriasExpandidas.contains(categoria);
+
+      // Header de categoría
+      widgets.add(
+        GestureDetector(
+          onTap: () => _toggleCategoria(categoria),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _exito.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.folder, color: _exito, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        categoria,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      Text(
+                        '${prods.length} producto${prods.length != 1 ? 's' : ''}',
+                        style: TextStyle(fontSize: 12, color: _textoSecundario),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  expandida ? Icons.expand_less : Icons.expand_more,
+                  color: _textoSecundario,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Productos de la categoría (si está expandida)
+      if (expandida) {
+        for (final producto in prods) {
+          widgets.add(_buildProductoCard(context, controller, producto));
+        }
+      }
+
+      widgets.add(const SizedBox(height: 8));
+    }
+
+    return widgets;
   }
 
   Widget _buildProductoCard(
@@ -196,7 +395,17 @@ class _ProductosTabState extends State<ProductosTab> {
           _toggleSeleccion(producto.id);
           return;
         }
-        _irAGestionProductos(context);
+        Navigator.of(context)
+            .push(
+              MaterialPageRoute(
+                builder: (_) => ProductDetailScreen(productId: producto.id),
+              ),
+            )
+            .then((_) async {
+              if (context.mounted) {
+                await controller.refrescarProductos();
+              }
+            }); // Recargar lista al volver
       },
       child: Dismissible(
         key: ValueKey(producto.id),
@@ -237,7 +446,10 @@ class _ProductosTabState extends State<ProductosTab> {
             ],
           ),
           child: ListTile(
-            leading: _buildImagenProducto(producto.imagenUrl),
+            leading: _buildImagenProducto(
+              producto.imagenUrl,
+              heroTag: 'producto-${producto.id}',
+            ),
             title: Text(
               producto.nombre,
               style: const TextStyle(fontWeight: FontWeight.w600),
@@ -255,15 +467,10 @@ class _ProductosTabState extends State<ProductosTab> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    if (producto.stock != null)
-                      Text(
-                        'Stock: ${producto.stock}',
-                        style: const TextStyle(
-                          color: _textoSecundario,
-                          fontSize: 12,
-                        ),
-                      ),
-                    const SizedBox(width: 8),
+                    if (producto.stock != null) ...[
+                      _buildStockBadge(producto.stock!),
+                      const SizedBox(width: 8),
+                    ],
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
@@ -308,7 +515,7 @@ class _ProductosTabState extends State<ProductosTab> {
     );
   }
 
-  Widget _buildImagenProducto(String? imagen) {
+  Widget _buildImagenProducto(String? imagen, {required String heroTag}) {
     String? urlCompleta;
     if (imagen != null && imagen.isNotEmpty) {
       urlCompleta = imagen.startsWith('http')
@@ -316,22 +523,39 @@ class _ProductosTabState extends State<ProductosTab> {
           : '${ApiConfig.baseUrl}$imagen';
     }
 
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: urlCompleta != null
-            ? Image.network(
-                urlCompleta,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildPlaceholder(),
-              )
-            : _buildPlaceholder(),
+    return Hero(
+      tag: heroTag,
+      flightShuttleBuilder:
+          (
+            BuildContext flightContext,
+            Animation<double> animation,
+            HeroFlightDirection flightDirection,
+            BuildContext fromHeroContext,
+            BuildContext toHeroContext,
+          ) {
+            // Mantener el estilo del destino durante el vuelo para evitar bordes amarillos
+            return Material(
+              type: MaterialType.transparency,
+              child: toHeroContext.widget,
+            );
+          },
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: urlCompleta != null
+              ? Image.network(
+                  urlCompleta,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => _buildPlaceholder(),
+                )
+              : _buildPlaceholder(),
+        ),
       ),
     );
   }
@@ -342,23 +566,6 @@ class _ProductosTabState extends State<ProductosTab> {
     );
   }
 
-  Widget _buildSkeletons() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 4,
-      itemBuilder: (context, index) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          height: 90,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(14),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildEmpty(BuildContext context, SupplierController controller) {
     return _buildEstadoVacio(
       icono: Icons.inventory_2_outlined,
@@ -366,7 +573,7 @@ class _ProductosTabState extends State<ProductosTab> {
       mensaje: 'Agrega tu primer producto para comenzar a vender.',
       color: _textoSecundario,
       accion: FilledButton.icon(
-        onPressed: () => _irAGestionProductos(context),
+        onPressed: () async => _irAGestionProductos(context),
         icon: const Icon(Icons.add, size: 18),
         label: const Text('Crear producto'),
       ),
@@ -405,6 +612,57 @@ class _ProductosTabState extends State<ProductosTab> {
             if (accion != null) ...[const SizedBox(height: 24), accion],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStockBadge(int stock) {
+    // Determinar el color y el ícono según el nivel de stock
+    Color badgeColor;
+    IconData icon;
+    String text;
+
+    if (stock == 0) {
+      badgeColor = Colors.red;
+      icon = Icons.warning_rounded;
+      text = 'Agotado';
+    } else if (stock <= 5) {
+      badgeColor = _alerta;
+      icon = Icons.error_outline_rounded;
+      text = 'Stock: $stock';
+    } else if (stock <= 10) {
+      badgeColor = const Color(0xFF3B82F6); // Azul
+      icon = Icons.inventory_2_outlined;
+      text = 'Stock: $stock';
+    } else {
+      badgeColor = _exito;
+      icon = Icons.check_circle_outline_rounded;
+      text = 'Stock: $stock';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: stock <= 5
+            ? Border.all(color: badgeColor.withValues(alpha: 0.3), width: 1)
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: badgeColor),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: badgeColor,
+            ),
+          ),
+        ],
       ),
     );
   }

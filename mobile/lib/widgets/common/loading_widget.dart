@@ -1,6 +1,6 @@
 // lib/widgets/common/loading_widget.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../theme/jp_theme.dart';
 
 /// Widget reutilizable para estados de carga
@@ -22,10 +22,7 @@ class LoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            color: color ?? JPColors.primary,
-            strokeWidth: 3,
-          ),
+          CupertinoActivityIndicator(radius: 14),
           if (showMessage) ...[
             const SizedBox(height: 16),
             Text(
@@ -58,10 +55,7 @@ class LoadingSmall extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CircularProgressIndicator(
-        color: color ?? JPColors.primary,
-        strokeWidth: 2,
-      ),
+      child: CupertinoActivityIndicator(radius: 14),
     );
   }
 }

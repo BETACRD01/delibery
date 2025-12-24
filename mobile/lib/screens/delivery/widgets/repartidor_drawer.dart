@@ -2,6 +2,7 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../../models/repartidor.dart';
 import '../../../widgets/role/role_selector_modal.dart';
@@ -270,12 +271,7 @@ class RepartidorDrawer extends StatelessWidget {
                           color: Colors.white24,
                           shape: BoxShape.circle,
                         ),
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
+                        child: const CupertinoActivityIndicator(radius: 14),
                       ),
                       errorWidget: (context, url, error) => Container(
                         width: 56,

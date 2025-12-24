@@ -1,7 +1,7 @@
 // lib/providers/proveedor_roles.dart
 import 'package:flutter/material.dart';
-import '../services/roles_service.dart';
-import '../services/auth_service.dart';
+import '../services/roles/roles_service.dart';
+import '../services/auth/auth_service.dart';
 
 // ============================================================================
 // PROVEEDOR ROLES

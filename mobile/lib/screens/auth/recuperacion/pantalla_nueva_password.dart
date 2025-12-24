@@ -1,7 +1,8 @@
 // lib/screens/auth/pantalla_nueva_password.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../../services/auth_service.dart';
+import '../../../services/auth/auth_service.dart';
 import '../../../config/rutas.dart';
 import '../../../apis/helpers/api_exception.dart';
 import '../../../services/core/validation/validators.dart';
@@ -399,13 +400,9 @@ Future<void> _cambiarPassword() async {
                 ),
               ),
               child: _loading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
+                  ? const CupertinoActivityIndicator(
+                      color: Colors.white,
+                      radius: 10,
                     )
                   : const Text(
                       'Cambiar Contraseña',
@@ -482,7 +479,7 @@ Future<void> _cambiarPassword() async {
         const SizedBox(height: 40),
 
         // Indicador de carga
-        const Center(child: CircularProgressIndicator()),
+        const Center(child: CupertinoActivityIndicator(radius: 14)),
         const SizedBox(height: 16),
         Text(
           'Redirigiendo al login...',

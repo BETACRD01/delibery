@@ -1,8 +1,9 @@
 // lib/screens/delivery/configuracion/pantalla_configuracion_repartidor.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
-import '../../../services/usuarios_service.dart';
+import '../../../services/usuarios/usuarios_service.dart';
 
 /// ⚙️ Pantalla de Configuración del Repartidor con lenguaje visual iOS.
 class PantallaConfiguracionRepartidor extends StatefulWidget {
@@ -115,7 +116,7 @@ class _PantallaConfiguracionRepartidorState
       ),
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CupertinoActivityIndicator(radius: 14))
             : CustomScrollView(
                 physics: const BouncingScrollPhysics(),
                 slivers: [

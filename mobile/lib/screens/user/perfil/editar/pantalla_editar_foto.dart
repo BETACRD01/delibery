@@ -2,9 +2,10 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../theme/jp_theme.dart';
-import '../../../../services/usuarios_service.dart';
+import '../../../../services/usuarios/usuarios_service.dart';
 import '../../../../apis/helpers/api_exception.dart';
 
 /// 📸 Pantalla para cambiar foto de perfil
@@ -189,10 +190,7 @@ class _PantallaEditarFotoState extends State<PantallaEditarFoto> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                        child: CupertinoActivityIndicator(radius: 14),
                       )
                     : const Icon(Icons.check_rounded),
                 label: Text(_guardando ? 'Guardando...' : 'Guardar Cambios'),

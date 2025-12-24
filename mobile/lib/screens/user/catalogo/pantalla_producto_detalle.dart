@@ -12,8 +12,8 @@ import '../../../../../theme/app_colors_primary.dart';
 import '../../../../../theme/app_colors_support.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/producto_model.dart';
-import '../../../services/productos_service.dart';
-import '../../../services/toast_service.dart';
+import '../../../services/productos/productos_service.dart';
+import '../../../services/core/toast_service.dart';
 import '../../../widgets/ratings/star_rating_display.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 
@@ -598,13 +598,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
+                        child: CupertinoActivityIndicator(radius: 14), )
                     : const Icon(Icons.shopping_cart),
                 label: Text(
                   _loading ? 'Agregando...' : 'Agregar al carrito',

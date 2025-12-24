@@ -1,7 +1,7 @@
 // lib/controllers/user/categoria_super_controller.dart
 
 import 'package:flutter/material.dart';
-import '../../services/super_service.dart';
+import '../../services/usuarios/super_service.dart';
 
 /// Controller para gestionar los datos de una categoría Super específica
 class CategoriaSuperController extends ChangeNotifier {

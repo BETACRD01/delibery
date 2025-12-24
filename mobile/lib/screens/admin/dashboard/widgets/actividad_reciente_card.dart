@@ -1,5 +1,6 @@
 // lib/screens/admin/dashboard/widgets/actividad_reciente_card.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../../apis/admin/acciones_admin_api.dart';
 import '../constants/dashboard_colors.dart';
 
@@ -66,7 +67,7 @@ class _ActividadRecienteCardState extends State<ActividadRecienteCard> {
             ),
             const SizedBox(height: 12),
             if (_loading)
-              const Center(child: CircularProgressIndicator())
+              const Center(child: CupertinoActivityIndicator(radius: 14))
             else if (_error != null)
               Text(_error!, style: const TextStyle(color: DashboardColors.rojo))
             else if (_items.isEmpty)

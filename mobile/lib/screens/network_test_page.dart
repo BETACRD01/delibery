@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import '../config/api_config.dart';
 import '../config/network_initializer.dart';
@@ -66,7 +67,7 @@ class _NetworkTestPageState extends State<NetworkTestPage> {
             ),
             onPressed: _isLoading ? null : _testConnection,
             icon: _isLoading 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                ? const SizedBox(width: 20, height: 20, child: CupertinoActivityIndicator(radius: 14))
                 : const Icon(Icons.wifi_find),
             label: Text(_isLoading ? 'Probando...' : 'Probar Conexion'),
           ),

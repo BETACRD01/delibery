@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import '../../models/categoria_model.dart';
 import '../../models/promocion_model.dart';
 import '../../models/producto_model.dart';
-import '../../services/productos_service.dart';
-import '../../services/usuarios_service.dart';
+import '../../services/productos/productos_service.dart';
+import '../../services/usuarios/usuarios_service.dart';
 
 /// Controller para la pantalla Home
 /// Maneja el estado y la lógica de negocio

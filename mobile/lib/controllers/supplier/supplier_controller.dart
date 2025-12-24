@@ -1,16 +1,18 @@
 // lib/controllers/supplier/supplier_controller.dart
 
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../services/proveedor_service.dart';
-import '../../models/proveedor.dart';
+
+import '../../apis/dtos/user/requests/update_profile_request.dart';
 import '../../apis/helpers/api_exception.dart';
 import '../../apis/resources/users/profile_api.dart';
-import '../../apis/dtos/user/requests/update_profile_request.dart';
-import '../../services/productos_service.dart';
 import '../../models/producto_model.dart';
 import '../../models/promocion_model.dart';
+import '../../models/proveedor.dart';
+import '../../services/auth/auth_service.dart';
+import '../../services/productos/productos_service.dart';
+import '../../services/proveedor/proveedor_service.dart';
 
 /// Controller para gestionar la pantalla del proveedor
 /// ✅ ACTUALIZADO: Manejo mejorado de errores 401
@@ -37,9 +39,9 @@ class SupplierController extends ChangeNotifier {
     AuthService? authService,
     ProveedorService? proveedorService,
     ProfileApi? profileApi,
-  })  : _authService = authService ?? AuthService(),
-        _proveedorService = proveedorService ?? ProveedorService(),
-        _profileApi = profileApi ?? ProfileApi();
+  }) : _authService = authService ?? AuthService(),
+       _proveedorService = proveedorService ?? ProveedorService(),
+       _profileApi = profileApi ?? ProfileApi();
 
   // ============================================
   // GETTERS - ESTADO PRINCIPAL
@@ -211,7 +213,12 @@ class SupplierController extends ChangeNotifier {
   // ============================================
 
   /// Actualiza los datos de contacto del usuario asociado al proveedor
-  Future<bool> actualizarDatosContacto({String? email, String? firstName, String? lastName, String? telefono}) async {
+  Future<bool> actualizarDatosContacto({
+    String? email,
+    String? firstName,
+    String? lastName,
+    String? telefono,
+  }) async {
     // Validar que al menos un campo esté presente
     if ((email == null || email.isEmpty) &&
         (firstName == null || firstName.isEmpty) &&
@@ -228,12 +235,18 @@ class SupplierController extends ChangeNotifier {
 
     try {
       debugPrint('Actualizando mis datos de contacto...');
-      debugPrint('Email: $email, Nombre: $firstName, Apellido: $lastName, Teléfono: $telefono');
+      debugPrint(
+        'Email: $email, Nombre: $firstName, Apellido: $lastName, Teléfono: $telefono',
+      );
 
       // Actualizar contacto usando el endpoint público
       // OPTIMIZACIÓN: Solo llamar si hay datos de perfil de usuario para editar
       if (email != null || firstName != null || lastName != null) {
-        _proveedor = await _proveedorService.editarMiContacto(email: email, firstName: firstName, lastName: lastName);
+        _proveedor = await _proveedorService.editarMiContacto(
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+        );
       }
 
       // Actualizar teléfono si viene y es diferente
@@ -249,8 +262,12 @@ class SupplierController extends ChangeNotifier {
         // DIAGNÓSTICO E/3: Verificación post-update y Prueba Definitiva
         // Si el backend devuelve el objeto actualizado, verificamos si el cambio se aplicó
         if (_proveedor?.celularActual != telefono) {
-          debugPrint('⚠️ ALERTA: El teléfono no se actualizó en la respuesta inmediata.');
-          debugPrint('Valor esperado: $telefono | Valor recibido: ${_proveedor?.celularActual}');
+          debugPrint(
+            '⚠️ ALERTA: El teléfono no se actualizó en la respuesta inmediata.',
+          );
+          debugPrint(
+            'Valor esperado: $telefono | Valor recibido: ${_proveedor?.celularActual}',
+          );
         } else {
           debugPrint('✅ Teléfono actualizado y verificado correctamente.');
         }
@@ -411,7 +428,9 @@ class SupplierController extends ChangeNotifier {
       _error = 'No tienes permisos para realizar esta acción';
     } else if (e.statusCode == 400) {
       // El mensaje del backend suele ser descriptivo en errores 400
-      _error = e.message.isNotEmpty ? e.message : 'Los datos proporcionados no son válidos';
+      _error = e.message.isNotEmpty
+          ? e.message
+          : 'Los datos proporcionados no son válidos';
     } else if (e.statusCode >= 500) {
       _error = 'Error en el servidor. Intenta nuevamente más tarde';
     } else {
@@ -450,7 +469,10 @@ class SupplierController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final producto = await _productosService.crearProducto(data, imagen: imagen);
+      final producto = await _productosService.crearProducto(
+        data,
+        imagen: imagen,
+      );
       _productos.insert(0, producto);
       _procesandoProducto = false;
       notifyListeners();
@@ -477,7 +499,10 @@ class SupplierController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final promocion = await _productosService.crearPromocion(data, imagen: imagen);
+      final promocion = await _productosService.crearPromocion(
+        data,
+        imagen: imagen,
+      );
       _promociones.insert(0, promocion);
       _procesandoPromocion = false;
       notifyListeners();
@@ -486,6 +511,45 @@ class SupplierController extends ChangeNotifier {
       _handleApiException(e, contexto: 'crear_promocion');
     } catch (e) {
       _error = 'Error creando promoción: $e';
+    }
+    _procesandoPromocion = false;
+    notifyListeners();
+    return false;
+  }
+
+  Future<bool> editarPromocion(
+    int id,
+    Map<String, dynamic> data, {
+    File? imagen,
+  }) async {
+    if (_proveedor == null) {
+      _error = 'No se encontró tu perfil como proveedor';
+      notifyListeners();
+      return false;
+    }
+
+    _procesandoPromocion = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final promocion = await _productosService.actualizarPromocion(
+        id,
+        data,
+        imagen: imagen,
+      );
+      // Actualizar en la lista local
+      final index = _promociones.indexWhere((p) => p.id == id.toString());
+      if (index >= 0) {
+        _promociones[index] = promocion;
+      }
+      _procesandoPromocion = false;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _handleApiException(e, contexto: 'editar_promocion');
+    } catch (e) {
+      _error = 'Error editando promoción: $e';
     }
     _procesandoPromocion = false;
     notifyListeners();
@@ -511,8 +575,12 @@ class SupplierController extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final promocion = await _productosService.actualizarPromocion(id, {'activa': activa ? 'true' : 'false'});
-      final index = _promociones.indexWhere((promo) => promo.id == id.toString());
+      final promocion = await _productosService.actualizarPromocion(id, {
+        'activa': activa ? 'true' : 'false',
+      });
+      final index = _promociones.indexWhere(
+        (promo) => promo.id == id.toString(),
+      );
       if (index >= 0) {
         _promociones[index] = promocion;
       }
@@ -584,7 +652,9 @@ class SupplierController extends ChangeNotifier {
   Future<void> _cargarProductosProveedor() async {
     if (_proveedor == null) return;
     try {
-      final lista = await _productosService.obtenerProductos(proveedorId: _proveedor!.id.toString());
+      final lista = await _productosService.obtenerProductos(
+        proveedorId: _proveedor!.id.toString(),
+      );
       _productos
         ..clear()
         ..addAll(lista);
@@ -597,9 +667,13 @@ class SupplierController extends ChangeNotifier {
   Future<void> _cargarPromocionesProveedor() async {
     if (_proveedor == null) return;
     try {
-      final lista = await _productosService.obtenerPromocionesPorProveedor(_proveedor!.id.toString());
+      final lista = await _productosService.obtenerPromocionesPorProveedor(
+        _proveedor!.id.toString(),
+      );
       final idProveedor = _proveedor!.id.toString();
-      final soloMias = lista.where((p) => p.proveedorId == idProveedor).toList();
+      final soloMias = lista
+          .where((p) => p.proveedorId == idProveedor)
+          .toList();
       _promociones
         ..clear()
         ..addAll(soloMias);

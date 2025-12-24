@@ -1,20 +1,30 @@
-// lib/screens/supplier/screens/perfil_proveedor_editable.dart
+// lib/screens/supplier/perfil/perfil_proveedor_panel.dart
 
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
-import '../../../config/api_config.dart';
-import '../../../controllers/supplier/supplier_controller.dart';
-import '../../../widgets/ratings/rating_summary_card.dart';
 
-/// Panel de perfil del proveedor - Diseño profesional y limpio
+import '../../../config/api_config.dart';
+import '../../../config/rutas.dart';
+import '../../../controllers/supplier/supplier_controller.dart';
+import '../../../services/auth/session_cleanup.dart';
+import '../../../theme/app_colors_primary.dart';
+import '../../../widgets/ratings/rating_summary_card.dart';
+import '../../../widgets/role/role_selector_modal.dart';
+import '../screens/pantalla_ayuda_proveedor.dart';
+import '../screens/pantalla_configuracion_proveedor.dart';
+
+/// Panel de perfil del proveedor - Diseño iOS nativo
 class PerfilProveedorEditable extends StatefulWidget {
   const PerfilProveedorEditable({super.key});
 
   @override
-  State<PerfilProveedorEditable> createState() => _PerfilProveedorEditableState();
+  State<PerfilProveedorEditable> createState() =>
+      _PerfilProveedorEditableState();
 }
 
 class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
@@ -41,12 +51,6 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
   String? _tipoProveedorSeleccionado;
   File? _logoSeleccionado;
 
-  // Colores profesionales
-  static const Color _primario = Color(0xFF1E88E5);
-  static const Color _exito = Color(0xFF10B981);
-  static const Color _peligro = Color(0xFFEF4444);
-  static const Color _textoSecundario = Color(0xFF6B7280);
-
   @override
   void initState() {
     super.initState();
@@ -72,7 +76,9 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
     final controller = context.read<SupplierController>();
 
     _nombreController = TextEditingController(text: controller.nombreNegocio);
-    _descripcionController = TextEditingController(text: controller.proveedor?.descripcion ?? '');
+    _descripcionController = TextEditingController(
+      text: controller.proveedor?.descripcion ?? '',
+    );
     _direccionController = TextEditingController(text: controller.direccion);
     _ciudadController = TextEditingController(text: controller.ciudad);
     _horarioAperturaController = TextEditingController(
@@ -84,9 +90,12 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
     _rucController = TextEditingController(text: controller.ruc);
     _tipoProveedorSeleccionado = controller.proveedor?.tipoProveedor;
     _emailController = TextEditingController(text: controller.email);
-    _nombreCompletoController = TextEditingController(text: controller.nombreCompleto);
-    _telefonoController =
-        TextEditingController(text: _formatearTelefonoParaMostrar(controller.telefono));
+    _nombreCompletoController = TextEditingController(
+      text: controller.nombreCompleto,
+    );
+    _telefonoController = TextEditingController(
+      text: _formatearTelefonoParaMostrar(controller.telefono),
+    );
     _telefonoCompleto = controller.telefono;
   }
 
@@ -95,14 +104,921 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
     return hora.length >= 5 ? hora.substring(0, 5) : hora;
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CupertinoColors.systemGroupedBackground,
+      body: Consumer<SupplierController>(
+        builder: (context, controller, child) {
+          if (controller.loading) {
+            return const Center(child: CupertinoActivityIndicator(radius: 14));
+          }
+
+          return CustomScrollView(
+            physics: const ClampingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(child: _buildHeader(controller)),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // Calificaciones
+                    _buildRatingsSection(controller),
+
+                    // Sección NEGOCIO
+                    _buildSectionHeader('NEGOCIO'),
+                    _buildNegocioCard(controller),
+
+                    const SizedBox(height: 24),
+
+                    // Sección CONTACTO
+                    _buildSectionHeader('CONTACTO'),
+                    _buildContactoCard(controller),
+
+                    const SizedBox(height: 24),
+
+                    // Sección UBICACIÓN
+                    _buildSectionHeader('UBICACIÓN'),
+                    _buildUbicacionCard(controller),
+
+                    const SizedBox(height: 24),
+
+                    // Sección HORARIOS
+                    _buildSectionHeader('HORARIOS'),
+                    _buildHorariosCard(controller),
+
+                    // Error message
+                    if (_error != null) _buildErrorBanner(),
+
+                    // Botones de edición
+                    if (_editando) ...[
+                      const SizedBox(height: 24),
+                      _buildBotonesEdicion(),
+                    ],
+
+                    const SizedBox(height: 24),
+
+                    // Sección CAMBIAR ROL
+                    _buildSectionHeader('CAMBIAR ROL'),
+                    _buildSettingsCard([
+                      _buildSettingsTile(
+                        icon: CupertinoIcons.arrow_right_arrow_left,
+                        iconBgColor: const Color(0xFFAF52DE),
+                        title: 'Cambiar Rol',
+                        subtitle: 'Cliente / Repartidor',
+                        onTap: () => showRoleSelectorModal(context),
+                      ),
+                    ]),
+
+                    const SizedBox(height: 24),
+
+                    // Sección AJUSTES
+                    _buildSectionHeader('AJUSTES'),
+                    _buildSettingsCard([
+                      _buildSettingsTile(
+                        icon: CupertinoIcons.gear,
+                        iconBgColor: const Color(0xFF8E8E93),
+                        title: 'Configuración',
+                        onTap: () => Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (_) =>
+                                const PantallaConfiguracionProveedor(),
+                          ),
+                        ),
+                      ),
+                      _buildDivider(),
+                      _buildSettingsTile(
+                        icon: CupertinoIcons.question_circle_fill,
+                        iconBgColor: const Color(0xFF5856D6),
+                        title: 'Ayuda y soporte',
+                        onTap: () => Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (_) => const PantallaAyudaProveedor(),
+                          ),
+                        ),
+                      ),
+                      _buildDivider(),
+                      _buildSettingsTile(
+                        icon: CupertinoIcons.square_arrow_left,
+                        iconBgColor: CupertinoColors.systemRed,
+                        title: 'Cerrar Sesión',
+                        onTap: _cerrarSesion,
+                      ),
+                    ]),
+                  ]),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeader(SupplierController controller) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGroupedBackground.resolveFrom(context),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // Top bar with title and edit button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 50),
+                  Text(
+                    'Mi Perfil',
+                    style: TextStyle(
+                      color: CupertinoColors.label.resolveFrom(context),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (!_editando)
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      child: const Text(
+                        'Editar',
+                        style: TextStyle(
+                          color: AppColorsPrimary.main,
+                          fontSize: 17,
+                        ),
+                      ),
+                      onPressed: () => setState(() => _editando = true),
+                    )
+                  else
+                    const SizedBox(width: 50),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Profile card
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemBackground.resolveFrom(context),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Logo
+                  GestureDetector(
+                    onTap: _editando ? _seleccionarLogo : null,
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColorsPrimary.main,
+                                AppColorsPrimary.main.withValues(alpha: 0.8),
+                              ],
+                            ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: _buildLogoImage(controller),
+                          ),
+                        ),
+                        if (_editando)
+                          Positioned(
+                            right: -2,
+                            bottom: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: AppColorsPrimary.main,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                CupertinoIcons.camera_fill,
+                                size: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 14),
+
+                  // Business name and email
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          controller.nombreNegocio.isNotEmpty
+                              ? controller.nombreNegocio
+                              : 'Mi Negocio',
+                          style: TextStyle(
+                            color: CupertinoColors.label.resolveFrom(context),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          controller.email.isNotEmpty
+                              ? controller.email
+                              : 'Sin email',
+                          style: TextStyle(
+                            color: CupertinoColors.secondaryLabel.resolveFrom(
+                              context,
+                            ),
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (controller.verificado) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: CupertinoColors.activeGreen,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.checkmark_seal_fill,
+                                  size: 10,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Verificado',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoImage(SupplierController controller) {
+    if (_logoSeleccionado != null) {
+      return ClipOval(
+        child: Image.file(
+          _logoSeleccionado!,
+          width: 64,
+          height: 64,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    final logoUrl = controller.logo;
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      final url = logoUrl.startsWith('http')
+          ? logoUrl
+          : '${ApiConfig.baseUrl}$logoUrl';
+      if (_logoUrlCaido != url) {
+        return ClipOval(
+          child: Image.network(
+            url,
+            width: 64,
+            height: 64,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _logoUrlCaido = url);
+              });
+              return _buildLogoPlaceholder();
+            },
+          ),
+        );
+      }
+    }
+
+    return _buildLogoPlaceholder();
+  }
+
+  Widget _buildLogoPlaceholder() {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemGrey5.resolveFrom(context),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        CupertinoIcons.building_2_fill,
+        size: 28,
+        color: CupertinoColors.systemGrey.resolveFrom(context),
+      ),
+    );
+  }
+
+  Widget _buildRatingsSection(SupplierController controller) {
+    final valoracion = controller.valoracionPromedio;
+    final totalResenas = controller.totalResenas;
+
+    if (totalResenas == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: CompactRatingSummaryCard(
+        averageRating: valoracion,
+        totalReviews: totalResenas,
+        subtitle: 'Calificación promedio del negocio',
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: CupertinoColors.systemGrey.resolveFrom(context),
+            letterSpacing: -0.08,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required Color iconBgColor,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Icon(icon, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: CupertinoColors.label,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_forward,
+              size: 14,
+              color: CupertinoColors.systemGrey3.resolveFrom(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 60),
+      child: Container(
+        height: 0.5,
+        color: CupertinoColors.separator.resolveFrom(context),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // SECCIONES DE DATOS
+  // ---------------------------------------------------------------------------
+
+  Widget _buildNegocioCard(SupplierController controller) {
+    return _buildSettingsCard([
+      _buildInfoTile(
+        icon: CupertinoIcons.building_2_fill,
+        iconBgColor: const Color(0xFF007AFF),
+        label: 'Nombre',
+        value: _nombreController.text,
+        controller: _nombreController,
+      ),
+      _buildDivider(),
+      _buildInfoTile(
+        icon: CupertinoIcons.number,
+        iconBgColor: const Color(0xFF5AC8FA),
+        label: 'RUC',
+        value: _rucController.text,
+        controller: _rucController,
+      ),
+      _buildDivider(),
+      _buildInfoTile(
+        icon: CupertinoIcons.tag_fill,
+        iconBgColor: const Color(0xFFFF9500),
+        label: 'Tipo',
+        value: _getNombreTipo(_tipoProveedorSeleccionado),
+        isDropdown: true,
+      ),
+      _buildDivider(),
+      _buildInfoTile(
+        icon: CupertinoIcons.doc_text_fill,
+        iconBgColor: const Color(0xFF34C759),
+        label: 'Descripción',
+        value: _descripcionController.text,
+        controller: _descripcionController,
+        maxLines: 2,
+      ),
+    ]);
+  }
+
+  Widget _buildContactoCard(SupplierController controller) {
+    return _buildSettingsCard([
+      _buildInfoTile(
+        icon: CupertinoIcons.mail_solid,
+        iconBgColor: const Color(0xFF5AC8FA),
+        label: 'Email',
+        value: _emailController.text,
+        controller: _emailController,
+      ),
+      _buildDivider(),
+      _buildInfoTile(
+        icon: CupertinoIcons.person_fill,
+        iconBgColor: const Color(0xFFAF52DE),
+        label: 'Nombre',
+        value: _nombreCompletoController.text,
+        controller: _nombreCompletoController,
+      ),
+      _buildDivider(),
+      _buildInfoTile(
+        icon: CupertinoIcons.phone_fill,
+        iconBgColor: const Color(0xFF34C759),
+        label: 'Teléfono',
+        value: _telefonoController.text,
+        isPhone: true,
+      ),
+    ]);
+  }
+
+  Widget _buildUbicacionCard(SupplierController controller) {
+    return _buildSettingsCard([
+      _buildInfoTile(
+        icon: CupertinoIcons.location_solid,
+        iconBgColor: const Color(0xFFFF3B30),
+        label: 'Dirección',
+        value: _direccionController.text,
+        controller: _direccionController,
+      ),
+      _buildDivider(),
+      _buildInfoTile(
+        icon: CupertinoIcons.map_fill,
+        iconBgColor: const Color(0xFF007AFF),
+        label: 'Ciudad',
+        value: _ciudadController.text,
+        controller: _ciudadController,
+      ),
+    ]);
+  }
+
+  Widget _buildHorariosCard(SupplierController controller) {
+    return _buildSettingsCard([
+      _buildInfoTile(
+        icon: CupertinoIcons.sunrise_fill,
+        iconBgColor: const Color(0xFFFF9500),
+        label: 'Apertura',
+        value: _formatearHora(_horarioAperturaController.text),
+        isTime: true,
+        controller: _horarioAperturaController,
+      ),
+      _buildDivider(),
+      _buildInfoTile(
+        icon: CupertinoIcons.sunset_fill,
+        iconBgColor: const Color(0xFF5856D6),
+        label: 'Cierre',
+        value: _formatearHora(_horarioCierreController.text),
+        isTime: true,
+        controller: _horarioCierreController,
+      ),
+    ]);
+  }
+
+  Widget _buildInfoTile({
+    required IconData icon,
+    required Color iconBgColor,
+    required String label,
+    required String value,
+    TextEditingController? controller,
+    bool isDropdown = false,
+    bool isPhone = false,
+    bool isTime = false,
+    int maxLines = 1,
+  }) {
+    if (!_editando) {
+      // View mode
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Icon(icon, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value.isNotEmpty ? value : '---',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: CupertinoColors.label,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: maxLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Edit mode
+    if (isDropdown) {
+      return _buildDropdownTile(icon, iconBgColor, label);
+    }
+
+    if (isPhone) {
+      return _buildPhoneTile(icon, iconBgColor, label);
+    }
+
+    if (isTime && controller != null) {
+      return _buildTimeTile(icon, iconBgColor, label, controller);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: label,
+              maxLines: maxLines,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemGrey6.resolveFrom(context),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdownTile(IconData icon, Color iconBgColor, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              color: CupertinoColors.systemGrey6.resolveFrom(context),
+              borderRadius: BorderRadius.circular(8),
+              onPressed: () => _mostrarPickerTipo(),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _getNombreTipo(_tipoProveedorSeleccionado),
+                    style: TextStyle(
+                      color: CupertinoColors.label.resolveFrom(context),
+                      fontSize: 16,
+                    ),
+                  ),
+                  Icon(
+                    CupertinoIcons.chevron_down,
+                    size: 16,
+                    color: CupertinoColors.systemGrey.resolveFrom(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneTile(IconData icon, Color iconBgColor, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: IntlPhoneField(
+              controller: _telefonoController,
+              initialCountryCode: _obtenerCodigoPaisInicial(
+                _telefonoController.text,
+              ),
+              decoration: InputDecoration(
+                labelText: label,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                isDense: true,
+                counterText: '',
+              ),
+              autovalidateMode: AutovalidateMode.disabled,
+              onChanged: (phone) => _telefonoCompleto = phone.completeNumber,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeTile(
+    IconData icon,
+    Color iconBgColor,
+    String label,
+    TextEditingController controller,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              color: CupertinoColors.systemGrey6.resolveFrom(context),
+              borderRadius: BorderRadius.circular(8),
+              onPressed: () => _seleccionarHora(controller),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    controller.text.isNotEmpty
+                        ? _formatearHora(controller.text)
+                        : label,
+                    style: TextStyle(
+                      color: controller.text.isNotEmpty
+                          ? CupertinoColors.label.resolveFrom(context)
+                          : CupertinoColors.placeholderText.resolveFrom(
+                              context,
+                            ),
+                      fontSize: 16,
+                    ),
+                  ),
+                  Icon(
+                    CupertinoIcons.clock,
+                    size: 16,
+                    color: CupertinoColors.systemGrey.resolveFrom(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner() {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemRed.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: CupertinoColors.systemRed.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.exclamationmark_circle_fill,
+            color: CupertinoColors.systemRed,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _error!,
+              style: const TextStyle(
+                color: CupertinoColors.systemRed,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBotonesEdicion() {
+    return Row(
+      children: [
+        Expanded(
+          child: CupertinoButton(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            color: CupertinoColors.systemGrey5.resolveFrom(context),
+            borderRadius: BorderRadius.circular(10),
+            onPressed: _guardando ? null : _cancelarEdicion,
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: CupertinoColors.label.resolveFrom(context),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: CupertinoButton(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            color: AppColorsPrimary.main,
+            borderRadius: BorderRadius.circular(10),
+            onPressed: _guardando ? null : _guardarCambios,
+            child: _guardando
+                ? const CupertinoActivityIndicator(color: Colors.white)
+                : const Text(
+                    'Guardar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // ACCIONES
+  // ---------------------------------------------------------------------------
+
   Future<void> _seleccionarLogo() async {
     try {
       final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
       if (picked != null) {
         setState(() => _logoSeleccionado = File(picked.path));
       }
-    } catch (e) {
+    } catch (_) {
       _mostrarSnackBar('Error al seleccionar imagen', esError: true);
     }
   }
@@ -113,24 +1029,57 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
       initialTime: TimeOfDay.now(),
     );
     if (hora != null) {
-      controller.text = '${hora.hour.toString().padLeft(2, '0')}:${hora.minute.toString().padLeft(2, '0')}:00';
+      controller.text =
+          '${hora.hour.toString().padLeft(2, '0')}:${hora.minute.toString().padLeft(2, '0')}:00';
+      setState(() {});
     }
   }
 
-  bool _validar() {
-    if (_nombreController.text.trim().isEmpty) {
-      _mostrarSnackBar('El nombre del negocio es requerido', esError: true);
-      return false;
-    }
-    if (_rucController.text.trim().length < 10) {
-      _mostrarSnackBar('El RUC debe tener al menos 10 caracteres', esError: true);
-      return false;
-    }
-    if (_emailController.text.trim().isEmpty || !_emailController.text.contains('@')) {
-      _mostrarSnackBar('Email inválido', esError: true);
-      return false;
-    }
-    return true;
+  void _mostrarPickerTipo() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: 250,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.centerRight,
+              child: CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: const Text('Listo'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 40,
+                onSelectedItemChanged: (index) {
+                  setState(
+                    () => _tipoProveedorSeleccionado =
+                        ApiConfig.tiposProveedor[index],
+                  );
+                },
+                children: ApiConfig.tiposProveedor
+                    .map((tipo) => Center(child: Text(_getNombreTipo(tipo))))
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _cancelarEdicion() {
+    setState(() {
+      _editando = false;
+      _logoSeleccionado = null;
+      _error = null;
+    });
+    _inicializarFormulario();
   }
 
   Future<void> _guardarCambios() async {
@@ -149,7 +1098,6 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
             : _telefonoController.text,
       );
 
-      // Datos del negocio
       final datosPerfil = <String, dynamic>{
         'nombre': _nombreController.text.trim(),
         'ruc': _rucController.text.trim(),
@@ -172,7 +1120,6 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         return;
       }
 
-      // Datos de contacto
       final partes = _nombreCompletoController.text.trim().split(' ');
       final firstName = partes.isNotEmpty ? partes[0] : '';
       final lastName = partes.length > 1 ? partes.sublist(1).join(' ') : '';
@@ -192,7 +1139,6 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         return;
       }
 
-      // Logo
       if (_logoSeleccionado != null) {
         await controller.subirLogo(_logoSeleccionado!);
       }
@@ -201,7 +1147,6 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
         _editando = false;
         _logoSeleccionado = null;
         _guardando = false;
-        _telefonoCompleto = telefonoFinal;
       });
 
       _mostrarSnackBar('Cambios guardados');
@@ -213,426 +1158,89 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
     }
   }
 
-  void _cancelarEdicion() {
-    setState(() {
-      _editando = false;
-      _logoSeleccionado = null;
-      _error = null;
-      _telefonoCompleto = _telefonoController.text.trim();
-    });
-    _inicializarFormulario();
+  bool _validar() {
+    if (_nombreController.text.trim().isEmpty) {
+      _mostrarSnackBar('El nombre del negocio es requerido', esError: true);
+      return false;
+    }
+    if (_rucController.text.trim().length < 10) {
+      _mostrarSnackBar(
+        'El RUC debe tener al menos 10 caracteres',
+        esError: true,
+      );
+      return false;
+    }
+    if (_emailController.text.trim().isEmpty ||
+        !_emailController.text.contains('@')) {
+      _mostrarSnackBar('Email inválido', esError: true);
+      return false;
+    }
+    return true;
   }
 
   void _mostrarSnackBar(String mensaje, {bool esError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
-        backgroundColor: esError ? _peligro : _exito,
+        backgroundColor: esError
+            ? CupertinoColors.systemRed
+            : CupertinoColors.activeGreen,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Mi Perfil', style: TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: _primario,
-        foregroundColor: Colors.white,
-        elevation: 0,
+  Future<void> _cerrarSesion() async {
+    final confirmar = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Cerrar Sesión'),
+        content: const Text('¿Estás seguro que deseas salir?'),
         actions: [
-          if (!_editando)
-            TextButton.icon(
-              onPressed: () => setState(() => _editando = true),
-              icon: const Icon(Icons.edit, size: 18, color: Colors.white),
-              label: const Text('Editar', style: TextStyle(color: Colors.white)),
-            ),
+          CupertinoDialogAction(
+            child: const Text('Cancelar'),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Salir'),
+          ),
         ],
       ),
-      body: Consumer<SupplierController>(
-        builder: (context, controller, child) {
-          if (controller.loading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildHeaderLogo(controller),
-                const SizedBox(height: 20),
-
-                // Sección de calificaciones
-                _buildSeccionCalificaciones(controller),
-
-                _buildSeccion('Contacto', [
-                  _buildCampo('Email', _emailController, Icons.email_outlined),
-                  _buildCampo('Nombre completo', _nombreCompletoController, Icons.person_outline),
-                  _buildCampoTelefono(),
-                ]),
-                const SizedBox(height: 16),
-                _buildSeccion('Negocio', [
-                  _buildCampo('Nombre del negocio', _nombreController, Icons.store_outlined),
-                  _buildCampo('RUC', _rucController, Icons.badge_outlined),
-                  _buildDropdownTipo(),
-                  _buildCampo('Descripción', _descripcionController, Icons.description_outlined, maxLines: 2),
-                ]),
-                const SizedBox(height: 16),
-                _buildSeccion('Ubicación', [
-                  _buildCampo('Dirección', _direccionController, Icons.location_on_outlined),
-                  _buildCampo('Ciudad', _ciudadController, Icons.location_city_outlined),
-                ]),
-                const SizedBox(height: 16),
-                _buildSeccion('Horarios', [
-                  _buildCampoHora('Apertura', _horarioAperturaController),
-                  _buildCampoHora('Cierre', _horarioCierreController),
-                ]),
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _peligro.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline, color: _peligro, size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(_error!, style:const TextStyle(color: _peligro, fontSize: 13))),
-                      ],
-                    ),
-                  ),
-                ],
-                if (_editando) ...[
-                  const SizedBox(height: 24),
-                  _buildBotones(),
-                ],
-                const SizedBox(height: 32),
-              ],
-            ),
-          );
-        },
-      ),
     );
-  }
 
-  Widget _buildHeaderLogo(SupplierController controller) {
-    Widget? imagen;
+    if (confirmar == true && mounted) {
+      final controller = context.read<SupplierController>();
+      await SessionCleanup.clearProviders(context);
+      final success = await controller.cerrarSesion();
 
-    if (_logoSeleccionado != null) {
-      imagen = ClipOval(
-        child: Image.file(
-          _logoSeleccionado!,
-          width: 100,
-          height: 100,
-          fit: BoxFit.cover,
-        ),
-      );
-    } else if (controller.logo != null && controller.logo!.isNotEmpty) {
-      final url = controller.logo!.startsWith('http')
-          ? controller.logo!
-          : '${ApiConfig.baseUrl}${controller.logo}';
-      if (_logoUrlCaido == url) {
-        imagen = _buildLogoPlaceholder();
-      } else {
-        imagen = ClipOval(
-          child: Image.network(
-            url,
-            width: 100,
-            height: 100,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              if (!mounted) return _buildLogoPlaceholder();
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                setState(() => _logoUrlCaido = url);
-              });
-              return _buildLogoPlaceholder();
-            },
-          ),
-        );
+      if (success && mounted) {
+        await Rutas.irAYLimpiar(context, Rutas.login);
       }
-    } else {
-      imagen = _buildLogoPlaceholder();
     }
-
-    return GestureDetector(
-      onTap: _editando ? _seleccionarLogo : null,
-      child: Stack(
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              shape: BoxShape.circle,
-              border: Border.all(color: _primario, width: 3),
-            ),
-            child: imagen,
-          ),
-          if (_editando)
-            Positioned(
-              bottom: 0,
-              right: 0,
-            child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration:const BoxDecoration(
-                  color: _primario,
-                  shape: BoxShape.circle,
-                ),
-              child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
-  Widget _buildSeccionCalificaciones(SupplierController controller) {
-    final valoracion = controller.valoracionPromedio;
-    final totalResenas = controller.totalResenas;
-
-    // Si no hay reseñas, no mostrar nada
-    if (totalResenas == 0) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: CompactRatingSummaryCard(
-        averageRating: valoracion,
-        totalReviews: totalResenas,
-        subtitle: 'Calificación promedio del negocio',
-        // onTap: () {
-        //   // TODO: Navegar a pantalla de todas las reseñas del proveedor
-        // },
-      ),
-    );
-  }
-
-  Widget _buildSeccion(String titulo, List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Text(
-              titulo.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: _textoSecundario,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          ...children.map((child) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: child,
-          )),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCampo(
-    String label,
-    TextEditingController controller,
-    IconData icon, {
-    int maxLines = 1,
-  }) {
-    if (!_editando) {
-      return Row(
-        children: [
-          Icon(icon, size: 20, color: _textoSecundario),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 11, color: _textoSecundario)),
-                const SizedBox(height: 2),
-                Text(
-                  controller.text.isEmpty ? '---' : controller.text,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        isDense: true,
-      ),
-    );
-  }
-
-  Widget _buildCampoTelefono() {
-    if (!_editando) {
-      return _buildCampo('Teléfono', _telefonoController, Icons.phone_outlined);
-    }
-
-      return IntlPhoneField(
-        controller: _telefonoController,
-        initialCountryCode: _obtenerCodigoPaisInicial(_telefonoController.text),
-        decoration: InputDecoration(
-          labelText: 'Teléfono',
-          prefixIcon: const Icon(Icons.phone_outlined),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          isDense: true,
-          counterText: '',
-        ),
-        autovalidateMode: AutovalidateMode.disabled,
-        onChanged: (phone) => _telefonoCompleto = phone.completeNumber,
-      );
-  }
-
-  Widget _buildCampoHora(String label, TextEditingController controller) {
-    if (!_editando) {
-      return Row(
-        children: [
-         const Icon(Icons.access_time, size: 20, color: _textoSecundario),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 11, color: _textoSecundario)),
-                const SizedBox(height: 2),
-                Text(
-                  controller.text.isEmpty ? '---' : _formatearHora(controller.text),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    return GestureDetector(
-      onTap: () => _seleccionarHora(controller),
-      child: AbsorbPointer(
-        child: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: label,
-            prefixIcon: const Icon(Icons.access_time, size: 20),
-            suffixIcon: const Icon(Icons.arrow_drop_down),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            isDense: true,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdownTipo() {
-    if (!_editando) {
-      return Row(
-        children: [
-         const Icon(Icons.category_outlined, size: 20, color: _textoSecundario),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Tipo', style: TextStyle(fontSize: 11, color: _textoSecundario)),
-                const SizedBox(height: 2),
-                Text(
-                  _getNombreTipo(_tipoProveedorSeleccionado),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    return DropdownButtonFormField<String>(
-      initialValue: _tipoProveedorSeleccionado,
-      decoration: InputDecoration(
-        labelText: 'Tipo de proveedor',
-        prefixIcon: const Icon(Icons.category_outlined, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        isDense: true,
-      ),
-      items: ApiConfig.tiposProveedor.map((tipo) {
-        return DropdownMenuItem(value: tipo, child: Text(_getNombreTipo(tipo)));
-      }).toList(),
-      onChanged: (v) => setState(() => _tipoProveedorSeleccionado = v),
-    );
-  }
+  // ---------------------------------------------------------------------------
+  // UTILIDADES
+  // ---------------------------------------------------------------------------
 
   String _getNombreTipo(String? tipo) {
     switch (tipo) {
-      case 'restaurante': return 'Restaurante';
-      case 'farmacia': return 'Farmacia';
-      case 'supermercado': return 'Supermercado';
-      case 'tienda': return 'Tienda';
-      case 'otro': return 'Otro';
-      default: return 'Seleccionar';
+      case 'restaurante':
+        return 'Restaurante';
+      case 'farmacia':
+        return 'Farmacia';
+      case 'supermercado':
+        return 'Supermercado';
+      case 'tienda':
+        return 'Tienda';
+      case 'otro':
+        return 'Otro';
+      default:
+        return 'Seleccionar';
     }
-  }
-
-  Widget _buildBotones() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _guardando ? null : _cancelarEdicion,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              side: BorderSide(color: Colors.grey.shade400),
-            ),
-            child: const Text('Cancelar'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: FilledButton(
-            onPressed: _guardando ? null : _guardarCambios,
-            style: FilledButton.styleFrom(
-              backgroundColor: _exito,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: _guardando
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('Guardar'),
-          ),
-        ),
-      ],
-    );
   }
 
   String _obtenerCodigoPaisInicial(String numero) {
@@ -642,12 +1250,6 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
     if (valor.startsWith('+52')) return 'MX';
     if (valor.startsWith('+57')) return 'CO';
     return 'EC';
-  }
-
-  Widget _buildLogoPlaceholder() {
-    return Center(
-      child: Icon(Icons.store, size: 40, color: Colors.grey.shade400),
-    );
   }
 
   String _normalizarTelefono(String telefono) {

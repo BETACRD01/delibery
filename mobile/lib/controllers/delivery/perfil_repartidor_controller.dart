@@ -2,7 +2,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../services/repartidor_service.dart';
+import '../../services/repartidor/repartidor_service.dart';
 import '../../models/repartidor.dart';
 import '../../apis/helpers/api_exception.dart';
 import 'dart:developer' as developer;

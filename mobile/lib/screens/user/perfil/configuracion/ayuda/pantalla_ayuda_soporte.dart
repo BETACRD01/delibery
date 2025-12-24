@@ -544,10 +544,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
               ? const SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
-                  ),
+                  child: CupertinoActivityIndicator(radius: 14),
                 )
               : const Text(
                   'Enviar Mensaje',

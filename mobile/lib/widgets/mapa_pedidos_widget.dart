@@ -2,14 +2,15 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 // Asumo que estos imports apuntan a las definiciones correctas
 import '../../models/pedido_repartidor.dart';
-import '../../services/repartidor_service.dart';
+import '../../services/repartidor/repartidor_service.dart';
 import '../../apis/subapis/http_client.dart';
 import '../../config/api_config.dart';
-import '../../services/auth_service.dart';
+import '../../services/auth/auth_service.dart';
 import 'dart:developer' as developer;
 
 class MapaPedidosScreen extends StatefulWidget {
@@ -369,7 +370,7 @@ class _MapaPedidosScreenState extends State<MapaPedidosScreen> {
           context: context,
           barrierDismissible: false,
           builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
+              const Center(child: CupertinoActivityIndicator(radius: 14)),
         ),
       );
 
@@ -468,7 +469,7 @@ class _MapaPedidosScreenState extends State<MapaPedidosScreen> {
   @override
   Widget build(BuildContext context) {
     if (_cargando) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CupertinoActivityIndicator(radius: 14)));
     }
 
     // 💡 CONDICIÓN DE ROL ROBUSTA EN EL BUILD: Usar toUpperCase()

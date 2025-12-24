@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../../apis/admin/usuarios_admin_api.dart';
 import '../dashboard/constants/dashboard_colors.dart';
@@ -108,7 +109,7 @@ class _PantallaAdminUsuariosState extends State<PantallaAdminUsuarios> {
           ),
           Expanded(
             child: _cargando
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CupertinoActivityIndicator(radius: 14))
                 : _error != null
                 ? Center(child: Text(_error!))
                 : RefreshIndicator(

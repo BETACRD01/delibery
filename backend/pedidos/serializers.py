@@ -9,7 +9,9 @@ from decimal import Decimal
 
 # Importación de modelos externos
 from repartidores.models import Repartidor
+from repartidores.models import Repartidor
 from proveedores.models import Proveedor
+from productos.models import Producto
 
 # Importación de modelos locales
 from .models import (
@@ -289,13 +291,39 @@ class PedidoCreateSerializer(serializers.ModelSerializer):
             # 2. Crear Items
             items_objs = []
             for item in items_data:
+                prod_instance = item.get('producto')
                 cantidad = item.get('cantidad') or 0
+                
+                # --- LOGICA DE STOCK (ATÓMICA) ---
+                if prod_instance.tiene_stock:
+                    # Intentar descontar stock solo si es suficiente
+                    # update retorna el número de filas modificadas
+                    updated = Producto.objects.filter(
+                        id=prod_instance.id, 
+                        stock__gte=cantidad
+                    ).update(stock=F('stock') - cantidad, veces_vendido=F('veces_vendido') + cantidad)
+                    
+                    if updated == 0:
+                        # Falló la actualización -> Stock insuficiente o producto desapareció
+                        # Re-consultamos para dar feedback preciso
+                        current_prod = Producto.objects.get(id=prod_instance.id)
+                        if current_prod.stock < cantidad:
+                            raise serializers.ValidationError(
+                                f"Stock insuficiente para '{current_prod.nombre}'. Disponible: {current_prod.stock}"
+                            )
+                        else:
+                            raise serializers.ValidationError(f"Error actualizando stock de {current_prod.nombre}")
+                else:
+                    # Si no maneja stock, solo sumamos ventas
+                    Producto.objects.filter(id=prod_instance.id).update(veces_vendido=F('veces_vendido') + cantidad)
+                
+                # Crear objeto item en memoria
                 precio_unitario = item.get('precio_unitario') or Decimal('0')
                 subtotal = Decimal(cantidad) * Decimal(precio_unitario)
                 items_objs.append(
                     ItemPedido(
                         pedido=pedido,
-                        producto=item.get('producto'),
+                        producto=prod_instance,
                         cantidad=cantidad,
                         precio_unitario=precio_unitario,
                         subtotal=subtotal,

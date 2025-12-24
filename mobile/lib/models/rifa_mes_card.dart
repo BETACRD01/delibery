@@ -1,6 +1,7 @@
 // lib/screens/user/widgets/rifa_mes_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../../models/rifa_activa.dart';
 
@@ -17,7 +18,7 @@ class RifaMesCard extends StatelessWidget {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16.0),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CupertinoActivityIndicator(radius: 14)),
         ),
       );
     }
@@ -59,13 +60,21 @@ class RifaMesCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               // --- BARRA DE PROGRESO ---
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: rifa!.progreso,
-                  minHeight: 12,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(rifa!.progreso >= 1.0 ? Colors.green : Colors.blue),
+              Container(
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: rifa!.progreso,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: rifa!.progreso >= 1.0 ? Colors.green : Colors.blue,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),

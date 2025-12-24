@@ -1,7 +1,8 @@
 // lib/screens/auth/pantalla_recuperar_password.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
+import '../../services/auth/auth_service.dart';
 import '../../config/rutas.dart';
 import '../../config/api_config.dart';
 import '../../apis/helpers/api_exception.dart';
@@ -360,13 +361,9 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
           disabledBackgroundColor: Colors.grey[300],
         ),
         child: _loading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+            ? const CupertinoActivityIndicator(
+                color: Colors.white,
+                radius: 10,
               )
             : Text(
                 _bloqueadoTemporalmente ? 'BLOQUEADO' : 'ENVIAR CÓDIGO',
@@ -449,7 +446,9 @@ class _PantallaRecuperarPasswordState extends State<PantallaRecuperarPassword> {
         ),
 
         const SizedBox(height: 32),
-        const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        const Center(
+          child: CupertinoActivityIndicator(radius: 14),
+        ),
       ],
     );
   }

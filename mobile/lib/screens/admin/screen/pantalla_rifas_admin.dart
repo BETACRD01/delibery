@@ -251,7 +251,7 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
 
   Widget _buildContenido(bool isIOS) {
     if (_cargando) {
-      return Center(child: isIOS ? const CupertinoActivityIndicator(radius: 16) : const CircularProgressIndicator());
+      return Center(child: isIOS ? const CupertinoActivityIndicator(radius: 16) : const CupertinoActivityIndicator(radius: 14));
     }
 
     if (_error != null) {
@@ -453,7 +453,7 @@ class _PantallaRifasAdminState extends State<PantallaRifasAdmin> {
           return Container(
             color: CupertinoColors.systemGrey6.resolveFrom(context),
             child: Center(
-              child: Platform.isIOS ? const CupertinoActivityIndicator() : const CircularProgressIndicator(),
+              child: Platform.isIOS ? const CupertinoActivityIndicator() : const CupertinoActivityIndicator(radius: 14),
             ),
           );
         },

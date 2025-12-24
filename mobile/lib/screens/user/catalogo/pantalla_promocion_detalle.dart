@@ -1,4 +1,5 @@
 // lib/screens/user/catalogo/pantalla_promocion_detalle.dart
+import 'package:flutter/cupertino.dart';
 
 import 'dart:async';
 import 'dart:math';
@@ -9,11 +10,11 @@ import 'package:provider/provider.dart';
 
 import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
-import '../../../../../services/productos_service.dart';
+import '../../../../../services/productos/productos_service.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/producto_model.dart';
 import '../../../models/promocion_model.dart';
-import '../../../services/toast_service.dart';
+import '../../../services/core/toast_service.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 
 /// Pantalla de detalle de una promoción
@@ -195,7 +196,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
                   color: promoColor,
-                  child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+                  child: const Center(child: CupertinoActivityIndicator(radius: 14)),
                 ),
                 errorWidget: (context, url, error) => Container(color: promoColor),
               )
@@ -389,7 +390,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
         if (_loading)
           const Center(
-            child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()),
+            child: Padding(padding: EdgeInsets.all(32), child: CupertinoActivityIndicator(radius: 14)),
           )
         else if (_error.isNotEmpty)
           Center(
@@ -681,11 +682,7 @@ class _ProductoPromoCard extends StatelessWidget {
                         imageUrl: producto.imagenUrl!,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: JPColors.primary.withValues(alpha: 0.5),
-                          ),
-                        ),
+                          child: CupertinoActivityIndicator(radius: 14), ),
                         errorWidget: (context, url, error) =>
                             Icon(Icons.fastfood_outlined, size: 30, color: Colors.grey[400]),
                       )

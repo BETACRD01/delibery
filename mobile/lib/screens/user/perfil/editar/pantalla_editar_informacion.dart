@@ -3,12 +3,13 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
 import '../../../../apis/helpers/api_exception.dart';
 import '../../../../models/usuario.dart';
-import '../../../../services/usuarios_service.dart';
+import '../../../../services/usuarios/usuarios_service.dart';
 import '../../../../theme/app_colors_primary.dart';
 import '../../../../theme/jp_theme.dart';
 import '../../../../widgets/util/phone_normalizer.dart';
@@ -836,10 +837,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
               ? const SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
-                  ),
+                  child: CupertinoActivityIndicator(radius: 14),
                 )
               : const Text(
                   'Guardar Cambios',

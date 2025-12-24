@@ -12,11 +12,16 @@ class PromocionModel {
   final String? imagenUrl;
   final String? proveedorId;
   final String? proveedorNombre;
-  
+
+  // Nuevos campos de tipo de promoción
+  final String tipoPromocion; // 'porcentaje', '2x1', 'precio_fijo', etc.
+  final String? tipoPromocionDisplay; // 'Descuento Porcentual', '2x1', etc.
+  final double? valorDescuento; // Valor numérico del descuento
+
   // Campos de navegación
   final String? productoAsociadoId;
   final String? categoriaAsociadaId;
-  
+
   final DateTime? fechaInicio;
   final DateTime? fechaFin;
   final bool activa;
@@ -32,6 +37,9 @@ class PromocionModel {
     this.imagenUrl,
     this.proveedorId,
     this.proveedorNombre,
+    this.tipoPromocion = 'porcentaje',
+    this.tipoPromocionDisplay,
+    this.valorDescuento,
     this.productoAsociadoId,
     this.categoriaAsociadaId,
     this.fechaInicio,
@@ -52,13 +60,18 @@ class PromocionModel {
       imagenUrl: json['imagen_url'] as String?,
       proveedorId: json['proveedor_id']?.toString(),
       proveedorNombre: json['proveedor_nombre'] as String?,
+      tipoPromocion: json['tipo_promocion'] ?? 'porcentaje',
+      tipoPromocionDisplay: json['tipo_promocion_display'] as String?,
+      valorDescuento: json['valor_descuento'] != null
+          ? double.tryParse(json['valor_descuento'].toString())
+          : null,
       productoAsociadoId: json['producto_asociado']?.toString(),
       categoriaAsociadaId: json['categoria_asociada']?.toString(),
       fechaInicio: json['fecha_inicio'] != null
           ? DateTime.parse(json['fecha_inicio'])
           : null,
-      fechaFin: json['fecha_fin'] != null 
-          ? DateTime.parse(json['fecha_fin']) 
+      fechaFin: json['fecha_fin'] != null
+          ? DateTime.parse(json['fecha_fin'])
           : null,
       activa: json['activa'] ?? true,
       esVigente: json['es_vigente'] ?? true,
@@ -127,6 +140,25 @@ class PromocionModel {
     return '#${hex.substring(2)}'; 
   }
 
+  /// Obtiene un icono representativo según el tipo de promoción
+  IconData get iconoTipo {
+    switch (tipoPromocion) {
+      case 'porcentaje':
+        return Icons.percent;
+      case '2x1':
+      case '3x2':
+        return Icons.local_offer;
+      case 'precio_fijo':
+        return Icons.attach_money;
+      case 'combo':
+        return Icons.category;
+      case 'envio_gratis':
+        return Icons.local_shipping;
+      default:
+        return Icons.star;
+    }
+  }
+
   /// Crea una copia con campos modificados
   PromocionModel copyWith({
     String? id,
@@ -137,6 +169,9 @@ class PromocionModel {
     String? imagenUrl,
     String? proveedorId,
     String? proveedorNombre,
+    String? tipoPromocion,
+    String? tipoPromocionDisplay,
+    double? valorDescuento,
     String? productoAsociadoId,
     String? categoriaAsociadaId,
     DateTime? fechaInicio,
@@ -154,6 +189,9 @@ class PromocionModel {
       imagenUrl: imagenUrl ?? this.imagenUrl,
       proveedorId: proveedorId ?? this.proveedorId,
       proveedorNombre: proveedorNombre ?? this.proveedorNombre,
+      tipoPromocion: tipoPromocion ?? this.tipoPromocion,
+      tipoPromocionDisplay: tipoPromocionDisplay ?? this.tipoPromocionDisplay,
+      valorDescuento: valorDescuento ?? this.valorDescuento,
       productoAsociadoId: productoAsociadoId ?? this.productoAsociadoId,
       categoriaAsociadaId: categoriaAsociadaId ?? this.categoriaAsociadaId,
       fechaInicio: fechaInicio ?? this.fechaInicio,

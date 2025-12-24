@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../../../../theme/jp_theme.dart' hide JPSnackbar;
-import '../../../../../services/auth_service.dart';
+import '../../../../../services/auth/auth_service.dart';
 import '../../../../../widgets/jp_snackbar.dart';
 
 class DialogoCambiarPassword extends StatefulWidget {

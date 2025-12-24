@@ -12,7 +12,7 @@ class ApiConfig {
   // ============================================================================
 
   // CAMBIA ESTO CADA VEZ QUE REINICIES NGROK (Sin la barra / al final)
-  static const String _ngrokUrl = 'https://7ecaf5123e85.ngrok-free.app';
+  static const String _ngrokUrl = 'https://7a09d7fed6a6.ngrok-free.app';
 
   // URL para producción (cuando subas a Play Store)
   static const String _prodUrl = 'https://api.tu-dominio-real.com';
@@ -133,6 +133,18 @@ class ApiConfig {
   static String get productosPromociones => '$_products/promociones/';
   static String productoDetalle(int id) => '$_products/productos/$id/';
   static String promocionDetalle(int id) => '$_products/promociones/$id/';
+
+  // Endpoints para panel proveedor (Gestión de productos)
+  static String get providerProducts => '$_products/provider/products/';
+  static String providerProductDetail(int id) =>
+      '$_products/provider/products/$id/';
+  static String providerProductRatings(int id) =>
+      '$_products/provider/products/$id/reviews/';
+
+  // Endpoints para panel proveedor (Gestión de promociones)
+  static String get providerPromociones => '$_products/provider/promociones/';
+  static String providerPromocionDetalle(int id) =>
+      '$_products/provider/promociones/$id/';
 
   static String get carrito => '$_products/carrito/';
   static String get carritoAgregar => '$_products/carrito/agregar/';

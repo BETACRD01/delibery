@@ -206,7 +206,7 @@ class JPAvatar extends StatelessWidget {
       fit: BoxFit.cover,
       placeholder: (_, _) => const Padding(
         padding: EdgeInsets.all(8.0),
-        child: CircularProgressIndicator(strokeWidth: 2),
+        child: CupertinoActivityIndicator(radius: 14),
       ),
       errorWidget: (_, _, _) => const Icon(Icons.error),
     );
@@ -297,10 +297,7 @@ class JPLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(JPColors.primary),
-        strokeWidth: 2,
-      ),
+      child: CupertinoActivityIndicator(radius: 14),
     );
   }
 }

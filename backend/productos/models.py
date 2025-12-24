@@ -130,7 +130,17 @@ class Producto(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(5)]
     )
     total_resenas = models.IntegerField(default=0)
-    
+
+    # Productos Relacionados
+    productos_relacionados = models.ManyToManyField(
+        'self',
+        blank=True,
+        symmetrical=False,
+        related_name='relacionado_con',
+        verbose_name='Productos Relacionados',
+        help_text='Productos que se sugieren junto con este'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -182,16 +192,52 @@ class Producto(models.Model):
 # PROMOCIONES (Banners Principales)
 # ═══════════════════════════════════════════════════════════════════════
 class Promocion(models.Model):
+    TIPO_PORCENTAJE = 'porcentaje'
+    TIPO_PRECIO_FIJO = 'precio_fijo'
+    TIPO_2X1 = '2x1'
+    TIPO_3X2 = '3x2'
+    TIPO_COMBO = 'combo'
+    TIPO_ENVIO_GRATIS = 'envio_gratis'
+    TIPO_OTRO = 'otro'
+
+    TIPOS_PROMOCION = [
+        (TIPO_PORCENTAJE, 'Descuento Porcentual'),
+        (TIPO_PRECIO_FIJO, 'Precio Fijo'),
+        (TIPO_2X1, '2x1'),
+        (TIPO_3X2, '3x2'),
+        (TIPO_COMBO, 'Combo Especial'),
+        (TIPO_ENVIO_GRATIS, 'Envío Gratis'),
+        (TIPO_OTRO, 'Otro'),
+    ]
+
     proveedor = models.ForeignKey(
         Proveedor,
         on_delete=models.CASCADE,
         related_name='promociones',
         null=True, blank=True
     )
-    
+
     titulo = models.CharField(max_length=200, help_text="Ej: Combos $4.99")
     descripcion = models.TextField(help_text="Ej: Pide tus combos favoritos...")
-    
+
+    # Tipo de promoción
+    tipo_promocion = models.CharField(
+        max_length=20,
+        choices=TIPOS_PROMOCION,
+        default=TIPO_PORCENTAJE,
+        verbose_name='Tipo de Promoción'
+    )
+
+    # Valor numérico de la promoción (porcentaje o precio)
+    valor_descuento = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Valor del Descuento',
+        help_text='Para porcentaje: 20 (%), para precio fijo: monto en $'
+    )
+
     # Datos visuales para el Widget de Flutter
     descuento = models.CharField(max_length=50, verbose_name='Texto Sticker', help_text="Ej: '20% OFF' o 'Exclusivo'")
     color = models.CharField(max_length=7, default='#E91E63', help_text="Color Hex del fondo (Ej: #E91E63)")

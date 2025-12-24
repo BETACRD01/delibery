@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../../../apis/admin/usuarios_admin_api.dart';
 import '../../../../apis/helpers/api_exception.dart';
@@ -130,7 +131,7 @@ class _PantallaResetearPasswordUsuarioState extends State<PantallaResetearPasswo
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CupertinoActivityIndicator(radius: 14),
                         )
                       : const Icon(Icons.search),
                   label: const Text('Buscar'),
@@ -184,7 +185,7 @@ class _PantallaResetearPasswordUsuarioState extends State<PantallaResetearPasswo
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CupertinoActivityIndicator(radius: 14),
                               )
                             : const Icon(Icons.lock_reset),
                         label: Text(_loadingReset ? 'Actualizando...' : 'Resetear contraseña'),

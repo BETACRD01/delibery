@@ -1,10 +1,11 @@
 // lib/screens/auth/pantalla_login.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../apis/helpers/api_exception.dart';
 import '../../config/rutas.dart';
-import '../../services/auth_service.dart';
+import '../../services/auth/auth_service.dart';
 import '../../theme/jp_theme.dart';
 import './pantalla_recuperar_password.dart';
 import './pantalla_registro.dart';
@@ -353,15 +354,20 @@ class _PantallaLoginState extends State<PantallaLogin> {
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: const Text(
-          'INICIAR SESIÓN',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 0.5,
-          ),
-        ),
+        child: _loading
+            ? const CupertinoActivityIndicator(
+                color: Colors.white,
+                radius: 10,
+              )
+            : const Text(
+                'INICIAR SESIÓN',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
       ),
     );
   }

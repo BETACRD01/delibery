@@ -1,8 +1,9 @@
 // lib/screens/delivery/historial/pantalla_historial_repartidor.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:mobile/models/entrega_historial.dart';
-import 'package:mobile/services/repartidor_service.dart';
+import 'package:mobile/services/repartidor/repartidor_service.dart';
 
 /// Pantalla dedicada al historial de entregas vinculada al backend.
 class PantallaHistorialRepartidor extends StatefulWidget {
@@ -190,7 +191,7 @@ class _PantallaHistorialRepartidorState
 
   Widget _buildListado() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CupertinoActivityIndicator(radius: 14));
     }
 
     if (_error != null) {

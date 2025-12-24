@@ -3,8 +3,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../services/repartidor_service.dart';
+import '../../services/auth/auth_service.dart';
+import '../../services/repartidor/repartidor_service.dart';
 import '../../config/api_config.dart';
 import '../../apis/subapis/http_client.dart';
 import '../../apis/helpers/api_exception.dart';
@@ -12,7 +12,7 @@ import '../../models/repartidor.dart';
 import '../../models/pedido_repartidor.dart';
 import '../../models/entrega_historial.dart';
 import 'dart:developer' as developer;
-import '../../services/ubicacion_service.dart';
+import '../../services/ubicacion/ubicacion_service.dart';
 
 /// Controller para gestionar la lógica de negocio del repartidor
 /// Separa completamente la lógica de la UI

@@ -1,7 +1,8 @@
 // lib/screens/user/super/pantalla_productos_proveedor.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../../services/super_service.dart';
+import '../../../services/usuarios/super_service.dart';
 
 /// Pantalla de productos de un proveedor Super
 class PantallaProductosProveedor extends StatefulWidget {
@@ -66,7 +67,7 @@ class _PantallaProductosProveedorState extends State<PantallaProductosProveedor>
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CupertinoActivityIndicator(radius: 14));
     }
 
     if (_error != null) {

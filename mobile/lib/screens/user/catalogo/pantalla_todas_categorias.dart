@@ -5,7 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart'
     show Material, MaterialType, Curves, KeyedSubtree;
 import '../../../../../config/rutas.dart';
-import '../../../../../services/productos_service.dart';
+import '../../../../../services/productos/productos_service.dart';
 import '../../../../../theme/app_colors_primary.dart';
 import '../../../../../theme/app_colors_support.dart';
 import '../../../../../theme/jp_theme.dart';

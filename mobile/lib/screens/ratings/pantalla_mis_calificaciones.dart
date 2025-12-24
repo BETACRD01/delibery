@@ -3,7 +3,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../models/resena_model.dart';
-import '../../services/calificaciones_service.dart';
+import '../../services/calificaciones/calificaciones_service.dart';
 import '../../widgets/ratings/star_rating_display.dart';
 
 /// Lista de calificaciones del usuario (recibidas/realizadas).

@@ -1,6 +1,7 @@
 // lib/screens/user/super/pantalla_categoria_detalle.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../../../models/categoria_super_model.dart';
 import '../../../controllers/user/categoria_super_controller.dart';
@@ -53,7 +54,7 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
             }
 
             if (controller.proveedores.isEmpty && controller.loading) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CupertinoActivityIndicator(radius: 14));
             }
 
             if (controller.proveedores.isEmpty) {

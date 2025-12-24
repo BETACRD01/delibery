@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import '../models/producto_model.dart';
 import '../models/promocion_model.dart';
-import '../services/carrito_service.dart';
+import '../services/carrito/carrito_service.dart';
 import '../apis/helpers/api_exception.dart';
 
 /// Item del carrito

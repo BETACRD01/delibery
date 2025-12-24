@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 class PantallaVerComprobanteUsuario extends StatelessWidget {
   final String comprobanteUrl;
@@ -27,7 +28,7 @@ class PantallaVerComprobanteUsuario extends StatelessWidget {
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
               return const Center(
-                child: CircularProgressIndicator(color: Colors.white),
+                child: CupertinoActivityIndicator(radius: 14),
               );
             },
             errorBuilder: (context, error, stackTrace) {

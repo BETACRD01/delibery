@@ -1,10 +1,11 @@
 // lib/screens/admin/pantalla_dashboard.dart
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/rutas.dart';
 import '../../controllers/admin/dashboard_controller.dart';
-import '../../services/session_cleanup.dart';
+import '../../services/auth/session_cleanup.dart';
 import 'dashboard/constants/dashboard_colors.dart';
 import 'dashboard/tabs/actividad_tab.dart';
 import 'dashboard/tabs/resumen_tab.dart';
@@ -83,7 +84,7 @@ class _PantallaDashboardState extends State<PantallaDashboard> with SingleTicker
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: Color.fromARGB(255, 39, 142, 176)),
+          CupertinoActivityIndicator(radius: 14),
           SizedBox(height: 16),
           Text('Cargando dashboard...'),
         ],

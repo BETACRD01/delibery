@@ -2,7 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import '../models/pedido_model.dart';
-import '../services/pedido_service.dart';
+import '../services/pedidos/pedido_service.dart';
 
 class PedidoProvider extends ChangeNotifier {
   final PedidoService _service;

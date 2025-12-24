@@ -2,8 +2,8 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import '../../../../../services/solicitudes_service.dart';
-import '../../../../../services/auth_service.dart';
+import '../../../../../services/solicitudes/solicitudes_service.dart';
+import '../../../../../services/auth/auth_service.dart';
 import '../../../../../models/solicitud_cambio_rol.dart';
 
 /// 📝 FORMULARIO PARA SOLICITUD DE REPARTIDOR

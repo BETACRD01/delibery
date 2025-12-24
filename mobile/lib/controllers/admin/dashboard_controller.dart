@@ -1,6 +1,6 @@
 // lib/controllers/admin/dashboard_controller.dart
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
+import '../../services/auth/auth_service.dart';
 import '../../apis/admin/solicitudes_api.dart';
 import '../../apis/admin/dashboard_admin_api.dart';
 import '../../apis/helpers/api_exception.dart';

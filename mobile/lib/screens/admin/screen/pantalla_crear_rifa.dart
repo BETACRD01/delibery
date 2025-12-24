@@ -594,7 +594,7 @@ class _PantallaCrearRifaState extends State<PantallaCrearRifa> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CupertinoActivityIndicator(radius: 14),
                         )
                       : const Icon(Icons.save),
                   label: Text(_enviando ? 'Creando...' : 'Crear rifa'),

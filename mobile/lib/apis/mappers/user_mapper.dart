@@ -1,16 +1,16 @@
 // lib/apis/mappers/user_mapper.dart
 
-import '../dtos/user/responses/profile_response.dart';
-import '../dtos/user/requests/update_profile_request.dart';
-import '../dtos/user/responses/address_response.dart';
-import '../dtos/user/requests/create_address_request.dart';
-import '../dtos/user/requests/update_address_request.dart';
-import '../dtos/user/responses/payment_method_response.dart';
-import '../dtos/user/requests/create_payment_method_request.dart';
-import '../dtos/user/requests/update_payment_method_request.dart';
-import '../../models/user/profile.dart';
 import '../../models/user/address.dart';
 import '../../models/user/payment_method.dart';
+import '../../models/user/profile.dart';
+import '../dtos/user/requests/create_address_request.dart';
+import '../dtos/user/requests/create_payment_method_request.dart';
+import '../dtos/user/requests/update_address_request.dart';
+import '../dtos/user/requests/update_payment_method_request.dart';
+import '../dtos/user/requests/update_profile_request.dart';
+import '../dtos/user/responses/address_response.dart';
+import '../dtos/user/responses/payment_method_response.dart';
+import '../dtos/user/responses/profile_response.dart';
 
 /// Mapper para convertir entre DTOs y Models del dominio de usuarios.
 ///
@@ -34,15 +34,17 @@ class UserMapper {
   static Profile profileToModel(ProfileResponse dto) {
     return Profile(
       id: dto.id,
-      username: dto.username,
-      email: dto.email,
-      firstName: dto.nombre,
-      lastName: dto.apellido,
+      username: dto.email ?? '', // Backend usa usuario_email
+      email: dto.email ?? '',
+      firstName: dto.nombre, // Backend usa usuario_nombre (nombre completo)
+      lastName: null, // Backend no envía apellido separado
       phone: dto.telefono,
       photoUrl: dto.fotoPerfil,
-      createdAt: DateTime.parse(dto.createdAt),
-      isActive: dto.isActive,
-      activeRole: dto.rolActivo,
+      createdAt: dto.creadoEn != null
+          ? DateTime.parse(dto.creadoEn!)
+          : DateTime.now(),
+      isActive: true, // Backend no envía is_active, asumimos activo
+      activeRole: null, // Se obtiene de otro endpoint
     );
   }
 
@@ -172,15 +174,27 @@ class UserMapper {
       tipo: model.type != original.type ? model.type : null,
       etiqueta: model.label != original.label ? model.label : null,
       direccion: model.street != original.street ? model.street : null,
-      referencia: model.reference != original.reference ? model.reference : null,
-      pisoApartamento: model.floorApartment != original.floorApartment ? model.floorApartment : null,
-      calleSecundaria: model.secondaryStreet != original.secondaryStreet ? model.secondaryStreet : null,
+      referencia: model.reference != original.reference
+          ? model.reference
+          : null,
+      pisoApartamento: model.floorApartment != original.floorApartment
+          ? model.floorApartment
+          : null,
+      calleSecundaria: model.secondaryStreet != original.secondaryStreet
+          ? model.secondaryStreet
+          : null,
       latitud: model.latitude != original.latitude ? model.latitude : null,
       longitud: model.longitude != original.longitude ? model.longitude : null,
       ciudad: model.city != original.city ? model.city : null,
-      telefonoContacto: model.contactPhone != original.contactPhone ? model.contactPhone : null,
-      indicaciones: model.instructions != original.instructions ? model.instructions : null,
-      esPredeterminada: model.isDefault != original.isDefault ? model.isDefault : null,
+      telefonoContacto: model.contactPhone != original.contactPhone
+          ? model.contactPhone
+          : null,
+      indicaciones: model.instructions != original.instructions
+          ? model.instructions
+          : null,
+      esPredeterminada: model.isDefault != original.isDefault
+          ? model.isDefault
+          : null,
     );
   }
 
@@ -211,7 +225,9 @@ class UserMapper {
   // ========================================================================
 
   /// Convierte un [PaymentMethod] (Model) a [CreatePaymentMethodRequest] (DTO).
-  static CreatePaymentMethodRequest paymentMethodToCreateRequest(PaymentMethod model) {
+  static CreatePaymentMethodRequest paymentMethodToCreateRequest(
+    PaymentMethod model,
+  ) {
     return CreatePaymentMethodRequest(
       tipo: model.type,
       alias: model.alias,
@@ -225,7 +241,9 @@ class UserMapper {
   // ========================================================================
 
   /// Convierte un [PaymentMethod] (Model) a [UpdatePaymentMethodRequest] (DTO).
-  static UpdatePaymentMethodRequest paymentMethodToUpdateRequest(PaymentMethod model) {
+  static UpdatePaymentMethodRequest paymentMethodToUpdateRequest(
+    PaymentMethod model,
+  ) {
     return UpdatePaymentMethodRequest(
       tipo: model.type,
       alias: model.alias,
@@ -243,7 +261,9 @@ class UserMapper {
       tipo: model.type != original.type ? model.type : null,
       alias: model.alias != original.alias ? model.alias : null,
       observaciones: model.notes != original.notes ? model.notes : null,
-      esPredeterminado: model.isDefault != original.isDefault ? model.isDefault : null,
+      esPredeterminado: model.isDefault != original.isDefault
+          ? model.isDefault
+          : null,
     );
   }
 }

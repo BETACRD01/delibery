@@ -1,9 +1,10 @@
 // lib/screens/delivery/pantalla_datos_bancarios.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import '../../theme/jp_theme.dart' hide JPSnackbar;
-import '../../services/repartidor_datos_bancarios_service.dart';
+import '../../services/repartidor/repartidor_datos_bancarios_service.dart';
 import '../../models/datos_bancarios.dart';
 import '../../widgets/jp_snackbar.dart';
 
@@ -129,7 +130,7 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: JPColors.primary),
+        child: CupertinoActivityIndicator(radius: 14),
       );
     }
 
@@ -277,14 +278,9 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
                     ),
                   ),
                   child: _isSaving
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
+                      ? const CupertinoActivityIndicator(
+                          radius: 10,
+                          color: Colors.white,
                         )
                       : Text(
                           _modoEdicion ? 'Actualizar' : 'Guardar',

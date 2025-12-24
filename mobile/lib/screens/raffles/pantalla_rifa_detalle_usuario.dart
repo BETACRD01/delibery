@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../apis/helpers/api_exception.dart';
 import '../../config/api_config.dart';
-import '../../services/usuarios_service.dart';
+import '../../services/usuarios/usuarios_service.dart';
 
 class PantallaRifaDetalleUsuario extends StatefulWidget {
   final String rifaId;
@@ -505,12 +505,23 @@ class _PantallaRifaDetalleUsuarioState
           const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progreso,
-              minHeight: 8,
-              backgroundColor: const Color(0xFFF2F2F7),
-              valueColor: AlwaysStoppedAnimation<Color>(estadoColor),
-            ),
+            child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF2F2F7),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: progreso,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: estadoColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
           ),
           const SizedBox(height: 8),
           Text(

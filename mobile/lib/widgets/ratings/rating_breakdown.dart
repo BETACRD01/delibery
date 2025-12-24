@@ -1,7 +1,6 @@
 // lib/widgets/ratings/rating_breakdown.dart
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 /// Widget que muestra la distribución de calificaciones por estrellas
 ///
@@ -73,15 +72,23 @@ class RatingBreakdown extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Barra de progreso
+              // Barra de progreso - Estilo iOS
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(barHeight / 2),
-                  child: LinearProgressIndicator(
-                    value: percentage,
-                    backgroundColor: inactiveColor,
-                    valueColor: AlwaysStoppedAnimation<Color>(activeColor),
-                    minHeight: barHeight,
+                child: Container(
+                  height: barHeight,
+                  decoration: BoxDecoration(
+                    color: inactiveColor,
+                    borderRadius: BorderRadius.circular(barHeight / 2),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: percentage,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: activeColor,
+                        borderRadius: BorderRadius.circular(barHeight / 2),
+                      ),
+                    ),
                   ),
                 ),
               ),

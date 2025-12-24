@@ -12,6 +12,8 @@ router = DefaultRouter()
 router.register(r'categorias', views.CategoriaViewSet, basename='categoria')
 router.register(r'productos', views.ProductoViewSet, basename='producto')
 router.register(r'promociones', views.PromocionViewSet, basename='promocion')
+router.register(r'provider/products', views.ProviderProductoViewSet, basename='provider-producto')
+router.register(r'provider/promociones', views.ProviderPromocionViewSet, basename='provider-promocion')
 
 # URLs del carrito
 urlpatterns_carrito = [

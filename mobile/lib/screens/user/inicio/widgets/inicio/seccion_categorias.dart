@@ -1,6 +1,7 @@
 // lib/screens/user/inicio/widgets/seccion_categorias.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:mobile/theme/app_colors_primary.dart';
 import 'package:mobile/theme/app_colors_support.dart';
 
@@ -217,19 +218,8 @@ class _CategoriaItem extends StatelessWidget {
         fit: BoxFit.cover,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
-          return Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: categoria.color ?? AppColorsPrimary.main,
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                    : null,
-              ),
-            ),
+          return const Center(
+            child: CupertinoActivityIndicator(radius: 10),
           );
         },
         // Si la imagen falla (404), mostramos el icono como respaldo

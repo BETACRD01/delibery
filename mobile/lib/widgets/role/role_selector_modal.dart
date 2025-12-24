@@ -5,7 +5,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Colors, Material, MaterialType;
 import 'package:provider/provider.dart';
-import '../../services/role_manager.dart';
+import '../../services/roles/role_manager.dart';
 import '../../switch/roles.dart';
 import '../../theme/jp_theme.dart';
 

@@ -19,11 +19,11 @@ import './providers/notificaciones_provider.dart';
 import './providers/proveedor_carrito.dart';
 import './providers/proveedor_pedido.dart';
 import './screens/delivery/pantalla_ver_comprobante.dart';
-import './services/auth_service.dart';
-import './services/notification_handler.dart';
-import './services/pedido_service.dart';
-import './services/role_manager.dart';
-import './services/servicio_notificacion.dart';
+import './services/auth/auth_service.dart';
+import './services/notifications/notification_handler.dart';
+import './services/pedidos/pedido_service.dart';
+import './services/roles/role_manager.dart';
+import './services/notifications/servicio_notificacion.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {

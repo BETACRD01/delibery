@@ -3,7 +3,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Material, MaterialType;
 
-import '../../services/toast_service.dart';
+import '../../services/core/toast_service.dart';
 import '../../theme/app_colors_primary.dart';
 import '../../theme/app_colors_secondary.dart';
 import '../../theme/jp_theme.dart';

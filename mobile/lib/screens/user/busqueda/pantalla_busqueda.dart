@@ -9,7 +9,7 @@ import '../../../config/rutas.dart';
 import '../../../controllers/user/busqueda_controller.dart';
 import '../../../models/producto_model.dart';
 import '../../../providers/proveedor_carrito.dart';
-import '../../../services/toast_service.dart';
+import '../../../services/core/toast_service.dart';
 import '../../../theme/app_colors_primary.dart';
 import '../../../theme/app_colors_support.dart';
 import '../../../theme/jp_theme.dart';

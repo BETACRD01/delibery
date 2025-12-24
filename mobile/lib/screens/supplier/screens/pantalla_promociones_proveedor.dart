@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -9,26 +10,28 @@ import 'package:provider/provider.dart';
 import '../../../controllers/supplier/supplier_controller.dart';
 import '../../../models/producto_model.dart';
 import '../../../models/promocion_model.dart';
+import '../../../theme/app_colors_primary.dart';
 
 class PantallaPromocionesProveedor extends StatelessWidget {
   const PantallaPromocionesProveedor({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis Promociones'),
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Mis Promociones'),
       ),
-      body: Consumer<SupplierController>(
+      child: Consumer<SupplierController>(
         builder: (context, controller, _) {
           final promos = controller.promociones;
           if (promos.isEmpty) {
             return const Center(child: Text('Sin promociones'));
           }
-          return ListView.builder(
-            itemCount: promos.length,
-            itemBuilder: (_, i) => ListTile(
-              title: Text(promos[i].titulo),
+          return Material(
+            type: MaterialType.transparency,
+            child: ListView.builder(
+              itemCount: promos.length,
+              itemBuilder: (_, i) => ListTile(title: Text(promos[i].titulo)),
             ),
           );
         },
@@ -37,7 +40,7 @@ class PantallaPromocionesProveedor extends StatelessWidget {
   }
 }
 
-// Helper público para reusar el formulario (stub)
+// Helper público para reusar el formulario
 Widget buildFormularioPromocion({PromocionModel? promo}) {
   return FormularioPromocion(promo: promo);
 }
@@ -56,22 +59,21 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
   final _descripcionController = TextEditingController();
   final _descuentoController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
-  Color _colorSeleccionado = Colors.pink;
+  Color _colorSeleccionado = const Color(0xFFE91E63);
   File? _imagenSeleccionada;
   bool _procesando = false;
   bool _activa = true;
-  bool _programar = false;
   String? _errorFormulario;
   String _tipoSeleccionado = 'descuento';
-  DateTime? _fechaInicio;
-  DateTime? _fechaFin;
   ProductoModel? _productoAsociado;
 
   static const List<Color> _opcionesColor = [
-    Colors.pink,
-    Colors.indigo,
-    Colors.teal,
-    Colors.orange,
+    Color(0xFFE91E63), // Pink
+    Color(0xFF3F51B5), // Indigo
+    Color(0xFF009688), // Teal
+    Color(0xFFFF9800), // Orange
+    Color(0xFF8E24AA), // Purple
+    Color(0xFF2196F3), // Blue
   ];
 
   @override
@@ -83,7 +85,6 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
       _descuentoController.text = widget.promo!.descuento;
       _activa = widget.promo!.activa;
       _colorSeleccionado = widget.promo!.color;
-      _tipoSeleccionado = widget.promo!.tipoNavegacion == 'producto' ? 'descuento' : _tipoSeleccionado;
     }
   }
 
@@ -97,181 +98,389 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
       ),
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemGrey4,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
+            child: Row(
               children: [
                 Text(
                   widget.promo != null ? 'Editar Promoción' : 'Nueva Promoción',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: CupertinoColors.label.resolveFrom(context),
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
+                CupertinoButton(
+                  padding: const EdgeInsets.all(4),
+                  onPressed: () => _mostrarGuiaPromociones(context),
+                  minimumSize: Size(0, 0),
+                  child: const Icon(
+                    CupertinoIcons.info_circle,
+                    color: CupertinoColors.activeBlue,
+                    size: 20,
+                  ),
+                ),
+                const Spacer(),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
                   onPressed: () => Navigator.pop(context),
+                  child: const Icon(
+                    CupertinoIcons.xmark_circle_fill,
+                    color: CupertinoColors.systemGrey3,
+                    size: 28,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Center(
-              child: GestureDetector(
-                onTap: _mostrarOpcionesImagen,
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: _imagenSeleccionada != null
-                        ? Image.file(_imagenSeleccionada!, fit: BoxFit.cover)
-                        : widget.promo?.imagenUrl != null
-                            ? Image.network(widget.promo!.imagenUrl!, fit: BoxFit.cover)
-                            : const Icon(Icons.campaign_outlined, size: 32, color: Colors.grey),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (_errorFormulario != null)
-              Text(_errorFormulario!, style: const TextStyle(color: Colors.red, fontSize: 12)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _tituloController,
-              decoration: const InputDecoration(
-                labelText: 'Título',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _descripcionController,
-              decoration: const InputDecoration(
-                labelText: 'Descripción',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _descuentoController,
-              decoration: const InputDecoration(
-                labelText: 'Texto destacado (ej. 20% OFF)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Text('Tipo', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('% Descuento'),
-                  selected: _tipoSeleccionado == 'descuento',
-                  onSelected: (_) => setState(() => _tipoSeleccionado = 'descuento'),
-                ),
-                ChoiceChip(
-                  label: const Text('Envío gratis'),
-                  selected: _tipoSeleccionado == 'envio',
-                  onSelected: (_) => setState(() => _tipoSeleccionado = 'envio'),
-                ),
-                ChoiceChip(
-                  label: const Text('2x1'),
-                  selected: _tipoSeleccionado == '2x1',
-                  onSelected: (_) => setState(() => _tipoSeleccionado = '2x1'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text('Color del banner', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 10,
-              children: _opcionesColor
-                  .map((color) => ChoiceChip(
-                        label: const Text(''),
-                        backgroundColor: color,
-                        selectedColor: color,
-                        selected: _colorSeleccionado == color,
-                        onSelected: (_) => setState(() => _colorSeleccionado = color),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              value: _activa,
-              onChanged: (value) => setState(() => _activa = value),
-              title: const Text('Promoción activa'),
-              contentPadding: EdgeInsets.zero,
-            ),
-            SwitchListTile(
-              value: _programar,
-              onChanged: (value) => setState(() => _programar = value),
-              title: const Text('Programar publicación'),
-              contentPadding: EdgeInsets.zero,
-            ),
-            if (_programar) ...[
-              Row(
+          ),
+
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding + 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: _buildFechaPicker(context, 'Inicio', _fechaInicio, (date) => setState(() => _fechaInicio = date))),
-                  const SizedBox(width: 10),
-                  Expanded(child: _buildFechaPicker(context, 'Fin', _fechaFin, (date) => setState(() => _fechaFin = date))),
+                  // Error message
+                  if (_errorFormulario != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemRed.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        _errorFormulario!,
+                        style: const TextStyle(
+                          color: CupertinoColors.systemRed,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+
+                  // Image picker (más grande para ver mejor la imagen)
+                  Center(
+                    child: GestureDetector(
+                      onTap: _mostrarOpcionesImagen,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemGrey5.resolveFrom(
+                            context,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: CupertinoColors.systemGrey4.resolveFrom(
+                              context,
+                            ),
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: _imagenSeleccionada != null
+                              ? Image.file(
+                                  _imagenSeleccionada!,
+                                  fit: BoxFit.cover,
+                                )
+                              : widget.promo?.imagenUrl != null
+                              ? Image.network(
+                                  widget.promo!.imagenUrl!,
+                                  fit: BoxFit.cover,
+                                )
+                              : Icon(
+                                  CupertinoIcons.photo_on_rectangle,
+                                  size: 36,
+                                  color: CupertinoColors.systemGrey.resolveFrom(
+                                    context,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Form fields in grouped card
+                  _buildGroupedCard(context, [
+                    _buildTextField(
+                      controller: _tituloController,
+                      placeholder: 'Título de la promoción',
+                    ),
+                    _buildDivider(context),
+                    _buildTextField(
+                      controller: _descripcionController,
+                      placeholder: 'Descripción',
+                    ),
+                    _buildDivider(context),
+                    _buildTextField(
+                      controller: _descuentoController,
+                      placeholder: 'Texto destacado (ej. 20% OFF)',
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+
+                  // Type selector
+                  _buildSectionHeader(context, 'TIPO DE PROMOCIÓN'),
+                  _buildGroupedCard(context, [_buildTypeSelector()]),
+                  const SizedBox(height: 16),
+
+                  // Color selector
+                  _buildSectionHeader(context, 'COLOR DEL BANNER'),
+                  _buildGroupedCard(context, [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: _opcionesColor.map((color) {
+                          final isSelected =
+                              _colorSeleccionado.toARGB32() == color.toARGB32();
+                          return GestureDetector(
+                            onTap: () =>
+                                setState(() => _colorSeleccionado = color),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: isSelected
+                                    ? Border.all(color: Colors.white, width: 3)
+                                    : null,
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: color.withValues(alpha: 0.5),
+                                          blurRadius: 8,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: isSelected
+                                  ? const Icon(
+                                      CupertinoIcons.checkmark,
+                                      color: Colors.white,
+                                      size: 18,
+                                    )
+                                  : null,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+
+                  // Options
+                  _buildGroupedCard(context, [
+                    _buildSwitchRow(
+                      context,
+                      title: 'Promoción activa',
+                      value: _activa,
+                      onChanged: (v) => setState(() => _activa = v),
+                    ),
+                    _buildDivider(context),
+                    _buildProductRow(context),
+                  ]),
+                  const SizedBox(height: 24),
+
+                  // Save button
+                  SizedBox(
+                    width: double.infinity,
+                    child: CupertinoButton(
+                      color: _colorSeleccionado,
+                      borderRadius: BorderRadius.circular(12),
+                      onPressed: _procesando
+                          ? null
+                          : () => _guardarPromocion(context),
+                      child: _procesando
+                          ? const CupertinoActivityIndicator(
+                              color: Colors.white,
+                            )
+                          : const Text(
+                              'Guardar Promoción',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
                 ],
               ),
-            ],
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Producto asociado'),
-              subtitle: Text(_productoAsociado?.nombre ?? 'No se seleccionó'),
-              trailing: TextButton(
-                onPressed: () => _mostrarSelectorProducto(context),
-                child: const Text('Seleccionar'),
-              ),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _procesando ? null : () => _guardarPromocion(context),
-                style: FilledButton.styleFrom(
-                  backgroundColor: _colorSeleccionado,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _procesando
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Guardar promoción', style: TextStyle(color: Colors.white)),
-              ),
-            ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 6),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: CupertinoColors.systemGrey.resolveFrom(context),
         ),
+      ),
+    );
+  }
+
+  Widget _buildGroupedCard(BuildContext context, List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16),
+      child: Container(
+        height: 0.5,
+        color: CupertinoColors.separator.resolveFrom(context),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String placeholder,
+  }) {
+    return CupertinoTextField(
+      controller: controller,
+      placeholder: placeholder,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(),
+      style: const TextStyle(fontSize: 16),
+    );
+  }
+
+  Widget _buildTypeSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: CupertinoSlidingSegmentedControl<String>(
+        groupValue: _tipoSeleccionado,
+        children: const {
+          'descuento': Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text('% OFF', style: TextStyle(fontSize: 13)),
+          ),
+          'envio': Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text('Envío', style: TextStyle(fontSize: 13)),
+          ),
+          '2x1': Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text('2x1', style: TextStyle(fontSize: 13)),
+          ),
+        },
+        onValueChanged: (value) {
+          if (value != null) setState(() => _tipoSeleccionado = value);
+        },
+      ),
+    );
+  }
+
+  Widget _buildSwitchRow(
+    BuildContext context, {
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              color: CupertinoColors.label.resolveFrom(context),
+            ),
+          ),
+          CupertinoSwitch(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: AppColorsPrimary.main,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductRow(BuildContext context) {
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      onPressed: () => _mostrarSelectorProducto(context),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Producto asociado',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: CupertinoColors.label.resolveFrom(context),
+                  ),
+                ),
+                Text(
+                  _productoAsociado?.nombre ?? 'No seleccionado',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            CupertinoIcons.chevron_forward,
+            size: 16,
+            color: CupertinoColors.systemGrey3.resolveFrom(context),
+          ),
+        ],
       ),
     );
   }
@@ -290,14 +499,6 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
       _errorFormulario = null;
     });
 
-    if (_programar && (_fechaInicio == null || _fechaFin == null)) {
-      setState(() {
-        _errorFormulario = 'Selecciona fechas de inicio y fin';
-        _procesando = false;
-      });
-      return;
-    }
-
     final data = {
       'titulo': titulo,
       'descripcion': descripcion,
@@ -305,131 +506,325 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
       'color': '#${_colorHex(_colorSeleccionado)}',
       'activa': _activa ? 'true' : 'false',
       'tipo': _tipoSeleccionado,
-      if (_programar) 'fecha_inicio': _fechaInicio?.toIso8601String(),
-      if (_programar) 'fecha_fin': _fechaFin?.toIso8601String(),
       if (_productoAsociado != null) 'producto_asociado': _productoAsociado!.id,
     };
 
     final controller = context.read<SupplierController>();
-    final ok = await controller.crearPromocion(
-      data,
-      imagen: _imagenSeleccionada,
-    );
+
+    bool ok;
+    if (widget.promo != null) {
+      // EDITAR promoción existente
+      ok = await controller.editarPromocion(
+        int.parse(widget.promo!.id),
+        data,
+        imagen: _imagenSeleccionada,
+      );
+    } else {
+      // CREAR nueva promoción
+      ok = await controller.crearPromocion(data, imagen: _imagenSeleccionada);
+    }
 
     setState(() => _procesando = false);
 
     if (ok) {
       if (!context.mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Promoción guardada'), backgroundColor: Colors.green),
-      );
     } else if (controller.error != null) {
       setState(() => _errorFormulario = controller.error);
     }
   }
 
   Future<void> _mostrarOpcionesImagen() async {
-    final source = await showModalBottomSheet<ImageSource>(
+    await showCupertinoModalPopup(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.photo_library),
-            title: const Text('Galería'),
-            onTap: () => Navigator.pop(context, ImageSource.gallery),
+      builder: (context) => CupertinoActionSheet(
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _seleccionarImagen(ImageSource.gallery);
+            },
+            child: const Text('Elegir de Galería'),
           ),
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text('Cámara'),
-            onTap: () => Navigator.pop(context, ImageSource.camera),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _seleccionarImagen(ImageSource.camera);
+            },
+            child: const Text('Tomar Foto'),
           ),
         ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
       ),
     );
-
-    if (source != null) {
-      try {
-        final picked = await _picker.pickImage(source: source, imageQuality: 70);
-        if (picked != null) {
-          setState(() => _imagenSeleccionada = File(picked.path));
-        }
-      } catch (_) {
-        setState(() => _errorFormulario = 'No se pudo cargar la imagen');
-      }
-    }
   }
 
-  Widget _buildFechaPicker(
-    BuildContext context,
-    String label,
-    DateTime? fecha,
-    ValueChanged<DateTime?> onSelected,
-  ) {
-    final texto = fecha != null ? fecha.toLocal().toString().split(' ').first : 'Seleccionar';
-    return GestureDetector(
-      onTap: () async {
-        final seleccionado = await showDatePicker(
-          context: context,
-          initialDate: fecha ?? DateTime.now(),
-          firstDate: DateTime.now().subtract(const Duration(days: 1)),
-          lastDate: DateTime.now().add(const Duration(days: 365)),
-        );
-        if (seleccionado != null) {
-          onSelected(seleccionado);
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Row(
-          children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text(texto),
-            const SizedBox(width: 4),
-            const Icon(Icons.calendar_today, size: 16),
-          ],
-        ),
-      ),
-    );
+  Future<void> _seleccionarImagen(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(source: source, imageQuality: 70);
+      if (picked != null) {
+        setState(() => _imagenSeleccionada = File(picked.path));
+      }
+    } catch (_) {
+      setState(() => _errorFormulario = 'No se pudo cargar la imagen');
+    }
   }
 
   Future<void> _mostrarSelectorProducto(BuildContext context) async {
     final controller = context.read<SupplierController>();
-    final productoSeleccionado = await showModalBottomSheet<ProductoModel>(
+    final producto = await showCupertinoModalPopup<ProductoModel>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.5,
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Seleccionar Producto',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Icon(CupertinoIcons.xmark_circle_fill),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Material(
+                type: MaterialType.transparency,
+                child: ListView.builder(
+                  itemCount: controller.productos.length,
+                  itemBuilder: (_, index) {
+                    final prod = controller.productos[index];
+                    return CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(ctx, prod),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: CupertinoColors.separator.resolveFrom(
+                                context,
+                              ),
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                prod.nombre,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: CupertinoColors.label.resolveFrom(
+                                    context,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '\$${prod.precio.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: CupertinoColors.secondaryLabel
+                                    .resolveFrom(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      builder: (ctx) {
-        return ListView.builder(
-          itemCount: controller.productos.length,
-          itemBuilder: (_, index) {
-            final producto = controller.productos[index];
-            return ListTile(
-              title: Text(producto.nombre),
-              subtitle: Text('Stock: ${producto.stock ?? 0}'),
-              onTap: () => Navigator.pop(ctx, producto),
-            );
-          },
-        );
-      },
     );
-    if (productoSeleccionado != null) {
-      setState(() => _productoAsociado = productoSeleccionado);
+    if (producto != null) {
+      setState(() => _productoAsociado = producto);
     }
   }
 
   String _colorHex(Color color) {
     final hex = color.toARGB32().toRadixString(16).padLeft(8, '0');
     return hex.substring(2);
+  }
+
+  void _mostrarGuiaPromociones(BuildContext context) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemGrey4,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '📢 Guía de Promociones',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Icon(CupertinoIcons.xmark_circle_fill),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Expanded(
+              child: Material(
+                type: MaterialType.transparency,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildGuideSection(
+                        context,
+                        icon: '🎯',
+                        title: '¿Qué son las promociones?',
+                        content:
+                            'Las promociones te permiten destacar tus productos y atraer más clientes. Puedes ofrecer descuentos, envío gratis o combos especiales.',
+                      ),
+                      const SizedBox(height: 20),
+                      _buildGuideSection(
+                        context,
+                        icon: '📝',
+                        title: 'Paso 1: Información básica',
+                        content:
+                            '• Título: Nombre atractivo para tu promoción (ej: "¡Oferta de Verano!")\n• Descripción: Explica los beneficios de la promoción\n• Texto destacado: Lo que verán los clientes (ej: "20% OFF", "2x1")',
+                      ),
+                      const SizedBox(height: 20),
+                      _buildGuideSection(
+                        context,
+                        icon: '🏷️',
+                        title: 'Paso 2: Tipo de promoción',
+                        content:
+                            '• % OFF: Descuento porcentual en productos\n• Envío: Envío gratis o con descuento\n• 2x1: Compra uno y llévate otro gratis',
+                      ),
+                      const SizedBox(height: 20),
+                      _buildGuideSection(
+                        context,
+                        icon: '🎨',
+                        title: 'Paso 3: Personalización',
+                        content:
+                            '• Color del banner: Elige un color llamativo que combine con tu marca\n• Imagen: Agrega una foto atractiva de tu producto o promoción',
+                      ),
+                      const SizedBox(height: 20),
+                      _buildGuideSection(
+                        context,
+                        icon: '📦',
+                        title: 'Paso 4: Producto asociado',
+                        content:
+                            'Vincula la promoción a un producto específico de tu catálogo. Los clientes podrán ver la promoción directamente en ese producto.',
+                      ),
+                      const SizedBox(height: 20),
+                      _buildGuideSection(
+                        context,
+                        icon: '✅',
+                        title: 'Paso 5: Activar',
+                        content:
+                            'Activa la promoción para que sea visible inmediatamente, o déjala pausada para publicarla después.',
+                      ),
+                      const SizedBox(height: 20),
+                      _buildGuideSection(
+                        context,
+                        icon: '💡',
+                        title: 'Consejos para promociones exitosas',
+                        content:
+                            '• Usa títulos cortos y llamativos\n• Incluye el descuento en el texto destacado\n• Usa imágenes de alta calidad\n• Limita la duración para crear urgencia\n• Promociona tus mejores productos',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuideSection(
+    BuildContext context, {
+    required String icon,
+    required String title,
+    required String content,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: CupertinoColors.label.resolveFrom(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: TextStyle(
+              fontSize: 14,
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

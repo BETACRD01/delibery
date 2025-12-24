@@ -1,11 +1,12 @@
 // lib/screens/user/catalogo/pantalla_menu_completo.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
-import '../../../../../services/productos_service.dart';
+import '../../../../../services/productos/productos_service.dart';
 import '../../../models/categoria_model.dart';
 import '../../../models/producto_model.dart';
 
@@ -198,7 +199,7 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CupertinoActivityIndicator(radius: 14));
     }
 
     if (_error.isNotEmpty) {

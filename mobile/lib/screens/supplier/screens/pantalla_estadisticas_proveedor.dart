@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../controllers/supplier/supplier_controller.dart';
 
 /// Pantalla dedicada de estadísticas del proveedor
@@ -19,7 +20,10 @@ class PantallaEstadisticasProveedor extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Estadísticas', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text(
+          'Estadísticas',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: _primario,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -76,8 +80,8 @@ class PantallaEstadisticasProveedor extends StatelessWidget {
                 const SizedBox(height: 10),
                 _buildStatCardLarge(
                   valor: controller.valoracionPromedio > 0
-                  ? controller.valoracionPromedio.toStringAsFixed(1)
-                  : '--',
+                      ? controller.valoracionPromedio.toStringAsFixed(1)
+                      : '--',
                   etiqueta: 'Valoración promedio',
                   subtitulo: '${controller.totalResenas} reseñas totales',
                   icono: Icons.star_outline,
@@ -111,10 +115,7 @@ class PantallaEstadisticasProveedor extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-        _primario,
-       _primario.withValues(alpha: 0.8),
-           ],
+          colors: [_primario, _primario.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -144,13 +145,16 @@ class PantallaEstadisticasProveedor extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildMiniStat('${controller.pedidosPendientesCount}', 'Pendientes'),
+              _buildMiniStat(
+                '${controller.pedidosPendientesCount}',
+                'Pendientes',
+              ),
               const SizedBox(width: 24),
               _buildMiniStat('${controller.totalProductos}', 'Productos'),
               const SizedBox(width: 24),
               _buildMiniStat(
-                controller.valoracionPromedio > 0 
-                    ? '${controller.valoracionPromedio.toStringAsFixed(1)}★' 
+                controller.valoracionPromedio > 0
+                    ? '${controller.valoracionPromedio.toStringAsFixed(1)}★'
                     : '--',
                 'Rating',
               ),
@@ -261,10 +265,22 @@ class PantallaEstadisticasProveedor extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(etiqueta, style: const TextStyle(fontSize: 13, color: _textoSecundario)),
+                Text(
+                  etiqueta,
+                  style: const TextStyle(fontSize: 13, color: _textoSecundario),
+                ),
                 const SizedBox(height: 2),
-                Text(valor, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-                Text(subtitulo, style:const TextStyle(fontSize: 12, color: _textoSecundario)),
+                Text(
+                  valor,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  subtitulo,
+                  style: const TextStyle(fontSize: 12, color: _textoSecundario),
+                ),
               ],
             ),
           ),
@@ -285,7 +301,11 @@ class PantallaEstadisticasProveedor extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bar_chart_outlined, size: 48, color: Colors.grey.shade300),
+            Icon(
+              Icons.bar_chart_outlined,
+              size: 48,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 12),
             const Text(
               'Gráfico de ventas',
@@ -309,7 +329,11 @@ class PantallaEstadisticasProveedor extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bar_chart_outlined, size: 64, color: _alerta.withValues(alpha: 0.5)),
+            Icon(
+              Icons.bar_chart_outlined,
+              size: 64,
+              color: _alerta.withValues(alpha: 0.5),
+            ),
             const SizedBox(height: 20),
             const Text(
               'Estadísticas no disponibles',

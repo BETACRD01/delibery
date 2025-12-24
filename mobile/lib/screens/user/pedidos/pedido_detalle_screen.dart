@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/pedido_model.dart';
 import '../../../providers/proveedor_pedido.dart';
-import '../../../services/pago_service.dart';
+import '../../../services/pago/pago_service.dart';
 import 'pantalla_subir_comprobante.dart';
 import 'pantalla_ver_comprobante_usuario.dart';
 import '../../../widgets/ratings/dialogo_calificar_repartidor.dart';
@@ -80,7 +80,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
           // Si está cargando, mostramos el círculo SIEMPRE,
           // ignorando cualquier error viejo que pueda existir en memoria.
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CupertinoActivityIndicator(radius: 14));
           }
 
           // Si ya terminó de cargar y TODAVÍA hay error, ahí sí lo mostramos
@@ -846,7 +846,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CupertinoActivityIndicator(radius: 14),
                   )
                 : const Icon(Icons.cancel_outlined),
             label: Text(_isCancelling ? 'Procesando...' : 'Cancelar Pedido'),

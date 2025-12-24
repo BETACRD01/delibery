@@ -8,9 +8,9 @@ import 'package:provider/provider.dart';
 
 import '../../../config/rutas.dart';
 import '../../../controllers/user/perfil_controller.dart';
-import '../../../services/auth_service.dart';
-import '../../../services/role_manager.dart';
-import '../../../services/toast_service.dart';
+import '../../../services/auth/auth_service.dart';
+import '../../../services/roles/role_manager.dart';
+import '../../../services/core/toast_service.dart';
 import '../../../switch/role_router.dart';
 import '../../../switch/roles.dart';
 import '../../../theme/app_colors_primary.dart';

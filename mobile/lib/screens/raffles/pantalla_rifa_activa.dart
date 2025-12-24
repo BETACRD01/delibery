@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import '../../services/usuarios_service.dart';
+import '../../services/usuarios/usuarios_service.dart';
 import '../../apis/helpers/api_exception.dart';
 import '../../config/api_config.dart';
 import 'pantalla_rifa_detalle_usuario.dart';
@@ -429,14 +429,20 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
           ],
         ),
         const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: progreso,
-            minHeight: 8,
-            backgroundColor: const Color(0xFFF2F2F7),
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              Color(0xFF34C759),
+        Container(
+          height: 8,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F2F7),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: progreso,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF34C759),
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
           ),
         ),

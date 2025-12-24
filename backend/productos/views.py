@@ -19,6 +19,7 @@ from .serializers import (
     CarritoSerializer, ItemCarritoSerializer,
     AgregarAlCarritoSerializer, ActualizarCantidadSerializer
 )
+from .serializers import ProviderProductoDetailSerializer, ProviderProductoSerializer
 from pedidos.serializers import PedidoCreateSerializer, PedidoDetailSerializer
 from pedidos.models import TipoPedido
 from pagos.models import Pago, MetodoPago, TipoMetodoPago, EstadoPago as EstadoPagoPago
@@ -56,7 +57,7 @@ class ProductoViewSet(viewsets.ReadOnlyModelViewSet):
         if self.request.query_params.get('solo_ofertas') == 'true':
             queryset = queryset.filter(precio_anterior__gt=F('precio'))
 
-        return queryset.select_related('categoria', 'proveedor')
+        return queryset.exclude(tiene_stock=True, stock__lte=0).select_related('categoria', 'proveedor')
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -123,6 +124,185 @@ class PromocionViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_queryset(self):
         return Promocion.objects.filter(activa=True)
+
+
+class ProviderPromocionViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para que los proveedores gestionen sus promociones.
+    Permite crear, editar y eliminar promociones.
+    """
+    serializer_class = PromocionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filtra promociones del proveedor autenticado
+        return Promocion.objects.filter(
+            proveedor__user=self.request.user
+        ).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        from proveedores.models import Proveedor
+        try:
+            proveedor = Proveedor.objects.get(user=self.request.user)
+            serializer.save(proveedor=proveedor)
+        except Proveedor.DoesNotExist:
+            raise serializers.ValidationError("Usuario no es proveedor")
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        instance.delete()
+
+class ProviderProductoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet exclusivo para que los proveedores gestionen sus productos.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Filtra productos donde el proveedor es el usuario actual
+        # Se asume que Proveedor.user es el usuario logueado
+        return Producto.objects.filter(
+            proveedor__user=self.request.user
+        ).select_related('categoria', 'proveedor').order_by('-created_at')
+    
+    def get_serializer_class(self):
+        if self.action in ['retrieve', 'update', 'partial_update']:
+            return ProviderProductoDetailSerializer
+        if self.action == 'create':
+            return ProviderProductoSerializer
+        return ProductoListSerializer 
+
+    def perform_create(self, serializer):
+        from proveedores.models import Proveedor
+        try:
+            proveedor = Proveedor.objects.get(user=self.request.user)
+            serializer.save(proveedor=proveedor)
+        except Proveedor.DoesNotExist:
+            raise serializers.ValidationError("Usuario no es proveedor")
+
+    @action(detail=True, methods=['get'])
+    def reviews(self, request, pk=None):
+        """
+        Retorna el listado completo de reseñas para un producto específico del proveedor.
+        """
+        producto = self.get_object()
+        # Filtrar calificaciones de tipo producto para este producto
+        from calificaciones.models import CalificacionProducto
+        qs = CalificacionProducto.objects.filter(producto=producto).select_related('cliente', 'cliente__perfil').order_by('-creado_en')
+        
+        page = self.paginate_queryset(qs)
+        from .serializers import ResenaProductoSerializer
+        if page is not None:
+            serializer = ResenaProductoSerializer(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ResenaProductoSerializer(qs, many=True, context={'request': request})
+        return Response(serializer.data)
+            
+    @action(detail=True, methods=['get'])
+    def ratings(self, request, pk=None):
+        producto = self.get_object()
+        from calificaciones.models import CalificacionProducto
+        qs = CalificacionProducto.objects.filter(producto=producto).select_related('cliente').order_by('-creado_en')
+
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            data = []
+            for c in page:
+                data.append({
+                    'id': c.id,
+                    'usuario': c.cliente.get_full_name() or "Anonimo",
+                    'estrellas': c.estrellas,
+                    'comentario': c.comentario,
+                    'fecha': c.creado_en
+                })
+            return self.get_paginated_response(data)
+
+        data = [{'id': c.id, 'estrellas': c.estrellas, 'comentario': c.comentario} for c in qs]
+        return Response(data)
+
+    @action(detail=False, methods=['get'])
+    def estadisticas(self, request):
+        """
+        Endpoint para obtener estadísticas de ventas del proveedor.
+        GET /api/productos/provider/products/estadisticas/
+        """
+        from django.db.models import Sum, Count, Avg
+        from django.utils import timezone
+        from datetime import timedelta
+        from pedidos.models import ItemPedido, Pedido, EstadoPedido
+
+        # Obtener productos del proveedor
+        productos = self.get_queryset()
+
+        # Calcular ventas totales y productos top
+        top_productos = []
+        for producto in productos[:10]:  # Top 10 productos
+            items = ItemPedido.objects.filter(
+                producto=producto,
+                pedido__estado__in=[EstadoPedido.ENTREGADO, EstadoPedido.EN_CAMINO]
+            )
+            total_vendido = items.aggregate(total=Sum('cantidad'))['total'] or 0
+            ingresos = items.aggregate(
+                ingresos=Sum(F('cantidad') * F('precio_unitario'))
+            )['ingresos'] or Decimal('0')
+
+            top_productos.append({
+                'producto_id': producto.id,
+                'nombre': producto.nombre,
+                'cantidad_vendida': total_vendido,
+                'ingresos': float(ingresos),
+                'imagen_url': _build_media_url(producto.imagen, request) if producto.imagen else producto.imagen_url,
+            })
+
+        # Ordenar por ingresos
+        top_productos.sort(key=lambda x: x['ingresos'], reverse=True)
+
+        # Ventas por día (últimos 30 días)
+        hoy = timezone.now().date()
+        hace_30_dias = hoy - timedelta(days=30)
+
+        ventas_por_dia = []
+        for i in range(30):
+            fecha = hace_30_dias + timedelta(days=i)
+            items = ItemPedido.objects.filter(
+                producto__proveedor__user=request.user,
+                pedido__estado__in=[EstadoPedido.ENTREGADO, EstadoPedido.EN_CAMINO],
+                pedido__created_at__date=fecha
+            )
+            ingresos = items.aggregate(
+                total=Sum(F('cantidad') * F('precio_unitario'))
+            )['total'] or Decimal('0')
+
+            ventas_por_dia.append({
+                'fecha': fecha.isoformat(),
+                'ingresos': float(ingresos),
+            })
+
+        # Totales generales
+        total_items = ItemPedido.objects.filter(
+            producto__proveedor__user=request.user,
+            pedido__estado__in=[EstadoPedido.ENTREGADO, EstadoPedido.EN_CAMINO]
+        )
+
+        resumen = {
+            'total_productos_vendidos': total_items.aggregate(total=Sum('cantidad'))['total'] or 0,
+            'ingresos_totales': float(
+                total_items.aggregate(total=Sum(F('cantidad') * F('precio_unitario')))['total'] or Decimal('0')
+            ),
+            'pedidos_completados': Pedido.objects.filter(
+                items__producto__proveedor__user=request.user,
+                estado=EstadoPedido.ENTREGADO
+            ).distinct().count(),
+        }
+
+        return Response({
+            'resumen': resumen,
+            'top_productos': top_productos[:5],
+            'ventas_por_dia': ventas_por_dia,
+        })
 
 # ... (El resto de vistas del Carrito se mantiene igual, no necesita cambios) ...
 @api_view(['GET'])

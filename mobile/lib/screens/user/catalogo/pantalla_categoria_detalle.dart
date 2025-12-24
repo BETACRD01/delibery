@@ -6,12 +6,12 @@ import 'package:provider/provider.dart';
 
 import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
-import '../../../../../services/productos_service.dart';
+import '../../../../../services/productos/productos_service.dart';
 import '../../../../../theme/app_colors_primary.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/categoria_model.dart';
 import '../../../models/producto_model.dart';
-import '../../../services/toast_service.dart';
+import '../../../services/core/toast_service.dart';
 import '../../../widgets/cards/jp_product_card.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 

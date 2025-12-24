@@ -2,10 +2,11 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import '../../../services/repartidor_service.dart';
-import '../../../services/repartidor_datos_bancarios_service.dart';
+import '../../../services/repartidor/repartidor_service.dart';
+import '../../../services/repartidor/repartidor_datos_bancarios_service.dart';
 import '../../../models/repartidor.dart';
 import '../../../models/datos_bancarios.dart';
 import '../../../apis/helpers/api_exception.dart';
@@ -581,7 +582,7 @@ class _PantallaEditarPerfilRepartidorState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: _naranja),
+          const CupertinoActivityIndicator(radius: 14),
           const SizedBox(height: 16),
           Text('Cargando perfil...', style: TextStyle(color: Colors.grey[600])),
         ],
@@ -645,7 +646,7 @@ class _PantallaEditarPerfilRepartidorState
               width: 140,
               height: 140,
               color: Colors.white,
-              child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+              child: const Center(child: CupertinoActivityIndicator(radius: 14)),
             );
           },
           errorBuilder: (context, error, stackTrace) {
@@ -713,13 +714,9 @@ class _PantallaEditarPerfilRepartidorState
                 ),
                 padding: const EdgeInsets.all(12),
                 child: _subiendoFoto
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
+                    ? const CupertinoActivityIndicator(
+                        radius: 10,
+                        color: Colors.white,
                       )
                     : const Icon(
                         Icons.camera_alt,
@@ -963,11 +960,7 @@ class _PantallaEditarPerfilRepartidorState
         if (_loadingBancarios)
           const Padding(
             padding: EdgeInsets.only(bottom: 12),
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+            child: CupertinoActivityIndicator(radius: 9),
           ),
         Text(
           tieneDatos
@@ -1129,13 +1122,9 @@ class _PantallaEditarPerfilRepartidorState
                   ),
                 ),
                 child: _guardando
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
+                    ? const CupertinoActivityIndicator(
+                        radius: 10,
+                        color: Colors.white,
                       )
                     : const Text(
                         'Guardar Cambios',

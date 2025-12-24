@@ -1,9 +1,10 @@
 // lib/screens/delivery/ganancias/pantalla_ganancias_repartidor.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/models/entrega_historial.dart';
-import 'package:mobile/services/repartidor_service.dart';
+import 'package:mobile/services/repartidor/repartidor_service.dart';
 
 /// Pantalla de ganancias vinculada al backend y alineada al diseño tipo iOS.
 class PantallaGananciasRepartidor extends StatefulWidget {
@@ -188,7 +189,7 @@ class _PantallaGananciasRepartidorState
 
   Widget _buildListado() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CupertinoActivityIndicator(radius: 14));
     }
     if (_error != null) {
       return Center(

@@ -1,10 +1,11 @@
 // lib/screens/user/super/pantalla_detalle_restaurante.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../models/proveedor.dart';
 import '../../../models/producto_model.dart';
-import '../../../services/productos_service.dart';
+import '../../../services/productos/productos_service.dart';
 import '../../../config/rutas.dart';
 
 /// Pantalla de detalle de un restaurante/proveedor
@@ -429,7 +430,7 @@ class _PantallaDetalleRestauranteState
     if (_loading) {
       return const SliverFillRemaining(
         child: Center(
-          child: CircularProgressIndicator(color: JPColors.primary),
+          child: CupertinoActivityIndicator(radius: 14),
         ),
       );
     }

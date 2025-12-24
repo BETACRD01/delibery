@@ -1,9 +1,10 @@
 // lib/screens/auth/forms/registro_usuario_form.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import '../../../services/auth_service.dart';
+import '../../../services/auth/auth_service.dart';
 import '../../../apis/helpers/api_exception.dart';
 import '../../pantalla_router.dart';
 
@@ -767,13 +768,9 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
           ),
         ),
         child: _loading
-            ? const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
-                ),
+            ? const CupertinoActivityIndicator(
+                color: Colors.white,
+                radius: 10,
               )
             : const Text(
                 'Crear Cuenta',

@@ -1,6 +1,7 @@
 // lib/screens/admin/pantalla_solicitudes_rol.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../apis/admin/solicitudes_api.dart';
 import '../../../models/solicitud_cambio_rol.dart';
 
@@ -1153,7 +1154,7 @@ class _PantallaSolicitudesRolState extends State<PantallaSolicitudesRol>
 
   Widget _buildCargando() {
     return const Center(
-      child: CircularProgressIndicator(),
+      child: CupertinoActivityIndicator(radius: 14),
     );
   }
 

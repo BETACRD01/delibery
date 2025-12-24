@@ -1,6 +1,7 @@
 // lib/screens/delivery/pantalla_inicio_repartidor.dart
 
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -13,7 +14,7 @@ import '../../widgets/mapa_pedidos_widget.dart';
 import '../../controllers/delivery/repartidor_controller.dart';
 import 'widgets/repartidor_drawer.dart';
 import 'widgets/lista_vacia_widget.dart';
-import '../../services/session_cleanup.dart';
+import '../../services/auth/session_cleanup.dart';
 import 'pantalla_ver_comprobante.dart';
 
 /// ✅ REFACTORIZADA: Pantalla principal para REPARTIDORES
@@ -791,7 +792,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: _accent),
+          const CupertinoActivityIndicator(radius: 14),
           const SizedBox(height: 16),
           Text('Cargando datos...', style: TextStyle(color: Colors.grey[600])),
         ],
@@ -1576,7 +1577,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
           context: context,
           barrierDismissible: false,
           builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
+              const Center(child: CupertinoActivityIndicator(radius: 14)),
         ),
       );
 
@@ -1765,15 +1766,9 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
                       },
                 style: ElevatedButton.styleFrom(backgroundColor: _success),
                 child: isSubmitting
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
+                    ? const CupertinoActivityIndicator(
+                        color: Colors.white,
+                        radius: 10,
                       )
                     : const Text('Confirmar Entrega'),
               ),
@@ -1811,7 +1806,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     }
 
     if (_controller.loadingHistorial) {
-      return const Center(child: CircularProgressIndicator(color: _accent));
+      return const Center(child: CupertinoActivityIndicator(radius: 14));
     }
 
     // Mostrar error si hubo problemas al cargar
@@ -2237,13 +2232,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
                     if (loadingProgress == null) return child;
                     return Container(
                       padding: const EdgeInsets.all(32),
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                            : null,
-                        color: _accent,
-                      ),
+                      child: const CupertinoActivityIndicator(radius: 14),
                     );
                   },
                 ),

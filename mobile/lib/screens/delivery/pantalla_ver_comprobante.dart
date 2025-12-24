@@ -1,10 +1,11 @@
 // lib/screens/delivery/pantalla_ver_comprobante.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../theme/jp_theme.dart' hide JPSnackbar;
 import '../../apis/helpers/api_exception.dart';
-import '../../services/pago_service.dart';
+import '../../services/pago/pago_service.dart';
 import '../../models/pago_model.dart';
 import '../../widgets/jp_snackbar.dart';
 
@@ -110,7 +111,7 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: JPColors.primary),
+        child: CupertinoActivityIndicator(radius: 14),
       );
     }
 
@@ -316,7 +317,7 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
               height: 320,
               color: const Color(0xFFEFF1F4),
               child: const Center(
-                child: CircularProgressIndicator(color: JPColors.primary),
+                child: CupertinoActivityIndicator(radius: 14),
               ),
             ),
             errorWidget: (context, url, error) => Container(
@@ -437,13 +438,9 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
             ),
           ),
           child: _marcandoVisto
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
+              ? const CupertinoActivityIndicator(
+                  radius: 10,
+                  color: Colors.white,
                 )
               : const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -477,9 +474,7 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
               child: InteractiveViewer(
                 child: CachedNetworkImage(
                   imageUrl: url,
-                  placeholder: (context, url) => const CircularProgressIndicator(
-                    color: Colors.white,
-                  ),
+                  placeholder: (context, url) => const CupertinoActivityIndicator(radius: 14),
                   errorWidget: (context, url, error) => const Icon(
                     Icons.error,
                     color: Colors.white,

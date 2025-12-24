@@ -59,11 +59,7 @@ class _SeccionPromocionesState extends State<SeccionPromociones> {
               ),
               const Spacer(),
               if (widget.loading)
-                const SizedBox(
-                  height: 15,
-                  width: 15,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                const CupertinoActivityIndicator(radius: 10),
             ],
           ),
         ),
@@ -274,11 +270,7 @@ class _PromocionCardImpacto extends StatelessWidget {
         imageUrl: promocion.imagenUrl!,
         fit: BoxFit.cover,
         placeholder: (context, url) => Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Colors.white.withValues(alpha: 0.4),
-            ),
-          ),
+          child: CupertinoActivityIndicator(radius: 14),
         ),
         errorWidget: (context, url, error) => _buildFallbackDecoration(),
       );

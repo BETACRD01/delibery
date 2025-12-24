@@ -1,62 +1,64 @@
 // lib/screens/supplier/screens/pantalla_ayuda_proveedor.dart
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Pantalla de ayuda y soporte del proveedor
+import '../../../theme/app_colors_primary.dart';
+
+/// Pantalla de ayuda y soporte del proveedor - Estilo iOS nativo
 class PantallaAyudaProveedor extends StatelessWidget {
   const PantallaAyudaProveedor({super.key});
 
-  static const Color _primario = Color(0xFF1E88E5);
-  static const Color _exito = Color(0xFF10B981);
-  static const Color _textoSecundario = Color(0xFF6B7280);
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Ayuda y Soporte', style: TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: _primario,
-        foregroundColor: Colors.white,
-        elevation: 0,
+    return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.systemGroupedBackground,
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Ayuda y Soporte'),
+        backgroundColor: CupertinoColors.systemBackground
+            .resolveFrom(context)
+            .withValues(alpha: 0.9),
+        border: null,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Header de ayuda
-          _buildHeaderAyuda(),
-          const SizedBox(height: 24),
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Header de ayuda
+            _buildHeaderAyuda(context),
+            const SizedBox(height: 24),
 
-          // Contacto rápido
-          _buildSeccion('Contacto rápido'),
-          const SizedBox(height: 10),
-          _buildContactoCard(context),
-          const SizedBox(height: 24),
+            // Contacto rápido
+            _buildSectionHeader(context, 'CONTACTO RÁPIDO'),
+            _buildContactoCard(context),
+            const SizedBox(height: 24),
 
-          // Preguntas frecuentes
-          _buildSeccion('Preguntas frecuentes'),
-          const SizedBox(height: 10),
-          _buildFAQCard(),
-          const SizedBox(height: 24),
+            // Preguntas frecuentes
+            _buildSectionHeader(context, 'PREGUNTAS FRECUENTES'),
+            _buildFAQCard(context),
+            const SizedBox(height: 24),
 
-          // Guías
-          _buildSeccion('Guías y tutoriales'),
-          const SizedBox(height: 10),
-          _buildGuiasCard(context),
+            // Guías
+            _buildSectionHeader(context, 'GUÍAS Y TUTORIALES'),
+            _buildGuiasCard(context),
 
-          const SizedBox(height: 32),
-        ],
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeaderAyuda() {
+  Widget _buildHeaderAyuda(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [_primario,_primario.withValues(alpha: 0.8),],
+          colors: [
+            AppColorsPrimary.main,
+            AppColorsPrimary.main.withValues(alpha: 0.8),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -64,8 +66,19 @@ class PantallaAyudaProveedor extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.support_agent, color: Colors.white, size: 48),
-          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              CupertinoIcons.chat_bubble_2_fill,
+              color: Colors.white,
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: 16),
           const Text(
             '¿En qué podemos ayudarte?',
             style: TextStyle(
@@ -77,235 +90,285 @@ class PantallaAyudaProveedor extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Estamos aquí para resolver tus dudas',
-           style: TextStyle(color: Colors.white.withValues(alpha: 0.9),fontSize: 14,),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 14,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSeccion(String titulo) {
-    return Text(
-      titulo.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: _textoSecundario,
-        letterSpacing: 0.5,
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: CupertinoColors.systemGrey.resolveFrom(context),
+          letterSpacing: -0.08,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(BuildContext context, List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 60),
+      child: Container(
+        height: 0.5,
+        color: CupertinoColors.separator.resolveFrom(context),
       ),
     );
   }
 
   Widget _buildContactoCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+    return _buildSettingsCard(context, [
+      _buildContactTile(
+        context,
+        icon: CupertinoIcons.chat_bubble_text_fill,
+        iconBgColor: CupertinoColors.activeGreen,
+        title: 'Chat en vivo',
+        subtitle: 'Respuesta inmediata',
+        onTap: () => _abrirChat(context),
       ),
-      child: Column(
-        children: [
-          _buildContactoItem(
-            icono: Icons.chat_outlined,
-            titulo: 'Chat en vivo',
-            subtitulo: 'Respuesta inmediata',
-            color: _exito,
-            onTap: () => _abrirChat(context),
-          ),
-          const Divider(height: 1),
-          _buildContactoItem(
-            icono: Icons.email_outlined,
-            titulo: 'Correo electrónico',
-            subtitulo: 'soporte@jpexpress.com',
-            color: _primario,
-            onTap: () => _enviarCorreo(),
-          ),
-          const Divider(height: 1),
-          _buildContactoItem(
-            icono: Icons.phone_outlined,
-            titulo: 'Teléfono',
-            subtitulo: '+593 99 123 4567',
-            color: Colors.orange,
-            onTap: () => _llamar(),
-          ),
-          const Divider(height: 1),
-          _buildContactoItem(
-            icono: Icons.message_outlined,
-            titulo: 'WhatsApp',
-            subtitulo: 'Escríbenos directamente',
-            color: const Color(0xFF25D366),
-            onTap: () => _abrirWhatsApp(),
-          ),
-        ],
+      _buildDivider(context),
+      _buildContactTile(
+        context,
+        icon: CupertinoIcons.mail_solid,
+        iconBgColor: const Color(0xFF007AFF),
+        title: 'Correo electrónico',
+        subtitle: 'soporte@jpexpress.com',
+        onTap: () => _enviarCorreo(),
       ),
-    );
+      _buildDivider(context),
+      _buildContactTile(
+        context,
+        icon: CupertinoIcons.phone_fill,
+        iconBgColor: const Color(0xFFFF9500),
+        title: 'Teléfono',
+        subtitle: '+593 99 123 4567',
+        onTap: () => _llamar(),
+      ),
+      _buildDivider(context),
+      _buildContactTile(
+        context,
+        icon: CupertinoIcons.bubble_left_bubble_right_fill,
+        iconBgColor: const Color(0xFF25D366),
+        title: 'WhatsApp',
+        subtitle: 'Escríbenos directamente',
+        onTap: () => _abrirWhatsApp(),
+      ),
+    ]);
   }
 
-  Widget _buildContactoItem({
-    required IconData icono,
-    required String titulo,
-    required String subtitulo,
-    required Color color,
+  Widget _buildContactTile(
+    BuildContext context, {
+    required IconData icon,
+    required Color iconBgColor,
+    required String title,
+    required String subtitle,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(7),
               ),
-              child: Icon(icono, color: color, size: 22),
+              child: Icon(icon, color: Colors.white, size: 18),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(titulo, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text(subtitulo, style: const TextStyle(fontSize: 12, color: _textoSecundario)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: CupertinoColors.label,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+            Icon(
+              CupertinoIcons.chevron_forward,
+              size: 14,
+              color: CupertinoColors.systemGrey3.resolveFrom(context),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFAQCard() {
+  Widget _buildFAQCard(BuildContext context) {
     final faqs = [
       _FAQ(
         pregunta: '¿Cómo agrego un nuevo producto?',
-        respuesta: 'Ve a la sección de Productos en el menú lateral, luego presiona el botón "Agregar" '
-            'y completa la información del producto incluyendo nombre, precio, descripción e imagen.',
+        respuesta:
+            'Ve a la sección de Productos, luego presiona el botón "+" y completa la información del producto.',
       ),
       _FAQ(
         pregunta: '¿Cómo verifico mi cuenta?',
-        respuesta: 'Para verificar tu cuenta, debes completar tu perfil con toda la información '
-            'requerida incluyendo RUC y documentos. Un administrador revisará tu solicitud.',
+        respuesta:
+            'Completa tu perfil con toda la información requerida incluyendo RUC y documentos.',
       ),
       _FAQ(
         pregunta: '¿Cómo gestiono los pedidos?',
-        respuesta: 'En la sección de Pedidos puedes ver todos los pedidos pendientes. '
-            'Puedes aceptar o rechazar pedidos y marcarlos como listos cuando estén preparados.',
+        respuesta:
+            'En la sección de Pedidos puedes ver, aceptar o rechazar pedidos pendientes.',
       ),
       _FAQ(
-        pregunta: '¿Cómo modifico mis horarios de atención?',
-        respuesta: 'Accede a "Mi Perfil" desde el menú lateral. Ahí podrás editar '
-            'los horarios de apertura y cierre de tu negocio.',
+        pregunta: '¿Cómo modifico mis horarios?',
+        respuesta:
+            'Accede a \"Mi Perfil\" y edita los horarios de apertura y cierre.',
       ),
       _FAQ(
         pregunta: '¿Cuánto es la comisión por venta?',
-        respuesta: 'La comisión varía según el tipo de proveedor y el plan contratado. '
-            'Puedes ver los detalles en la sección de Configuración o contactando a soporte.',
+        respuesta:
+            'La comisión varía según tu plan. Contacta a soporte para más detalles.',
       ),
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: faqs.asMap().entries.map((entry) {
-          final faq = entry.value;
-          final isLast = entry.key == faqs.length - 1;
-          return Column(
-            children: [
-              _FAQItem(faq: faq),
-              if (!isLast) const Divider(height: 1),
-            ],
-          );
-        }).toList(),
-      ),
+    return _buildSettingsCard(
+      context,
+      faqs.asMap().entries.map((entry) {
+        final faq = entry.value;
+        final isLast = entry.key == faqs.length - 1;
+        return Column(
+          children: [
+            _FAQItem(faq: faq),
+            if (!isLast) _buildDivider(context),
+          ],
+        );
+      }).toList(),
     );
   }
 
   Widget _buildGuiasCard(BuildContext context) {
     final guias = [
       _Guia(
-        icono: Icons.play_circle_outline,
+        icono: CupertinoIcons.play_circle_fill,
         titulo: 'Primeros pasos',
         subtitulo: 'Aprende a usar la plataforma',
       ),
       _Guia(
-        icono: Icons.inventory_2_outlined,
+        icono: CupertinoIcons.cube_box_fill,
         titulo: 'Gestión de productos',
         subtitulo: 'Cómo administrar tu catálogo',
       ),
       _Guia(
-        icono: Icons.receipt_long_outlined,
+        icono: CupertinoIcons.doc_text_fill,
         titulo: 'Procesamiento de pedidos',
         subtitulo: 'Flujo completo de pedidos',
       ),
       _Guia(
-        icono: Icons.bar_chart_outlined,
+        icono: CupertinoIcons.graph_square_fill,
         titulo: 'Entendiendo tus estadísticas',
-        subtitulo: 'Analiza el rendimiento de tu negocio',
+        subtitulo: 'Analiza el rendimiento',
       ),
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: guias.asMap().entries.map((entry) {
-          final guia = entry.value;
-          final isLast = entry.key == guias.length - 1;
+    return _buildSettingsCard(
+      context,
+      guias.asMap().entries.map((entry) {
+        final guia = entry.value;
+        final isLast = entry.key == guias.length - 1;
+        return Column(
+          children: [
+            _buildGuideTile(context, guia),
+            if (!isLast) _buildDivider(context),
+          ],
+        );
+      }).toList(),
+    );
+  }
 
-          return Column(
-            children: [
-              InkWell(
-                onTap: () {
-                  // TODO: Abrir guía
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Abriendo: ${guia.titulo}')),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                         color: _primario.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(guia.icono, color: _primario, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(guia.titulo, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 2),
-                            Text(guia.subtitulo, style: const TextStyle(fontSize: 12, color: _textoSecundario)),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
-                    ],
-                  ),
-                ),
+  Widget _buildGuideTile(BuildContext context, _Guia guia) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: () {
+        // TODO: Abrir guía
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: AppColorsPrimary.main,
+                borderRadius: BorderRadius.circular(7),
               ),
-              if (!isLast) const Divider(height: 1),
-            ],
-          );
-        }).toList(),
+              child: Icon(guia.icono, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    guia.titulo,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: CupertinoColors.label,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  Text(
+                    guia.subtitulo,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_forward,
+              size: 14,
+              color: CupertinoColors.systemGrey3.resolveFrom(context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -314,11 +377,12 @@ class PantallaAyudaProveedor extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Abriendo chat de soporte...')),
     );
-    // TODO: Implementar chat
   }
 
   void _enviarCorreo() async {
-    final uri = Uri.parse('mailto:soporte@jpexpress.com?subject=Soporte Proveedor');
+    final uri = Uri.parse(
+      'mailto:soporte@jpexpress.com?subject=Soporte Proveedor',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     }
@@ -332,7 +396,9 @@ class PantallaAyudaProveedor extends StatelessWidget {
   }
 
   void _abrirWhatsApp() async {
-    final uri = Uri.parse('https://wa.me/593991234567?text=Hola, necesito ayuda con mi cuenta de proveedor');
+    final uri = Uri.parse(
+      'https://wa.me/593991234567?text=Hola, necesito ayuda con mi cuenta de proveedor',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -360,10 +426,11 @@ class _FAQItemState extends State<_FAQItem> {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => setState(() => _expandido = !_expandido),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: () => setState(() => _expandido = !_expandido),
+      child: Container(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -372,12 +439,19 @@ class _FAQItemState extends State<_FAQItem> {
                 Expanded(
                   child: Text(
                     widget.faq.pregunta,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: CupertinoColors.label,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ),
                 Icon(
-                  _expandido ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: Colors.grey.shade400,
+                  _expandido
+                      ? CupertinoIcons.chevron_up
+                      : CupertinoIcons.chevron_down,
+                  color: CupertinoColors.systemGrey3.resolveFrom(context),
+                  size: 16,
                 ),
               ],
             ),
@@ -385,7 +459,11 @@ class _FAQItemState extends State<_FAQItem> {
               const SizedBox(height: 10),
               Text(
                 widget.faq.respuesta,
-                style: const TextStyle(fontSize: 13, color:  Color(0xFF6B7280), height: 1.4),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  height: 1.4,
+                ),
               ),
             ],
           ],

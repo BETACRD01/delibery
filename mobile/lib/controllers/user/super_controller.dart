@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../../models/categoria_super_model.dart';
-import '../../services/super_service.dart';
+import '../../services/usuarios/super_service.dart';
 
 /// Controlador para la pantalla Super
 class SuperController extends ChangeNotifier {

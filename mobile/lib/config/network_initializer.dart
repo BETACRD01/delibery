@@ -1,5 +1,6 @@
 // lib/config/network_initializer.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import 'api_config.dart';
 
@@ -166,7 +167,7 @@ class _NetworkRefreshButtonState extends State<NetworkRefreshButton> {
           ? const SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CupertinoActivityIndicator(radius: 14),
             )
           : const Icon(
               Icons.sync,

@@ -174,23 +174,27 @@ class ProductoCreateUpdateSerializer(serializers.ModelSerializer):
 
 class PromocionSerializer(serializers.ModelSerializer):
     proveedor_nombre = serializers.CharField(source='proveedor.nombre', read_only=True)
-    
+
     # Campo calculado para la URL de la imagen
     imagen_url = serializers.SerializerMethodField()
-    
+
     es_vigente = serializers.ReadOnlyField()
     dias_restantes = serializers.ReadOnlyField()
-    
+
+    # Mostrar el display name del tipo
+    tipo_promocion_display = serializers.CharField(source='get_tipo_promocion_display', read_only=True)
+
     class Meta:
         model = Promocion
         fields = [
             'id', 'titulo', 'descripcion', 'descuento',
-            'color', 'imagen_url', 
+            'tipo_promocion', 'tipo_promocion_display', 'valor_descuento',
+            'color', 'imagen', 'imagen_url',
             'proveedor_id', 'proveedor_nombre',
-            
+
             # Campos de navegación
             'producto_asociado', 'categoria_asociada',
-            
+
             'fecha_inicio', 'fecha_fin', 'activa',
             'es_vigente', 'dias_restantes'
         ]
@@ -270,3 +274,107 @@ class AgregarAlCarritoSerializer(serializers.Serializer):
 
 class ActualizarCantidadSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# SERIALIZERS PARA PROVEEDORES
+# ═══════════════════════════════════════════════════════════════════════
+
+class ProviderProductoDetailSerializer(ProductoDetalleSerializer):
+    """
+    Serializer enriquecido para que el proveedor vea sus productos con métricas.
+    Incluye desglose de ratings, ventas y preview de reseñas.
+    """
+    rating_breakdown = serializers.SerializerMethodField()
+    ventas_totales = serializers.IntegerField(source='veces_vendido', read_only=True)
+    ingresos_estimados = serializers.SerializerMethodField()
+    resenas_preview = serializers.SerializerMethodField()
+    conversion_rate = serializers.SerializerMethodField()
+    productos_relacionados = serializers.SerializerMethodField()
+
+    class Meta(ProductoDetalleSerializer.Meta):
+        fields = ProductoDetalleSerializer.Meta.fields + [
+            'rating_breakdown',
+            'ventas_totales',
+            'ingresos_estimados',
+            'resenas_preview',
+            'conversion_rate',
+            'productos_relacionados'
+        ]
+
+    def get_rating_breakdown(self, obj):
+        # Desglose de estrellas 5, 4, 3, 2, 1
+        # Se calcula consultando CalificacionProducto
+        # Idealmente esto se cachéa, pero para MVP lo consultamos directo.
+        from django.db.models import Count
+        breakdown = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        
+        # Usamos related_name='calificaciones_producto' definido en CalificacionProducto
+        qs = obj.calificaciones_producto.values('estrellas').annotate(count=Count('id'))
+        
+        for item in qs:
+            estrellas = item.get('estrellas')
+            if estrellas in breakdown:
+                breakdown[estrellas] = item.get('count')
+                
+        return breakdown
+
+    def get_ingresos_estimados(self, obj):
+        # Calculo simple: veces_vendido * precio actual
+        # OJO: Esto no es exacto porque el precio cambia, pero sirve de KPI aproximado.
+        return obj.veces_vendido * obj.precio
+
+    def get_resenas_preview(self, obj):
+        # Últimas 3 reseñas
+        qs = obj.calificaciones_producto.select_related('cliente').order_by('-creado_en')[:3]
+        data = []
+        for c in qs:
+            data.append({
+                'id': c.id,
+                'usuario': c.cliente.get_full_name() or "Usuario",
+                'estrellas': c.estrellas,
+                'comentario': c.comentario,
+                'fecha': c.creado_en
+            })
+        return data
+        
+    def get_conversion_rate(self, obj):
+        # Dato simulado o calculado si tuviéramos tabla de 'Vistas'
+        # Por ahora retornamos un valor mock/placeholder o 0 si no hay sistema de tracking de vistas
+        return 0.0
+
+    def get_productos_relacionados(self, obj):
+        # Retorna productos relacionados en formato simplificado
+        relacionados = obj.productos_relacionados.filter(disponible=True)[:5]
+        return [{
+            'id': p.id,
+            'nombre': p.nombre,
+            'precio': str(p.precio),
+            'imagen_url': _build_media_url(p.imagen, self.context.get('request')) if p.imagen else p.imagen_url,
+        } for p in relacionados]
+
+class ResenaProductoSerializer(serializers.ModelSerializer):
+    usuario_nombre = serializers.SerializerMethodField()
+    usuario_foto = serializers.SerializerMethodField()
+    fecha = serializers.DateTimeField(source='creado_en', read_only=True)
+
+    class Meta:
+        from calificaciones.models import CalificacionProducto
+        model = CalificacionProducto
+        fields = ['id', 'usuario_nombre', 'usuario_foto', 'estrellas', 'comentario', 'fecha', 'pedido_id']
+
+    def get_usuario_nombre(self, obj):
+        return obj.cliente.get_full_name() or "Usuario"
+
+    def get_usuario_foto(self, obj):
+        request = self.context.get('request')
+        foto = getattr(getattr(obj.cliente, 'perfil', None), 'foto_perfil', None)
+        return _build_media_url(foto, request)
+
+class ProviderProductoSerializer(ProductoCreateUpdateSerializer):
+    """
+    Serializer para creación y edición por parte del proveedor.
+    Hereda de ProductoCreateUpdateSerializer para reusar validaciones.
+    """
+    pass
+

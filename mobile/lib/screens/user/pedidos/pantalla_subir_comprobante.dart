@@ -5,9 +5,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
-import '../../../services/pago_service.dart';
+import '../../../services/pago/pago_service.dart';
 import '../../../models/datos_bancarios.dart';
-import '../../../services/toast_service.dart';
+import '../../../services/core/toast_service.dart';
 
 /// Pantalla para subir el comprobante de transferencia - iOS Premium
 class PantallaSubirComprobante extends StatefulWidget {

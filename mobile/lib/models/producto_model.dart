@@ -28,6 +28,13 @@ class ProductoModel {
   final bool? tieneStock;
   final int? stock;
 
+  // Métricas para proveedor
+  final int ventasTotales;
+  final double conversionRate;
+  final double ingresosEstimados;
+  final Map<int, int> ratingBreakdown;
+  final List<ResenaPreview> resenasPreview;
+
   ProductoModel({
     required this.id,
     required this.nombre,
@@ -52,14 +59,23 @@ class ProductoModel {
     this.tiempoEntregaMax,
     this.tieneStock,
     this.stock,
+    this.ventasTotales = 0,
+    this.conversionRate = 0.0,
+    this.ingresosEstimados = 0.0,
+    this.ratingBreakdown = const {},
+    this.resenasPreview = const [],
   });
 
   /// Factory para crear desde JSON (backend)
   factory ProductoModel.fromJson(Map<String, dynamic> json) {
     final rawImagen =
-        json['imagen_url'] ?? json['imagen'] ?? json['foto'] ?? json['foto_url'];
+        json['imagen_url'] ??
+        json['imagen'] ??
+        json['foto'] ??
+        json['foto_url'];
     final proveedor = json['proveedor'] as Map<String, dynamic>?;
-    final rawProveedorLogo = json['proveedor_logo'] ??
+    final rawProveedorLogo =
+        json['proveedor_logo'] ??
         json['proveedor_logo_url'] ??
         json['proveedor_logo_full'] ??
         json['logo_proveedor'] ??
@@ -73,6 +89,26 @@ class ProductoModel {
         proveedor?['foto'] ??
         proveedor?['foto_url'] ??
         proveedor?['foto_perfil'];
+
+    // Procesa rating breakdown
+    Map<int, int> breakdown = {};
+    if (json['rating_breakdown'] != null) {
+      if (json['rating_breakdown'] is Map) {
+        (json['rating_breakdown'] as Map).forEach((k, v) {
+          breakdown[int.tryParse(k.toString()) ?? 0] =
+              int.tryParse(v.toString()) ?? 0;
+        });
+      }
+    }
+
+    // Procesa reseñas
+    List<ResenaPreview> resenas = [];
+    if (json['resenas_preview'] != null && json['resenas_preview'] is List) {
+      resenas = (json['resenas_preview'] as List)
+          .map((e) => ResenaPreview.fromJson(e))
+          .toList();
+    }
+
     return ProductoModel(
       id: json['id']?.toString() ?? '',
       nombre: json['nombre'] ?? '',
@@ -91,14 +127,33 @@ class ProductoModel {
       disponible: json['disponible'] ?? true,
       destacado: json['destacado'] ?? false,
       proveedorId: json['proveedor_id']?.toString(),
-      proveedorNombre: json['proveedor_nombre'] as String? ?? proveedor?['nombre'] as String?,
+      proveedorNombre:
+          json['proveedor_nombre'] as String? ??
+          proveedor?['nombre'] as String?,
       proveedorLogoUrl: _normalizarImagen(rawProveedorLogo),
-      proveedorLatitud: _parseDouble(json['proveedor_latitud'] ?? proveedor?['latitud']),
-      proveedorLongitud: _parseDouble(json['proveedor_longitud'] ?? proveedor?['longitud']),
-      tiempoEntregaMin: _parseInt(json['tiempo_entrega_min'] ?? json['tiempo_min'] ?? json['tiempo_estimado_min']),
-      tiempoEntregaMax: _parseInt(json['tiempo_entrega_max'] ?? json['tiempo_max'] ?? json['tiempo_estimado_max']),
+      proveedorLatitud: _parseDouble(
+        json['proveedor_latitud'] ?? proveedor?['latitud'],
+      ),
+      proveedorLongitud: _parseDouble(
+        json['proveedor_longitud'] ?? proveedor?['longitud'],
+      ),
+      tiempoEntregaMin: _parseInt(
+        json['tiempo_entrega_min'] ??
+            json['tiempo_min'] ??
+            json['tiempo_estimado_min'],
+      ),
+      tiempoEntregaMax: _parseInt(
+        json['tiempo_entrega_max'] ??
+            json['tiempo_max'] ??
+            json['tiempo_estimado_max'],
+      ),
       tieneStock: json['tiene_stock'],
       stock: _parseInt(json['stock']),
+      ventasTotales: _parseInt(json['ventas_totales']) ?? 0,
+      conversionRate: _parseDouble(json['conversion_rate']),
+      ingresosEstimados: _parseDouble(json['ingresos_estimados']),
+      ratingBreakdown: breakdown,
+      resenasPreview: resenas,
     );
   }
 
@@ -145,15 +200,12 @@ class ProductoModel {
   bool get tieneBuenaCalificacion => rating >= 4.0;
 
   /// Texto del sticker de descuento (ej: "20% OFF")
-  String get textoDescuento => enOferta && porcentajeDescuento > 0
-      ? '$porcentajeDescuento% OFF'
-      : '';
+  String get textoDescuento =>
+      enOferta && porcentajeDescuento > 0 ? '$porcentajeDescuento% OFF' : '';
 
   /// Calcula el ahorro en precio
   double get montoAhorro =>
-      (precioAnterior != null && enOferta)
-          ? precioAnterior! - precio
-          : 0.0;
+      (precioAnterior != null && enOferta) ? precioAnterior! - precio : 0.0;
 
   String get ahorroFormateado => '\$${montoAhorro.toStringAsFixed(2)}';
 
@@ -174,7 +226,8 @@ class ProductoModel {
     return defaultRango;
   }
 
-  String get tiempoEntregaAproximado => 'Entrega aprox. ${tiempoEntregaFormateado()}';
+  String get tiempoEntregaAproximado =>
+      'Entrega aprox. ${tiempoEntregaFormateado()}';
 
   // ════════════════════════════════════════════════════════════════
   // HELPERS PRIVADOS
@@ -225,6 +278,13 @@ class ProductoModel {
     double? proveedorLongitud,
     int? tiempoEntregaMin,
     int? tiempoEntregaMax,
+    bool? tieneStock,
+    int? stock,
+    int? ventasTotales,
+    double? conversionRate,
+    double? ingresosEstimados,
+    Map<int, int>? ratingBreakdown,
+    List<ResenaPreview>? resenasPreview,
   }) {
     return ProductoModel(
       id: id ?? this.id,
@@ -248,6 +308,13 @@ class ProductoModel {
       proveedorLongitud: proveedorLongitud ?? this.proveedorLongitud,
       tiempoEntregaMin: tiempoEntregaMin ?? this.tiempoEntregaMin,
       tiempoEntregaMax: tiempoEntregaMax ?? this.tiempoEntregaMax,
+      tieneStock: tieneStock ?? this.tieneStock,
+      stock: stock ?? this.stock,
+      ventasTotales: ventasTotales ?? this.ventasTotales,
+      conversionRate: conversionRate ?? this.conversionRate,
+      ingresosEstimados: ingresosEstimados ?? this.ingresosEstimados,
+      ratingBreakdown: ratingBreakdown ?? this.ratingBreakdown,
+      resenasPreview: resenasPreview ?? this.resenasPreview,
     );
   }
 
@@ -257,5 +324,34 @@ class ProductoModel {
     if (value is double) return value.round();
     if (value is String) return int.tryParse(value);
     return null;
+  }
+}
+
+class ResenaPreview {
+  final int id;
+  final String usuario;
+  final String? usuarioFoto;
+  final int estrellas;
+  final String? comentario;
+  final String fecha;
+
+  ResenaPreview({
+    required this.id,
+    required this.usuario,
+    this.usuarioFoto,
+    required this.estrellas,
+    this.comentario,
+    required this.fecha,
+  });
+
+  factory ResenaPreview.fromJson(Map<String, dynamic> json) {
+    return ResenaPreview(
+      id: int.tryParse(json['id'].toString()) ?? 0,
+      usuario: json['usuario'] ?? json['usuario_nombre'] ?? 'Anónimo',
+      usuarioFoto: json['usuario_foto'] ?? json['foto'],
+      estrellas: int.tryParse(json['estrellas'].toString()) ?? 0,
+      comentario: json['comentario'],
+      fecha: json['fecha'] ?? '',
+    );
   }
 }
