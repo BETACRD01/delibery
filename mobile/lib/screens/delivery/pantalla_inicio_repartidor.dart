@@ -15,6 +15,7 @@ import '../../controllers/delivery/repartidor_controller.dart';
 import 'widgets/repartidor_drawer.dart';
 import 'widgets/lista_vacia_widget.dart';
 import '../../services/auth/session_cleanup.dart';
+import '../../widgets/ratings/dialogo_calificar_cliente.dart';
 import 'pantalla_ver_comprobante.dart';
 
 /// ✅ REFACTORIZADA: Pantalla principal para REPARTIDORES
@@ -1788,6 +1789,20 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
           backgroundColor: _success,
         ),
       );
+
+      // Mostrar diálogo de calificación del cliente después de entregar
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+
+      await showCupertinoModalPopup<bool>(
+        context: context,
+        builder: (context) => DialogoCalificarCliente(
+          pedidoId: pedido.id,
+          clienteNombre: pedido.cliente.nombre,
+          clienteFoto: pedido.cliente.foto,
+        ),
+      );
+
       return;
     }
     final errorMsg = _controller.error ?? 'Error al marcar como entregado';

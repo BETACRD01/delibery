@@ -12,7 +12,7 @@ class ApiConfig {
   // ============================================================================
 
   // CAMBIA ESTO CADA VEZ QUE REINICIES NGROK (Sin la barra / al final)
-  static const String _ngrokUrl = 'https://7a09d7fed6a6.ngrok-free.app';
+  static const String _ngrokUrl = 'https://749ec67d62f0.ngrok-free.app';
 
   // URL para producción (cuando subas a Play Store)
   static const String _prodUrl = 'https://api.tu-dominio-real.com';

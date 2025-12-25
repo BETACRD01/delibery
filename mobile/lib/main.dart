@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../controllers/user/perfil_controller.dart';
 import './apis/subapis/http_client.dart';
 import './config/api_config.dart';
+import './config/performance_config.dart';
 import './config/rutas.dart';
 import './controllers/delivery/repartidor_controller.dart';
 import './controllers/supplier/supplier_controller.dart';
@@ -42,6 +43,9 @@ void main() async {
     debugRepaintRainbowEnabled = false;
     return true;
   }());
+
+  // Inicializar optimizaciones de rendimiento
+  PerformanceConfig.initialize();
 
   await _initFirebase();
 
@@ -128,6 +132,10 @@ class _MyAppState extends State<MyApp> {
         builder: (context, localeProvider, _) => MaterialApp(
           title: 'JP Express',
           debugShowCheckedModeBanner: false,
+
+          // Color de fondo para evitar pantallas negras durante transiciones
+          color: Colors.white,
+
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -145,6 +153,20 @@ class _MyAppState extends State<MyApp> {
             settings: s,
             builder: (_) => _PantallaError(ruta: s.name ?? 'desconocida'),
           ),
+
+          // Builder para optimización de rendimiento
+          builder: (context, child) {
+            return MediaQuery(
+              // Limitar escalado de texto para major rendimiento
+              data: MediaQuery.of(context).copyWith(
+                textScaler: MediaQuery.of(context).textScaler.clamp(
+                  minScaleFactor: 0.8,
+                  maxScaleFactor: 1.3,
+                ),
+              ),
+              child: child!,
+            );
+          },
         ),
       ),
     );
@@ -194,7 +216,7 @@ class _PantallaError extends StatelessWidget {
                 Rutas.login,
                 (_) => false,
               ),
-              child: const Text('Volver al inicio'),
+              child: const Text('Volver al initio'),
             ),
           ],
         ),

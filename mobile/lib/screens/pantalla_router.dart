@@ -110,11 +110,6 @@ class _PantallaRouterState extends State<PantallaRouter> {
   }
 
   Future<void> _navegarSegunRol(String rol) async {
-    // Nota: El delay aquí ya no es estrictamente necesario para evitar el crash
-    // gracias al addPostFrameCallback, pero lo mantenemos breve para suavidad visual
-    // si la carga es instantánea.
-    await Future.delayed(const Duration(milliseconds: 50));
-
     if (!mounted) return;
 
     Widget destino;
@@ -123,7 +118,7 @@ class _PantallaRouterState extends State<PantallaRouter> {
     switch (rol) {
       case 'USUARIO':
         debugPrint('Rol identificado: USUARIO -> PantallaInicio (CON NAVEGACIÓN)');
-        destino = const PantallaInicio(); 
+        destino = const PantallaInicio();
         nombreRuta = 'PantallaInicio';
         break;
 
@@ -155,13 +150,25 @@ class _PantallaRouterState extends State<PantallaRouter> {
 
     if (!mounted) return;
 
-    // Navegación instantánea (sin animación de transición)
+    // Navegación suave con transición fade para evitar pantallas negras
     await Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, _, _) => destino,
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) => destino,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // Fade suave y rápido
+          return FadeTransition(
+            opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              ),
+            ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 200),
+        reverseTransitionDuration: const Duration(milliseconds: 150),
         settings: RouteSettings(name: nombreRuta),
       ),
     );

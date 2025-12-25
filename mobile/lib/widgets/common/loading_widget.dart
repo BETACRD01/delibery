@@ -22,7 +22,7 @@ class LoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CupertinoActivityIndicator(radius: 14),
+          const CupertinoActivityIndicator(radius: 14),
           if (showMessage) ...[
             const SizedBox(height: 16),
             Text(
@@ -55,7 +55,7 @@ class LoadingSmall extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CupertinoActivityIndicator(radius: 14),
+      child: const CupertinoActivityIndicator(radius: 14),
     );
   }
 }

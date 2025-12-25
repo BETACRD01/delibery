@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:ui';
 import '../../../../../controllers/user/perfil_controller.dart';
+import '../../../../../theme/app_colors_primary.dart';
 
 class PantallaNotificaciones extends StatefulWidget {
   const PantallaNotificaciones({super.key});
@@ -120,7 +121,7 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
 
   Widget _buildLoadingState() {
     return const Center(
-      child: CupertinoActivityIndicator(radius: 14, color: Color(0xFF007AFF)),
+      child: CupertinoActivityIndicator(radius: 14, color: AppColorsPrimary.main),
     );
   }
 
@@ -136,8 +137,8 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
             const SizedBox(height: 28),
             _buildNotificationCard(
               icon: Icons.shopping_bag_outlined,
-              iconColor: const Color(0xFF007AFF),
-              iconBgColor: const Color(0xFF007AFF).withValues(alpha: 0.1),
+              iconColor: AppColorsPrimary.main,
+              iconBgColor: AppColorsPrimary.main.withValues(alpha: 0.1),
               title: 'Pedidos y Entregas',
               subtitle:
                   'Recibe actualizaciones en tiempo real sobre el estado de tus pedidos',
@@ -148,8 +149,8 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
             const SizedBox(height: 16),
             _buildNotificationCard(
               icon: Icons.local_offer_outlined,
-              iconColor: const Color(0xFFFF9500),
-              iconBgColor: const Color(0xFFFF9500).withValues(alpha: 0.1),
+              iconColor: AppColorsPrimary.main,
+              iconBgColor: AppColorsPrimary.main.withValues(alpha: 0.1),
               title: 'Promociones y Ofertas',
               subtitle:
                   'Mantente al día con descuentos exclusivos y novedades especiales',
@@ -250,7 +251,7 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
               child: CupertinoSwitch(
                 value: value,
                 onChanged: onChanged,
-                activeTrackColor: const Color(0xFF34C759),
+                activeTrackColor: AppColorsPrimary.main,
               ),
             ),
           ],
@@ -264,10 +265,10 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF007AFF).withValues(alpha: 0.05),
+        color: AppColorsPrimary.main.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+          color: AppColorsPrimary.main.withValues(alpha: 0.15),
           width: 1,
         ),
       ),
@@ -276,7 +277,7 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
         children: [
           Icon(
             Icons.info_outline,
-            color: const Color(0xFF007AFF).withValues(alpha: 0.8),
+            color: AppColorsPrimary.main.withValues(alpha: 0.8),
             size: 20,
           ),
           const SizedBox(width: 12),

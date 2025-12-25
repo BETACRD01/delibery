@@ -3,10 +3,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../../../models/notificacion_model.dart';
 import '../../../providers/notificaciones_provider.dart';
 import '../../../theme/jp_theme.dart';
+import '../../../theme/app_colors_primary.dart';
 
 /// Inbox unificado (push + internas) accesible desde la campana
 class PantallaNotificaciones extends StatefulWidget {
@@ -57,10 +57,10 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
               if (noLeidasCount > 0)
                 TextButton(
                   onPressed: inbox.marcarTodasComoLeidas,
-                  child: Text(
+                  child: const Text(
                     'Marcar todas',
                     style: TextStyle(
-                      color: CupertinoColors.activeBlue.resolveFrom(context),
+                      color: AppColorsPrimary.main,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

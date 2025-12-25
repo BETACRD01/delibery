@@ -72,6 +72,14 @@ class AppTheme {
 
       scaffoldBackgroundColor: AppColorsSupport.background,
 
+      // Transiciones suaves estilo iOS
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
+
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: AppColorsSupport.textPrimary,

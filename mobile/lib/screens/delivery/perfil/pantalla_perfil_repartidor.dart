@@ -1,16 +1,18 @@
 // lib/screens/delivery/perfil/pantalla_editar_perfil_repartidor.dart
 
+import 'dart:developer' as developer;
 import 'dart:io';
-import 'package:flutter/material.dart';
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import '../../../services/repartidor/repartidor_service.dart';
-import '../../../services/repartidor/repartidor_datos_bancarios_service.dart';
-import '../../../models/repartidor.dart';
-import '../../../models/datos_bancarios.dart';
+
 import '../../../apis/helpers/api_exception.dart';
-import 'dart:developer' as developer;
+import '../../../models/datos_bancarios.dart';
+import '../../../models/repartidor.dart';
+import '../../../services/repartidor/repartidor_datos_bancarios_service.dart';
+import '../../../services/repartidor/repartidor_service.dart';
 import '../pantalla_datos_bancarios.dart';
 
 /// Pantalla de Edición de Perfil del Repartidor
@@ -132,7 +134,9 @@ class _PantallaEditarPerfilRepartidorState
       _perfil = await _service.obtenerMiRepartidor(forzarRecarga: true);
 
       // Llenar controllers con datos actuales
-      _telefonoController.text = _formatearTelefonoParaMostrar(_perfil?.telefono);
+      _telefonoController.text = _formatearTelefonoParaMostrar(
+        _perfil?.telefono,
+      );
       _telefonoCompleto = _perfil?.telefono;
       _fotoUrlCaido = null;
       _emailController.text = _perfil?.email ?? '';
@@ -351,7 +355,9 @@ class _PantallaEditarPerfilRepartidorState
 
       // Detectar cambios en datos del repartidor
       final telefonoNuevo = _normalizarTelefono(
-        (_telefonoCompleto?.isNotEmpty == true ? _telefonoCompleto! : _telefonoController.text),
+        (_telefonoCompleto?.isNotEmpty == true
+            ? _telefonoCompleto!
+            : _telefonoController.text),
       );
 
       final vehiculoNuevo = _vehiculoSeleccionado ?? '';
@@ -568,9 +574,7 @@ class _PantallaEditarPerfilRepartidorState
           height: 4,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            gradient: const LinearGradient(
-              colors: [_naranja, _naranjaOscuro],
-            ),
+            gradient: const LinearGradient(colors: [_naranja, _naranjaOscuro]),
           ),
         ),
       ),
@@ -646,12 +650,19 @@ class _PantallaEditarPerfilRepartidorState
               width: 140,
               height: 140,
               color: Colors.white,
-              child: const Center(child: CupertinoActivityIndicator(radius: 14)),
+              child: const Center(
+                child: CupertinoActivityIndicator(radius: 14),
+              ),
             );
           },
           errorBuilder: (context, error, stackTrace) {
             if (!mounted) return _buildAvatarPlaceholder();
-            setState(() => _fotoUrlCaido = _perfil!.fotoPerfil);
+            // Diferir setState para evitar llamarlo durante build
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _fotoUrlCaido != _perfil!.fotoPerfil) {
+                setState(() => _fotoUrlCaido = _perfil!.fotoPerfil);
+              }
+            });
             return _buildAvatarPlaceholder();
           },
         ),
@@ -747,80 +758,262 @@ class _PantallaEditarPerfilRepartidorState
   Widget _buildResumenCalificaciones() {
     if (_estadisticas == null) return const SizedBox.shrink();
     final stats = _estadisticas!;
+    final total = stats.totalCalificaciones;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header con título
           Row(
             children: [
-              const Icon(Icons.star, color: Color(0xFFFF9800)),
-              const SizedBox(width: 10),
-              Text(
-                stats.calificacionPromedio.toStringAsFixed(1),
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _naranja.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.star_rounded,
+                  color: _naranja,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 6),
-              const Text('⭐',
-                  style: TextStyle(color: Color(0xFFFF9800), fontSize: 18)),
-              const Spacer(),
-              Text(
-                '${stats.totalCalificaciones} reseñas',
-                style: const TextStyle(color: Colors.grey),
+              const SizedBox(width: 12),
+              const Text(
+                'Mis Calificaciones',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            '${stats.porcentaje5Estrellas.toStringAsFixed(1)}% de 5 estrellas',
-            style: const TextStyle(color: Colors.green, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
+
+          const SizedBox(height: 20),
+
+          // Rating grande centrado
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDesgloseChip('⭐⭐⭐⭐⭐', stats.calificaciones5Estrellas),
-              _buildDesgloseChip('⭐⭐⭐⭐', stats.calificaciones4Estrellas),
-              _buildDesgloseChip('⭐⭐⭐', stats.calificaciones3Estrellas),
-              _buildDesgloseChip('⭐⭐', stats.calificaciones2Estrellas),
-              _buildDesgloseChip('⭐', stats.calificaciones1Estrella),
+              // Número grande
+              Expanded(
+                flex: 2,
+                child: Column(
+                  children: [
+                    Text(
+                      stats.calificacionPromedio.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Estrellas visuales
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final rating = stats.calificacionPromedio;
+                        IconData iconData;
+                        Color color;
+
+                        if (index < rating.floor()) {
+                          iconData = Icons.star_rounded;
+                          color = const Color(0xFFFFB800);
+                        } else if (index < rating) {
+                          iconData = Icons.star_half_rounded;
+                          color = const Color(0xFFFFB800);
+                        } else {
+                          iconData = Icons.star_outline_rounded;
+                          color = Colors.grey.shade300;
+                        }
+
+                        return Icon(iconData, color: color, size: 18);
+                      }),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${stats.totalCalificaciones} reseñas',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 20),
+
+              // Barras de progreso
+              Expanded(
+                flex: 3,
+                child: Column(
+                  children: [
+                    _buildRatingBar(
+                      5,
+                      stats.calificaciones5Estrellas,
+                      total,
+                      const Color(0xFF4CAF50),
+                    ),
+                    const SizedBox(height: 6),
+                    _buildRatingBar(
+                      4,
+                      stats.calificaciones4Estrellas,
+                      total,
+                      const Color(0xFF8BC34A),
+                    ),
+                    const SizedBox(height: 6),
+                    _buildRatingBar(
+                      3,
+                      stats.calificaciones3Estrellas,
+                      total,
+                      const Color(0xFFFFB800),
+                    ),
+                    const SizedBox(height: 6),
+                    _buildRatingBar(
+                      2,
+                      stats.calificaciones2Estrellas,
+                      total,
+                      const Color(0xFFFF9800),
+                    ),
+                    const SizedBox(height: 6),
+                    _buildRatingBar(
+                      1,
+                      stats.calificaciones1Estrella,
+                      total,
+                      const Color(0xFFF44336),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
+
+          // Mensaje de porcentaje 5 estrellas
+          if (stats.porcentaje5Estrellas > 0) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _verde.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.thumb_up_rounded, color: _verde, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${stats.porcentaje5Estrellas.toStringAsFixed(0)}% de clientes muy satisfechos',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _verde,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildDesgloseChip(String label, int value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Text(
-        '$label $value',
-        style: const TextStyle(fontSize: 12),
-      ),
+  Widget _buildRatingBar(int stars, int count, int total, Color color) {
+    // Calcular porcentaje
+    double percentage = total > 0 ? count / total : 0.0;
+
+    // Si hay al menos 1 calificación en esta categoría, mostrar un mínimo visible
+    if (count > 0 && percentage < 0.05) {
+      percentage = 0.05; // Mínimo 5% para que se vea algo
+    }
+
+    return Row(
+      children: [
+        // Número de estrellas
+        SizedBox(
+          width: 16,
+          child: Text(
+            '$stars',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 14),
+        const SizedBox(width: 8),
+        // Barra de progreso
+        Expanded(
+          child: Container(
+            height: 10,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8E8E8),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final barWidth = constraints.maxWidth * percentage;
+                return Stack(
+                  children: [
+                    // Barra de fondo ya está en el Container padre
+                    // Barra de progreso coloreada
+                    if (count > 0)
+                      Container(
+                        width: barWidth,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.4),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        // Cantidad
+        SizedBox(
+          width: 28,
+          child: Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: count > 0 ? Colors.black87 : Colors.grey.shade400,
+            ),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
     );
   }
 
@@ -843,9 +1036,7 @@ class _PantallaEditarPerfilRepartidorState
             labelText: 'Teléfono',
             hintText: '0987654321',
             prefixIcon: const Icon(Icons.phone, color: _naranja),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             counterText: '',
           ),
           onChanged: (phone) => _telefonoCompleto = phone.completeNumber,
@@ -856,35 +1047,17 @@ class _PantallaEditarPerfilRepartidorState
           initialValue: _vehiculoSeleccionado,
           decoration: InputDecoration(
             labelText: 'Vehículo',
-            prefixIcon: const Icon(
-              Icons.directions_bike,
-              color: _naranja,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            prefixIcon: const Icon(Icons.directions_bike, color: _naranja),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           items: const [
-            DropdownMenuItem(
-              value: 'motocicleta',
-              child: Text('Motocicleta'),
-            ),
-            DropdownMenuItem(
-              value: 'bicicleta',
-              child: Text('Bicicleta'),
-            ),
-            DropdownMenuItem(
-              value: 'automovil',
-              child: Text('Automóvil'),
-            ),
-            DropdownMenuItem(
-              value: 'camioneta',
-              child: Text('Camioneta'),
-            ),
+            DropdownMenuItem(value: 'motocicleta', child: Text('Motocicleta')),
+            DropdownMenuItem(value: 'bicicleta', child: Text('Bicicleta')),
+            DropdownMenuItem(value: 'automovil', child: Text('Automóvil')),
+            DropdownMenuItem(value: 'camioneta', child: Text('Camioneta')),
             DropdownMenuItem(value: 'otro', child: Text('Otro')),
           ],
-          onChanged: (val) =>
-              setState(() => _vehiculoSeleccionado = val),
+          onChanged: (val) => setState(() => _vehiculoSeleccionado = val),
         ),
       ],
     );
@@ -907,9 +1080,7 @@ class _PantallaEditarPerfilRepartidorState
             labelText: 'Email',
             hintText: 'correo@ejemplo.com',
             prefixIcon: const Icon(Icons.email, color: _azul),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 16),
@@ -920,9 +1091,7 @@ class _PantallaEditarPerfilRepartidorState
             labelText: 'Nombre',
             hintText: 'Juan',
             prefixIcon: const Icon(Icons.person_outline, color: _azul),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 16),
@@ -933,9 +1102,7 @@ class _PantallaEditarPerfilRepartidorState
             labelText: 'Apellido',
             hintText: 'Pérez',
             prefixIcon: const Icon(Icons.person_outline, color: _azul),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ],
@@ -983,9 +1150,7 @@ class _PantallaEditarPerfilRepartidorState
             ),
             icon: const Icon(Icons.edit),
             label: Text(
-              tieneDatos
-                  ? 'Editar cuenta bancaria'
-                  : 'Agregar cuenta bancaria',
+              tieneDatos ? 'Editar cuenta bancaria' : 'Agregar cuenta bancaria',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -1002,18 +1167,18 @@ class _PantallaEditarPerfilRepartidorState
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: _cardBorderColor),
-            boxShadow: [
-              BoxShadow(
-                color: _cardBorderColor.withValues(alpha: 0.4),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-              ),
-            ],
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _cardBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: _cardBorderColor.withValues(alpha: 0.4),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1078,18 +1243,18 @@ class _PantallaEditarPerfilRepartidorState
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _cardBorderColor),
-              boxShadow: [
-                BoxShadow(
-                  color: _cardBorderColor.withValues(alpha: 0.4),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _cardBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: _cardBorderColor.withValues(alpha: 0.4),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Expanded(
@@ -1097,7 +1262,10 @@ class _PantallaEditarPerfilRepartidorState
               onPressed: _guardando ? null : () => Navigator.of(context).pop(),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _naranja,
-                side: BorderSide(color: _naranja.withValues(alpha: 0.7), width: 2),
+                side: BorderSide(
+                  color: _naranja.withValues(alpha: 0.7),
+                  width: 2,
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
