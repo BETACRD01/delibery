@@ -66,7 +66,6 @@ class TipoCalificacion(models.TextChoices):
     CLIENTE_A_REPARTIDOR = 'cliente_a_repartidor', 'Cliente califica a Repartidor'
     REPARTIDOR_A_CLIENTE = 'repartidor_a_cliente', 'Repartidor califica a Cliente'
     CLIENTE_A_PROVEEDOR = 'cliente_a_proveedor', 'Cliente califica a Proveedor'
-    CLIENTE_A_PRODUCTO = 'cliente_a_producto', 'Cliente califica un Producto'
     PROVEEDOR_A_REPARTIDOR = 'proveedor_a_repartidor', 'Proveedor califica a Repartidor'
     REPARTIDOR_A_PROVEEDOR = 'repartidor_a_proveedor', 'Repartidor califica a Proveedor'
 
@@ -284,10 +283,10 @@ class Calificacion(models.Model):
         if self.calificador_id == self.calificado_id:
             raise ValidationError("No puedes calificarte a ti mismo.")
 
-        # Validar que el pedido esté entregado
-        if self.pedido and self.pedido.estado != 'entregado':
+        # Validar que el pedido esté finalizado
+        if self.pedido and self.pedido.estado not in ['entregado', 'finalizado']:
             raise ValidationError(
-                "Solo puedes calificar pedidos que hayan sido entregados."
+                "Solo puedes calificar pedidos que hayan sido finalizados o entregados."
             )
 
         # Validar coherencia del tipo con los participantes del pedido
@@ -302,6 +301,29 @@ class Calificacion(models.Model):
         cliente_user = pedido.cliente.user if pedido.cliente else None
         repartidor_user = pedido.repartidor.user if pedido.repartidor else None
         proveedor_user = pedido.proveedor.user if pedido.proveedor else None
+
+        # ✅ Para CLIENTE_A_PROVEEDOR en pedidos multi-proveedor
+        # Si no hay pedido.proveedor pero self.calificado ya está asignado,
+        # verificar que el calificado tenga rol de proveedor
+        if (self.tipo == TipoCalificacion.CLIENTE_A_PROVEEDOR and
+            proveedor_user is None and
+            self.calificado):
+            # Verificar que el calificado sea un proveedor válido del pedido
+            if hasattr(self.calificado, 'proveedor'):
+                # El calificado es un usuario con perfil de proveedor
+                proveedor = self.calificado.proveedor
+                # Verificar que este proveedor tiene productos en el pedido
+                proveedores_items = pedido.items.values_list(
+                    'producto__proveedor_id', flat=True
+                ).distinct()
+                if proveedor.id in proveedores_items:
+                    # Validación exitosa para pedidos multi-proveedor
+                    # Verificar que el calificador sea el cliente
+                    if cliente_user and self.calificador_id != cliente_user.id:
+                        raise ValidationError(
+                            f"Para el tipo '{self.get_tipo_display()}', el calificador debe ser el cliente."
+                        )
+                    return  # ✅ Validación exitosa
 
         validaciones = {
             TipoCalificacion.CLIENTE_A_REPARTIDOR: (cliente_user, repartidor_user),
@@ -357,6 +379,15 @@ class Calificacion(models.Model):
         """Actualiza el promedio de calificaciones del usuario calificado"""
         from calificaciones.services import CalificacionService
         CalificacionService.actualizar_promedio_usuario(self.calificado)
+
+        # Si es calificación a proveedor, actualizar también el promedio del proveedor
+        if self.tipo in [TipoCalificacion.CLIENTE_A_PROVEEDOR, TipoCalificacion.REPARTIDOR_A_PROVEEDOR]:
+            Proveedor = apps.get_model('proveedores', 'Proveedor')
+            try:
+                proveedor = Proveedor.objects.get(user=self.calificado)
+                _recalcular_rating_proveedor(proveedor)
+            except Proveedor.DoesNotExist:
+                pass
 
     # ============================================
     # PROPIEDADES
@@ -510,135 +541,42 @@ class ResumenCalificacion(models.Model):
         return round((positivas / self.total_calificaciones) * 100, 1)
 
 
-def _recalcular_rating_producto(producto):
-    """
-    Recalcula promedio y total de reseñas del producto.
-    Se ejecuta tras cada cambio en CalificacionProducto.
-    """
-    if producto is None:
-        return
-
-    CalificacionProducto = apps.get_model('calificaciones', 'CalificacionProducto')
-    agregados = CalificacionProducto.objects.filter(producto=producto).aggregate(
-        promedio=Avg('estrellas'),
-        total=Count('id'),
-    )
-
-    promedio_nuevo = round(float(agregados['promedio'] or 0.0), 2)
-    total_nuevo = agregados['total'] or 0
-
-    producto.rating_promedio = promedio_nuevo
-    producto.total_resenas = total_nuevo
-    producto.save(update_fields=['rating_promedio', 'total_resenas'])
-
-    _bump_cache_version('producto', producto.id)
-    _recalcular_rating_proveedor(producto.proveedor)
-
-
 def _recalcular_rating_proveedor(proveedor):
     """
-    Recalcula la calificación del proveedor de forma ponderada por ventas.
-    Formula:
-    - Suma (rating_promedio × veces_vendido) / Suma (veces_vendido)
+    Recalcula la calificación del proveedor basado en las calificaciones directas
+    que ha recibido (CLIENTE_A_PROVEEDOR y REPARTIDOR_A_PROVEEDOR).
     """
     if proveedor is None:
         return
 
-    Producto = apps.get_model('productos', 'Producto')
-    suma_ponderada = Sum(
-        ExpressionWrapper(
-            F('rating_promedio') * F('veces_vendido'),
-            output_field=FloatField(),
-        )
+    # Calcular promedio de calificaciones directas al proveedor
+    tipos_validos = [
+        TipoCalificacion.CLIENTE_A_PROVEEDOR,
+        TipoCalificacion.REPARTIDOR_A_PROVEEDOR,
+    ]
+
+    agregados = Calificacion.objects.filter(
+        calificado=proveedor.user,
+        tipo__in=tipos_validos
+    ).aggregate(
+        promedio=Avg('estrellas'),
+        total=Count('id'),
+        promedio_puntualidad=Avg('puntualidad'),
+        promedio_amabilidad=Avg('amabilidad'),
+        promedio_calidad=Avg('calidad_producto')
     )
 
-    agregados = Producto.objects.filter(proveedor=proveedor).aggregate(
-        total_ventas=Sum('veces_vendido'),
-        total_resenas=Sum('total_resenas'),
-        suma_ponderada=suma_ponderada,
-        promedio_simple=Avg('rating_promedio'),
-    )
+    total_calificaciones = agregados['total'] or 0
 
-    total_ventas = agregados['total_ventas'] or 0
-    total_resenas = agregados['total_resenas'] or 0
-
-    if total_ventas > 0:
-        promedio = (agregados['suma_ponderada'] or 0.0) / float(total_ventas)
-    elif total_resenas > 0:
-        promedio = float(agregados['promedio_simple'] or 0.0)
+    if total_calificaciones > 0:
+        proveedor.calificacion_promedio = round(float(agregados['promedio'] or 0.0), 2)
+        proveedor.total_resenas = total_calificaciones
     else:
-        promedio = 0.0
+        proveedor.calificacion_promedio = 0.0
+        proveedor.total_resenas = 0
 
-    proveedor.calificacion_promedio = round(promedio, 2)
-    proveedor.total_resenas = total_resenas
     proveedor.save(update_fields=['calificacion_promedio', 'total_resenas'])
     _bump_cache_version('proveedor', proveedor.id)
-
-
-class CalificacionProducto(models.Model):
-    """Calificación que el cliente deja sobre cada producto entregado."""
-
-    producto = models.ForeignKey(
-        'productos.Producto',
-        on_delete=models.CASCADE,
-        related_name='calificaciones_producto',
-        verbose_name='Producto',
-    )
-    pedido = models.ForeignKey(
-        'pedidos.Pedido',
-        on_delete=models.CASCADE,
-        related_name='calificaciones_producto',
-        verbose_name='Pedido',
-    )
-    item = models.ForeignKey(
-        'pedidos.ItemPedido',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='calificaciones_producto',
-        verbose_name='Item del pedido',
-    )
-    cliente = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='calificaciones_producto',
-        verbose_name='Cliente',
-    )
-    estrellas = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(5)],
-        verbose_name='Estrellas',
-        help_text='Valor de 1 a 5',
-    )
-    comentario = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name='Comentario',
-        max_length=500,
-        help_text='Opinión opcional sobre el producto',
-    )
-    creado_en = models.DateTimeField(auto_now_add=True)
-    actualizado_en = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'calificaciones_producto'
-        verbose_name = 'Calificación de Producto'
-        verbose_name_plural = 'Calificaciones de Productos'
-        ordering = ['-creado_en']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['producto', 'pedido', 'cliente', 'item'],
-                name='unique_calificacion_producto_por_item'
-            )
-        ]
-
-    def __str__(self):
-        return f"{self.cliente.email} → {self.producto.nombre}: {self.estrellas}⭐"
-
-
-@receiver(post_save, sender=CalificacionProducto)
-@receiver(post_delete, sender=CalificacionProducto)
-def _actualizar_rating_producto(sender, instance, **kwargs):
-    _recalcular_rating_producto(instance.producto)
 
 
 @receiver(post_delete, sender=Calificacion)

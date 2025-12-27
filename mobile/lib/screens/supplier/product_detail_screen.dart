@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 
+import '../../controllers/supplier/supplier_controller.dart';
 import '../../models/producto_model.dart';
 import '../../services/productos/productos_service.dart';
 import '../../theme/app_colors_primary.dart';
@@ -48,6 +52,81 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Producto actualizado exitosamente')),
       );
+    }
+  }
+
+  void _confirmarEliminar(ProductoModel producto) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar producto'),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar "${producto.nombre}"?\n\nEsta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade400,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true && mounted) {
+      // Mostrar indicador de carga
+      unawaited(showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CupertinoActivityIndicator(radius: 14),
+                  SizedBox(height: 16),
+                  Text('Eliminando producto...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ));
+
+      try {
+        // Importar el controller
+        final controller = context.read<SupplierController>();
+        await controller.eliminarProducto(producto.id);
+
+        if (!mounted) return;
+        Navigator.of(context).pop(); // Cerrar loader
+        Navigator.of(context).pop(); // Volver a la lista
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Producto "${producto.nombre}" eliminado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        Navigator.of(context).pop(); // Cerrar loader
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -125,8 +204,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     children: [
                       _buildInfoSection(producto),
                       const SizedBox(height: 16),
-                      _buildMetricsSection(producto),
-                      const SizedBox(height: 16),
+                      // _buildMetricsSection(producto), // REMOVIDO: Cuadro de rendimiento
+                      // const SizedBox(height: 16),
                       _buildReviewsSection(producto),
                       const SizedBox(height: 40),
                     ],
@@ -182,6 +261,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
             child: const Icon(Icons.edit, color: Colors.white, size: 20),
+          ),
+        ),
+        IconButton(
+          onPressed: () => _confirmarEliminar(producto),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.red.shade400,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.shade400.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
           ),
         ),
       ],
@@ -279,127 +376,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  Widget _buildMetricsSection(ProductoModel p) {
-    return _CardBase(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Rendimiento',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _KpiItem(
-                  label: 'Ventas',
-                  value: '${p.ventasTotales}',
-                  icon: Icons.shopping_bag_outlined,
-                  color: Colors.purple,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _KpiItem(
-                  label: 'Ingresos',
-                  value: '\$${p.ingresosEstimados.toStringAsFixed(0)}',
-                  icon: Icons.attach_money,
-                  color: Colors.green,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Column(
-                children: [
-                  Text(
-                    p.rating.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
-                    children: List.generate(5, (index) {
-                      return Icon(
-                        index < p.rating.round()
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        color: Colors.amber,
-                        size: 20,
-                      );
-                    }),
-                  ),
-                  Text(
-                    '${p.totalResenas} reseñas',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 24),
-              Expanded(child: _buildRatingBars(p.ratingBreakdown)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRatingBars(Map<int, int> breakdown) {
-    int max = 0;
-    breakdown.forEach((_, v) {
-      if (v > max) max = v;
-    });
-    if (max == 0) max = 1;
-
-    return Column(
-      children: [5, 4, 3, 2, 1].map((star) {
-        final count = breakdown[star] ?? 0;
-        final pct = count / max;
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            children: [
-              Text(
-                '$star',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.star_rounded, size: 12, color: Colors.grey),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: pct,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.amber,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildReviewsSection(ProductoModel p) {
     if (p.resenasPreview.isEmpty) {
       return const SizedBox.shrink();
@@ -485,49 +461,6 @@ class _StatusChip extends StatelessWidget {
           fontWeight: FontWeight.w600,
           fontSize: 12,
         ),
-      ),
-    );
-  }
-}
-
-class _KpiItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _KpiItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-          ),
-        ],
       ),
     );
   }

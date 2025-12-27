@@ -22,9 +22,16 @@ class PantallaAyudaProveedor extends StatelessWidget {
         border: null,
       ),
       child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+        child: DefaultTextStyle(
+          style: const TextStyle(
+            fontFamily: '.SF Pro Text',
+            fontSize: 17,
+            color: CupertinoColors.label,
+            decoration: TextDecoration.none,
+          ),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
             // Header de ayuda
             _buildHeaderAyuda(context),
             const SizedBox(height: 24),
@@ -44,7 +51,8 @@ class PantallaAyudaProveedor extends StatelessWidget {
             _buildGuiasCard(context),
 
             const SizedBox(height: 32),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -211,6 +219,8 @@ class PantallaAyudaProveedor extends StatelessWidget {
                       color: CupertinoColors.label,
                       fontWeight: FontWeight.w400,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     subtitle,
@@ -220,6 +230,8 @@ class PantallaAyudaProveedor extends StatelessWidget {
                         context,
                       ),
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -349,6 +361,8 @@ class PantallaAyudaProveedor extends StatelessWidget {
                       color: CupertinoColors.label,
                       fontWeight: FontWeight.w400,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     guia.subtitulo,
@@ -358,6 +372,8 @@ class PantallaAyudaProveedor extends StatelessWidget {
                         context,
                       ),
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -444,6 +460,8 @@ class _FAQItemState extends State<_FAQItem> {
                       color: CupertinoColors.label,
                       fontWeight: FontWeight.w400,
                     ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Icon(
@@ -464,6 +482,8 @@ class _FAQItemState extends State<_FAQItem> {
                   color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   height: 1.4,
                 ),
+                maxLines: 10,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ],

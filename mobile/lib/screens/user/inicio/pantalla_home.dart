@@ -17,6 +17,7 @@ import '../../../services/auth/auth_service.dart';
 import '../../../services/auth/session_cleanup.dart';
 import '../../../services/core/toast_service.dart';
 import '../../../widgets/cards/jp_product_card.dart';
+import '../../../widgets/common/carrito_floating_button.dart';
 import '../../../widgets/common/jp_shimmer.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 import '../busqueda/pantalla_busqueda.dart';
@@ -58,7 +59,7 @@ class _PantallaHomeState extends State<PantallaHome> {
       value: _homeController,
       child: Scaffold(
         backgroundColor: CupertinoColors.systemGroupedBackground,
-        floatingActionButton: const _CarritoFAB(),
+        floatingActionButton: const CarritoFloatingButton(),
         body: _HomeBody(
           onAgregarCarrito: _agregarProductoAlCarrito,
           onLogout: () => _cerrarSesion(context),
@@ -669,19 +670,12 @@ class _SeccionProductos extends StatelessWidget {
                         ? precioVal.toDouble()
                         : 0.0;
                     final imagen = producto.imagenUrl?.toString();
-                    final ratingVal = (producto is ProductoModel)
-                        ? producto.rating
-                        : (producto.rating ?? 0);
-                    final rating = (ratingVal is num)
-                        ? ratingVal.toDouble()
-                        : 0.0;
                     final porcentaje = producto.porcentajeDescuento;
 
                     return JPProductCard(
                       nombre: nombre,
                       precio: precio,
                       imagenUrl: imagen,
-                      rating: rating,
                       badgeType: _badgeTypeToString(badgeType),
                       porcentajeDescuento: porcentaje,
                       onTap: () => onProductoTap(producto),
@@ -706,90 +700,3 @@ class _SeccionProductos extends StatelessWidget {
   }
 }
 
-/// FAB del Carrito estilo iOS
-class _CarritoFAB extends StatelessWidget {
-  const _CarritoFAB();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<ProveedorCarrito>(
-      builder: (context, carrito, _) {
-        final cantidad = carrito.cantidadTotal;
-
-        return GestureDetector(
-          onTap: () => Rutas.irACarrito(context),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            decoration: BoxDecoration(
-              color: CupertinoColors.systemBackground.resolveFrom(context),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: CupertinoColors.systemGrey.withValues(alpha: 0.25),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: CupertinoColors.systemGrey5.resolveFrom(context),
-                width: 0.5,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Icono del carrito con badge
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(
-                      CupertinoIcons.cart_fill,
-                      color: AppColorsPrimary.main,
-                      size: 24,
-                    ),
-                    if (cantidad > 0)
-                      Positioned(
-                        right: -8,
-                        top: -6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: CupertinoColors.systemRed,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          constraints: const BoxConstraints(minWidth: 20),
-                          child: Text(
-                            cantidad > 9 ? '9+' : '$cantidad',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: CupertinoColors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-
-                // Texto "Mi Pedido"
-                Text(
-                  'Mi Pedido',
-                  style: TextStyle(
-                    color: AppColorsPrimary.main,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}

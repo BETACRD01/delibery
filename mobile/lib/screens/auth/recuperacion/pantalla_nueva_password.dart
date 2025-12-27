@@ -1,11 +1,12 @@
 // lib/screens/auth/pantalla_nueva_password.dart
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../config/rutas.dart';
 import '../../../apis/helpers/api_exception.dart';
 import '../../../services/core/validation/validators.dart';
+import '../../../theme/jp_theme.dart';
+import '../../../theme/app_colors_primary.dart';
 
 /// Pantalla para establecer nueva contraseña
 /// ✅ Última etapa del flujo de recuperación
@@ -22,7 +23,6 @@ class _PantallaNuevaPasswordState extends State<PantallaNuevaPassword> {
   // ============================================
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
   final _api = AuthService();
 
   // ============================================
@@ -35,12 +35,6 @@ class _PantallaNuevaPasswordState extends State<PantallaNuevaPassword> {
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
   bool _exitoso = false;
-
-  // ============================================
-  // COLORES
-  // ============================================
-  static const Color _azulPrincipal = Color(0xFF4FC3F7);
-  static const Color _azulOscuro = Color(0xFF0288D1);
 
   // ============================================
   // CICLO DE VIDA
@@ -82,82 +76,119 @@ class _PantallaNuevaPasswordState extends State<PantallaNuevaPassword> {
   }
 
   /// ✅ Cambia la contraseña
-Future<void> _cambiarPassword() async {
-  if (!_formKey.currentState!.validate()) {
-    return;
-  }
+  Future<void> _cambiarPassword() async {
+    // Validación manual
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
 
-  setState(() {
-    _loading = true;
-    _error = null;
-  });
+    if (password.isEmpty || confirmPassword.isEmpty) {
+      setState(() => _error = 'Por favor completa todos los campos');
+      return;
+    }
 
-  try {
-    // ✅ CORREGIDO: resetPasswordConCodigo → resetPassword
-    // ✅ CORREGIDO: password → nuevaPassword
-    await _api.resetPassword(
-      email: _email!,
-      codigo: _codigo!,
-      nuevaPassword: _passwordController.text,
-    );
+    final validacion = Validators.validarPassword(password);
+    if (!validacion['valida']) {
+      final errores = validacion['errores'] as List<String>;
+      setState(() => _error = errores.first);
+      return;
+    }
 
-    if (mounted) {
-      setState(() {
-        _exitoso = true;
-        _loading = false;
-      });
+    if (password != confirmPassword) {
+      setState(() => _error = 'Las contraseñas no coinciden');
+      return;
+    }
 
-      // Esperar 2 segundos y volver al login
-      await Future.delayed(const Duration(seconds: 2));
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await _api.resetPassword(
+        email: _email!,
+        codigo: _codigo!,
+        nuevaPassword: password,
+      );
+
       if (mounted) {
-        await Rutas.completarRecuperacionPassword(context);
+        setState(() {
+          _exitoso = true;
+          _loading = false;
+        });
+
+        // Esperar 2 segundos y volver al login
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          await Rutas.completarRecuperacionPassword(context);
+        }
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Error al cambiar contraseña. Intenta nuevamente';
+          _loading = false;
+        });
       }
     }
-  } on ApiException catch (e) {
-    if (mounted) {
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _error = 'Error al cambiar contraseña. Intenta nuevamente';
-        _loading = false;
-      });
-    }
   }
-}
   // ============================================
   // UI - BUILD
   // ============================================
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: !_exitoso
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: _azulOscuro),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [_azulPrincipal.withValues(alpha: 0.1), Colors.white],
-          ),
+    return CupertinoPageScaffold(
+      backgroundColor: JPCupertinoColors.background(context),
+      navigationBar: !_exitoso
+          ? CupertinoNavigationBar(
+              backgroundColor: JPCupertinoColors.surface(context).withValues(alpha: 0.95),
+              border: Border(
+                bottom: BorderSide(
+                  color: JPCupertinoColors.separator(context),
+                  width: 0.5,
+                ),
+              ),
+              leading: CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => Navigator.of(context).pop(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.back,
+                      color: AppColorsPrimary.main,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Atrás',
+                      style: TextStyle(
+                        color: AppColorsPrimary.main,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+      child: DefaultTextStyle(
+        style: TextStyle(
+          fontSize: 17,
+          color: JPCupertinoColors.label(context),
+          fontFamily: '.SF Pro Text',
         ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: _exitoso ? _buildExito() : _buildFormulario(),
             ),
           ),
@@ -168,267 +199,293 @@ Future<void> _cambiarPassword() async {
 
   /// Formulario de nueva contraseña
   Widget _buildFormulario() {
-    return Form(
-      key: _formKey,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Icono
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _azulPrincipal.withValues(alpha: 0.1),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Icono
+        Container(
+          height: 96,
+          width: 96,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColorsPrimary.main.withValues(alpha: 0.15),
+                AppColorsPrimary.main.withValues(alpha: 0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: const Icon(Icons.lock_open, size: 80, color: _azulPrincipal),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(height: 32),
-
-          // Título
-          const Text(
-            'Nueva Contraseña',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF212121),
-            ),
+          child: Icon(
+            CupertinoIcons.lock_open,
+            size: 48,
+            color: AppColorsPrimary.main,
           ),
-          const SizedBox(height: 12),
+        ),
+        const SizedBox(height: 28),
 
-          // Descripción
-          Text(
-            'Crea una contraseña segura para tu cuenta',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey[600],
-              height: 1.5,
-            ),
+        // Título
+        Text(
+          'Nueva Contraseña',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: JPCupertinoColors.label(context),
+            letterSpacing: -0.5,
           ),
-          const SizedBox(height: 40),
+        ),
+        const SizedBox(height: 12),
 
-          // Campo de contraseña
-          TextFormField(
-            controller: _passwordController,
-            obscureText: !_passwordVisible,
-            enabled: !_loading,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor ingresa tu contraseña';
-              }
-              final validacion = Validators.validarPassword(value);
-              if (!validacion['valida']) {
-                final errores = validacion['errores'] as List<String>;
-                return errores.first;
-              }
-              return null;
-            },
-            decoration: InputDecoration(
-              labelText: 'Nueva contraseña',
-              labelStyle: TextStyle(color: Colors.grey[700]),
-              prefixIcon:const Icon(Icons.lock_outline, color: _azulOscuro),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _passwordVisible ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey[600],
-                ),
-                onPressed: () {
-                  setState(() => _passwordVisible = !_passwordVisible);
-                },
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _azulPrincipal, width: 2),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.red, width: 1.5),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.red, width: 2),
-              ),
-              filled: true,
-              fillColor: Colors.white,
+        // Descripción
+        Text(
+          'Crea una contraseña segura para tu cuenta',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 15,
+            color: JPCupertinoColors.secondaryLabel(context),
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 40),
+
+        // Campo de contraseña
+        Container(
+          decoration: BoxDecoration(
+            color: JPCupertinoColors.surface(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: JPCupertinoColors.separator(context),
+              width: 0.5,
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Campo confirmar contraseña
-          TextFormField(
-            controller: _confirmPasswordController,
-            obscureText: !_confirmPasswordVisible,
-            enabled: !_loading,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor confirma tu contraseña';
-              }
-              if (value != _passwordController.text) {
-                return 'Las contraseñas no coinciden';
-              }
-              return null;
-            },
-            decoration: InputDecoration(
-              labelText: 'Confirmar contraseña',
-              labelStyle: TextStyle(color: Colors.grey[700]),
-              prefixIcon: const Icon(Icons.lock_outline, color: _azulOscuro),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _confirmPasswordVisible
-                      ? Icons.visibility_off
-                      : Icons.visibility,
-                  color: Colors.grey[600],
-                ),
-                onPressed: () {
-                  setState(
-                    () => _confirmPasswordVisible = !_confirmPasswordVisible,
-                  );
-                },
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.lock,
+                color: AppColorsPrimary.main,
+                size: 22,
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _azulPrincipal, width: 2),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.red, width: 1.5),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.red, width: 2),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Requisitos de contraseña
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'La contraseña debe tener:',
+              const SizedBox(width: 12),
+              Expanded(
+                child: CupertinoTextField(
+                  controller: _passwordController,
+                  placeholder: 'Nueva contraseña',
+                  obscureText: !_passwordVisible,
+                  placeholderStyle: TextStyle(
+                    color: JPCupertinoColors.placeholder(context),
+                    fontSize: 17,
+                  ),
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
+                    color: JPCupertinoColors.label(context),
+                    fontSize: 17,
+                  ),
+                  enabled: !_loading,
+                  decoration: const BoxDecoration(),
+                  suffix: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                    child: Icon(
+                      _passwordVisible ? CupertinoIcons.eye_slash : CupertinoIcons.eye,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                      size: 22,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                _buildRequisitoPassword('Al menos 8 caracteres'),
-                _buildRequisitoPassword('Al menos una letra'),
-                _buildRequisitoPassword('Al menos un número'),
-                _buildRequisitoPassword('Sin espacios en blanco'),
-              ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Campo confirmar contraseña
+        Container(
+          decoration: BoxDecoration(
+            color: JPCupertinoColors.surface(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: JPCupertinoColors.separator(context),
+              width: 0.5,
             ),
           ),
-
-          // Mensaje de error
-          if (_error != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red[300]!, width: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.lock,
+                color: AppColorsPrimary.main,
+                size: 22,
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red[700], size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _error!,
-                      style: TextStyle(color: Colors.red[700], fontSize: 14),
+              const SizedBox(width: 12),
+              Expanded(
+                child: CupertinoTextField(
+                  controller: _confirmPasswordController,
+                  placeholder: 'Confirmar contraseña',
+                  obscureText: !_confirmPasswordVisible,
+                  placeholderStyle: TextStyle(
+                    color: JPCupertinoColors.placeholder(context),
+                    fontSize: 17,
+                  ),
+                  style: TextStyle(
+                    color: JPCupertinoColors.label(context),
+                    fontSize: 17,
+                  ),
+                  enabled: !_loading,
+                  decoration: const BoxDecoration(),
+                  suffix: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => setState(() => _confirmPasswordVisible = !_confirmPasswordVisible),
+                    child: Icon(
+                      _confirmPasswordVisible ? CupertinoIcons.eye_slash : CupertinoIcons.eye,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                      size: 22,
                     ),
                   ),
-                ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // Requisitos de contraseña
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: JPCupertinoColors.secondarySurface(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: JPCupertinoColors.separator(context),
+              width: 0.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'La contraseña debe tener:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: JPCupertinoColors.label(context),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildRequisitoPassword('Al menos 8 caracteres'),
+              _buildRequisitoPassword('Al menos una letra'),
+              _buildRequisitoPassword('Al menos un número'),
+              _buildRequisitoPassword('Sin espacios en blanco'),
+            ],
+          ),
+        ),
+
+        // Mensaje de error
+        if (_error != null) ...[
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: JPCupertinoColors.systemRed(context).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: JPCupertinoColors.systemRed(context).withValues(alpha: 0.3),
+                width: 1,
               ),
             ),
-          ],
-
-          const SizedBox(height: 28),
-
-          // Botón cambiar contraseña
-          Container(
-            height: 54,
-            decoration: BoxDecoration(
-              gradient:const LinearGradient(colors: [_azulPrincipal, _azulOscuro]),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: _azulPrincipal.withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
+            child: Row(
+              children: [
+                Icon(
+                  CupertinoIcons.exclamationmark_circle,
+                  size: 22,
+                  color: JPCupertinoColors.systemRed(context),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _error!,
+                    style: TextStyle(
+                      color: JPCupertinoColors.systemRed(context),
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ],
-            ),
-            child: ElevatedButton(
-              onPressed: _loading ? null : _cambiarPassword,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _loading
-                  ? const CupertinoActivityIndicator(
-                      color: Colors.white,
-                      radius: 10,
-                    )
-                  : const Text(
-                      'Cambiar Contraseña',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
             ),
           ),
         ],
-      ),
+
+        const SizedBox(height: 32),
+
+        // Botón cambiar contraseña
+        Container(
+          height: 54,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColorsPrimary.main,
+                AppColorsPrimary.main.withValues(alpha: 0.85),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: AppColorsPrimary.main.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: CupertinoButton(
+            onPressed: _loading ? null : _cambiarPassword,
+            color: CupertinoColors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            padding: EdgeInsets.zero,
+            child: _loading
+                ? const CupertinoActivityIndicator(
+                    color: CupertinoColors.white,
+                    radius: 12,
+                  )
+                : const Text(
+                    'Cambiar Contraseña',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
   /// Widget para mostrar requisito de contraseña
   Widget _buildRequisitoPassword(String texto) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline, size: 16, color: Colors.grey[600]),
+          Icon(
+            CupertinoIcons.checkmark_circle,
+            size: 16,
+            color: JPCupertinoColors.secondaryLabel(context),
+          ),
           const SizedBox(width: 8),
-          Text(texto, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+          Text(
+            texto,
+            style: TextStyle(
+              fontSize: 12,
+              color: JPCupertinoColors.secondaryLabel(context),
+            ),
+          ),
         ],
       ),
     );
@@ -442,23 +499,36 @@ Future<void> _cambiarPassword() async {
       children: [
         // Icono de éxito
         Container(
-          padding: const EdgeInsets.all(20),
+          height: 110,
+          width: 110,
           decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                JPCupertinoColors.systemGreen(context).withValues(alpha: 0.2),
+                JPCupertinoColors.systemGreen(context).withValues(alpha: 0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             shape: BoxShape.circle,
-            color: Colors.green[50],
           ),
-          child: Icon(Icons.check_circle, size: 100, color: Colors.green[600]),
+          child: Icon(
+            CupertinoIcons.checkmark_alt_circle_fill,
+            size: 64,
+            color: JPCupertinoColors.systemGreen(context),
+          ),
         ),
         const SizedBox(height: 32),
 
         // Título
-        const Text(
+        Text(
           '¡Contraseña Cambiada!',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF212121),
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: JPCupertinoColors.label(context),
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 16),
@@ -467,24 +537,34 @@ Future<void> _cambiarPassword() async {
         Text(
           'Tu contraseña ha sido actualizada exitosamente.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: Colors.grey[600], height: 1.5),
+          style: TextStyle(
+            fontSize: 15,
+            color: JPCupertinoColors.secondaryLabel(context),
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 12),
 
         Text(
           'Ahora puedes iniciar sesión con tu nueva contraseña.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Colors.grey[500], height: 1.5),
+          style: TextStyle(
+            fontSize: 14,
+            color: JPCupertinoColors.tertiaryLabel(context),
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 40),
 
         // Indicador de carga
-        const Center(child: CupertinoActivityIndicator(radius: 14)),
+        const Center(child: CupertinoActivityIndicator(radius: 16)),
         const SizedBox(height: 16),
         Text(
           'Redirigiendo al login...',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey[600]),
+          style: TextStyle(
+            color: JPCupertinoColors.secondaryLabel(context),
+          ),
         ),
       ],
     );

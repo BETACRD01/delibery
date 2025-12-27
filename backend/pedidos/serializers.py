@@ -4,6 +4,7 @@ from django.apps import apps
 from rest_framework import serializers
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import F
 from django.core.exceptions import ValidationError as DjangoValidationError
 from decimal import Decimal
 
@@ -66,8 +67,6 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
     """Serializer para items individuales del pedido"""
     producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
     producto_imagen = serializers.SerializerMethodField()
-    calificacion_producto = serializers.SerializerMethodField()
-    puede_calificar_producto = serializers.SerializerMethodField()
 
     class Meta:
         model = ItemPedido
@@ -76,8 +75,6 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
             'producto',  # ID del producto (Foreign Key)
             'producto_nombre',
             'producto_imagen',
-            'calificacion_producto',
-            'puede_calificar_producto',
             'cantidad',
             'precio_unitario',
             'subtotal',
@@ -97,49 +94,6 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
             except Exception:
                 return None
         return None
-
-    def get_calificacion_producto(self, obj):
-        request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
-            return None
-
-        CalificacionProducto = apps.get_model('calificaciones', 'CalificacionProducto')
-        calificacion = CalificacionProducto.objects.filter(
-            pedido=obj.pedido,
-            item=obj,
-            cliente=request.user,
-        ).first()
-
-        if not calificacion:
-            return None
-
-        return {
-            'estrellas': calificacion.estrellas,
-            'comentario': calificacion.comentario,
-            'fecha': calificacion.creado_en.isoformat(),
-        }
-
-    def get_puede_calificar_producto(self, obj):
-        request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
-            return False
-
-        user = request.user
-        if obj.pedido.estado != EstadoPedido.ENTREGADO:
-            return False
-
-        cliente_user_id = getattr(obj.pedido.cliente, 'user_id', None)
-        if cliente_user_id != user.id:
-            return False
-
-        CalificacionProducto = apps.get_model('calificaciones', 'CalificacionProducto')
-        existe = CalificacionProducto.objects.filter(
-            pedido=obj.pedido,
-            item=obj,
-            cliente=user,
-        ).exists()
-
-        return not existe
 
     def validate_cantidad(self, value):
         if value <= 0:
@@ -492,6 +446,12 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
         }
 
     def get_proveedor(self, obj):
+        """
+        Devuelve información completa del proveedor con todos los campos necesarios.
+        Construye URLs absolutas para las fotos.
+        """
+        request = self.context.get('request')
+
         # Para pedidos multi-proveedor, devolver lista de proveedores
         if not obj.proveedor:
             # Obtener proveedores únicos de los items
@@ -502,10 +462,23 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
                     try:
                         from proveedores.models import Proveedor
                         prov = Proveedor.objects.get(id=prov_id)
+
+                        # Construir URL completa de la foto
+                        foto_url = None
+                        if prov.logo:
+                            try:
+                                foto_url = prov.logo.url
+                                if request and not foto_url.startswith('http'):
+                                    foto_url = request.build_absolute_uri(foto_url)
+                            except Exception:
+                                foto_url = None
+
                         proveedores_data.append({
                             'id': prov.id,
                             'nombre': prov.nombre,
-                            'foto': prov.logo.url if prov.logo else None,
+                            'telefono': prov.telefono,
+                            'direccion': prov.direccion,
+                            'foto_perfil': foto_url,
                         })
                     except Proveedor.DoesNotExist:
                         continue
@@ -513,10 +486,22 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
             return None
 
         # Pedido de un solo proveedor
+        # Construir URL completa de la foto
+        foto_url = None
+        if obj.proveedor.logo:
+            try:
+                foto_url = obj.proveedor.logo.url
+                if request and not foto_url.startswith('http'):
+                    foto_url = request.build_absolute_uri(foto_url)
+            except Exception:
+                foto_url = None
+
         return {
             'id': obj.proveedor.id,
             'nombre': obj.proveedor.nombre,
-            'foto': obj.proveedor.logo.url if obj.proveedor.logo else None,
+            'telefono': obj.proveedor.telefono,
+            'direccion': obj.proveedor.direccion,
+            'foto_perfil': foto_url,
         }
 
     def get_repartidor(self, obj):
@@ -621,29 +606,51 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
         """
         Habilita la calificación del proveedor cuando el pedido está ENTREGADO
         y el cliente aún no lo ha calificado.
+        Funciona tanto para pedidos de un solo proveedor como multi-proveedor.
         """
         request = self.context.get('request')
         user = getattr(request, 'user', None)
 
         if not user or not user.is_authenticated:
             return False
+        # Permitir calificar solo en ENTREGADO
         if obj.estado != EstadoPedido.ENTREGADO:
             return False
-        if not obj.proveedor:
-            return False
-        if getattr(obj.proveedor, 'user_id', None) == getattr(user, 'id', None):
-            return False
 
-        try:
-          from calificaciones.models import Calificacion, TipoCalificacion
-          ya_califico = Calificacion.objects.filter(
-              pedido=obj,
-              calificador=user,
-              tipo=TipoCalificacion.CLIENTE_A_PROVEEDOR
-          ).exists()
-          return not ya_califico
-        except Exception:
-          return False
+        # Verificar si hay proveedor (un solo proveedor)
+        if obj.proveedor:
+            # Evitar autocalificación
+            if getattr(obj.proveedor, 'user_id', None) == getattr(user, 'id', None):
+                return False
+
+            try:
+                from calificaciones.models import Calificacion, TipoCalificacion
+                ya_califico = Calificacion.objects.filter(
+                    pedido=obj,
+                    calificador=user,
+                    tipo=TipoCalificacion.CLIENTE_A_PROVEEDOR
+                ).exists()
+                return not ya_califico
+            except Exception:
+                return False
+        else:
+            # Pedido multi-proveedor: verificar si hay proveedores en los items
+            proveedores_items = obj.items.values_list('producto__proveedor', flat=True).distinct()
+            if proveedores_items and len(proveedores_items) > 0:
+                # Para pedidos multi-proveedor, permitir calificar
+                # (cada proveedor se calificará individualmente en el futuro)
+                try:
+                    from calificaciones.models import Calificacion, TipoCalificacion
+                    # Verificar si ya calificó a algún proveedor de este pedido
+                    ya_califico = Calificacion.objects.filter(
+                        pedido=obj,
+                        calificador=user,
+                        tipo=TipoCalificacion.CLIENTE_A_PROVEEDOR
+                    ).exists()
+                    return not ya_califico
+                except Exception:
+                    return False
+            return False
 
     def get_calificacion_proveedor(self, obj):
         request = self.context.get('request')
@@ -817,12 +824,24 @@ class PedidoRepartidorDetalladoSerializer(serializers.ModelSerializer):
     def get_proveedor(self, obj):
         if not obj.proveedor:
             return None
+
+        # Construir URL completa de la foto
+        request = self.context.get('request')
+        foto_url = None
+        if obj.proveedor.logo:
+            try:
+                foto_url = obj.proveedor.logo.url
+                if request and not foto_url.startswith('http'):
+                    foto_url = request.build_absolute_uri(foto_url)
+            except Exception:
+                foto_url = None
+
         return {
             'id': obj.proveedor.id,
             'nombre': obj.proveedor.nombre,
             'telefono': obj.proveedor.telefono,  # Teléfono del proveedor para coordinar recogida
             'direccion': obj.proveedor.direccion,
-            'foto': obj.proveedor.logo.url if obj.proveedor.logo else None,
+            'foto_perfil': foto_url,  # ✅ Cambiado de 'foto' a 'foto_perfil' para consistencia
         }
 
     def get_tiempo_transcurrido(self, obj):

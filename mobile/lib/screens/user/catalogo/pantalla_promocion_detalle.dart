@@ -2,7 +2,6 @@
 import 'package:flutter/cupertino.dart';
 
 import 'dart:async';
-import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
 import '../../../../../services/productos/productos_service.dart';
+import '../../../../../theme/app_colors_secondary.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/producto_model.dart';
 import '../../../models/promocion_model.dart';
@@ -89,32 +89,33 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
       List<ProductoModel> productosReales = [];
 
-      // 1) Producto asociado
-      if ((promocion.productoAsociadoId ?? '').isNotEmpty) {
-        try {
-          final prod = await productosService.obtenerProducto(promocion.productoAsociadoId!);
-          productosReales.add(prod);
-        } catch (_) {
-          // continúa con otros métodos
+      // 1) Productos asociados específicos (múltiples)
+      if (promocion.productosAsociadosIds.isNotEmpty) {
+        for (final productoId in promocion.productosAsociadosIds) {
+          try {
+            final prod = await productosService.obtenerProducto(productoId);
+            productosReales.add(prod);
+          } catch (e) {
+            // Error silenciado
+          }
         }
       }
 
-      // 2) Categoría asociada
-      if (productosReales.isEmpty && (promocion.categoriaAsociadaId ?? '').isNotEmpty) {
-        productosReales = await productosService.obtenerProductos(categoriaId: promocion.categoriaAsociadaId);
-      }
-
-      // 3) Fallback: ofertas/random para que siempre haya sugerencias reales
-      if (productosReales.isEmpty) {
-        productosReales = await productosService.obtenerProductosEnOferta(random: true);
-        if (productosReales.isEmpty) {
-          productosReales = await productosService.obtenerProductosMasPopulares(random: true);
+      // 2) Productos de categoría asociada
+      if ((promocion.categoriaAsociadaId ?? '').isNotEmpty) {
+        try {
+          final productosCat = await productosService.obtenerProductos(
+            categoriaId: promocion.categoriaAsociadaId,
+          );
+          productosReales.addAll(productosCat);
+        } catch (e) {
+          // Error silenciado
         }
       }
 
       if (mounted) {
         setState(() {
-          // Filtramos duplicados por id y tomamos 8 como máximo
+          // Filtramos duplicados por id
           final vistos = <String>{};
           final depurados = <ProductoModel>[];
           for (final p in productosReales) {
@@ -122,13 +123,11 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
             vistos.add(p.id);
             depurados.add(p);
           }
-          depurados.shuffle(Random());
-          _productosIncluidos = depurados.take(8).toList();
+          _productosIncluidos = depurados;
           _loading = false;
         });
       }
     } catch (e) {
-      debugPrint('Error cargando productos de promoción: $e');
       if (mounted) {
         setState(() {
           _error = 'No se pudieron cargar los productos. Intenta nuevamente.';
@@ -151,23 +150,35 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
     return Scaffold(
       backgroundColor: JPColors.background,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(promocion),
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(promocion),
-                if (promocion.fechaFin != null) _buildContador(),
-                const SizedBox(height: 24),
-                _buildDescripcion(promocion),
-                const SizedBox(height: 24),
-                _buildProductosIncluidos(),
-                const SizedBox(height: 24),
-                _buildTerminos(),
-                const SizedBox(height: 100),
-              ],
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              _buildSliverAppBar(promocion),
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(promocion),
+                    if (promocion.fechaFin != null) _buildContador(),
+                    const SizedBox(height: 24),
+                    _buildDescripcion(promocion),
+                    const SizedBox(height: 24),
+                    _buildProductosIncluidos(),
+                    const SizedBox(height: 24),
+                    _buildTerminos(),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // FAB del carrito flotante - Versión circular compacta
+          Positioned(
+            top: 8,
+            right: 8,
+            child: SafeArea(
+              child: _CarritoCircularButton(),
             ),
           ),
         ],
@@ -177,69 +188,107 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
   }
 
   Widget _buildSliverAppBar(PromocionModel promocion) {
-    // Usamos el color de la promoción directamente, asumiendo que es objeto Color
     final promoColor = promocion.color;
 
     return SliverAppBar(
-      expandedHeight: 250,
+      expandedHeight: 280,
       pinned: true,
-      backgroundColor: promoColor,
-      foregroundColor: Colors.white,
+      backgroundColor: CupertinoColors.systemBackground.resolveFrom(context),
+      foregroundColor: CupertinoColors.label.resolveFrom(context),
+      elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
           children: [
-            // 1. IMAGEN DE FONDO (si existe)
+            // 1. IMAGEN DE FONDO
             if (promocion.imagenUrl != null && promocion.imagenUrl!.isNotEmpty)
               CachedNetworkImage(
                 imageUrl: promocion.imagenUrl!,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
-                  color: promoColor,
-                  child: const Center(child: CupertinoActivityIndicator(radius: 14)),
+                  color: promoColor.withValues(alpha: 0.1),
+                  child: const Center(
+                    child: CupertinoActivityIndicator(radius: 14),
+                  ),
                 ),
-                errorWidget: (context, url, error) => Container(color: promoColor),
+                errorWidget: (context, url, error) => Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        promoColor.withValues(alpha: 0.8),
+                        promoColor,
+                      ],
+                    ),
+                  ),
+                ),
               )
             else
-              // Fondo con color de la promoción si no hay imagen
-              Container(color: promoColor),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      promoColor.withValues(alpha: 0.8),
+                      promoColor,
+                    ],
+                  ),
+                ),
+              ),
 
-            // 2. GRADIENTE OSCURO para mejorar legibilidad del texto
+            // 2. GRADIENTE SUTIL para mejor legibilidad
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: 0.3), Colors.black.withValues(alpha: 0.7)],
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.3),
+                  ],
                 ),
               ),
             ),
 
-            // 3. CONTENIDO CENTRADO
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Badge de descuento
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+            // 3. BADGE DE DESCUENTO - Posicionado abajo sutilmente
+            Positioned(
+              bottom: 24,
+              left: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
                     ),
-                    child: Text(
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.tag_fill,
+                      color: promoColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
                       promocion.descuento,
-                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: promoColor, letterSpacing: 1),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: promoColor,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -411,17 +460,46 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
             ),
           )
         else if (_productosIncluidos.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemGrey6.resolveFrom(context),
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Column(
                 children: [
-                  Icon(Icons.fastfood_outlined, size: 48, color: Colors.grey[300]),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColorsSecondary.main.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      CupertinoIcons.sparkles,
+                      size: 40,
+                      color: AppColorsSecondary.main,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Esta promoción aplica a todo el catálogo\no no tiene productos específicos.',
+                    'Promoción General',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: JPColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Esta promoción aplica a todo el catálogo.\nExplora nuestros productos para aprovecharla.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: JPColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
@@ -524,7 +602,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                       const SizedBox(height: 2),
                       Text(
                         'Total: \$${precioTotal.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: JPColors.primary),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.red),
                       ),
                     ],
                   )
@@ -539,18 +617,27 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                 const SizedBox(width: 16),
 
                 Expanded(
-                  child: ElevatedButton(
+                  child: ElevatedButton.icon(
                     onPressed: promocion.esVigente ? _agregarPromocionAlCarrito : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: JPColors.primary,
+                      backgroundColor: promocion.esVigente ? AppColorsSecondary.main : Colors.grey,
                       foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: promocion.esVigente ? 4 : 0,
+                      shadowColor: AppColorsSecondary.main.withValues(alpha: 0.4),
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: Text(
+                    icon: Icon(
+                      mostrarTotales ? Icons.shopping_cart_rounded : Icons.explore_rounded,
+                      size: 22,
+                    ),
+                    label: Text(
                       mostrarTotales ? 'Agregar combo' : 'Explorar productos',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
@@ -658,84 +745,204 @@ class _ProductoPromoCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[100]!),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: CupertinoColors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          )
+        ],
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: Row(
-          children: [
-            // Imagen del producto
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 80,
-                height: 80,
-                color: Colors.grey[100],
-                child: producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: producto.imagenUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Center(
-                          child: CupertinoActivityIndicator(radius: 14), ),
-                        errorWidget: (context, url, error) =>
-                            Icon(Icons.fastfood_outlined, size: 30, color: Colors.grey[400]),
-                      )
-                    : Icon(Icons.fastfood_outlined, size: 30, color: Colors.grey[400]),
-              ),
-            ),
-            const SizedBox(width: 16),
-
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Imagen del producto con badge
+              Stack(
                 children: [
-                  Text(
-                    producto.nombre,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: JPColors.textPrimary),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 90,
+                      height: 90,
+                      color: Colors.grey[100],
+                      child: producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: producto.imagenUrl!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const Center(
+                                child: CupertinoActivityIndicator(radius: 14),
+                              ),
+                              errorWidget: (context, url, error) =>
+                                  Icon(Icons.fastfood_outlined, size: 30, color: Colors.grey[400]),
+                            )
+                          : Icon(Icons.fastfood_outlined, size: 30, color: Colors.grey[400]),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    producto.descripcion,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (tieneDescuento) ...[
-                        Text(
-                          '\$${producto.precioAnterior!.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[500],
-                            decoration: TextDecoration.lineThrough,
-                          ),
+                  if (tieneDescuento)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                            )
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        '\$${producto.precio.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: JPColors.primary),
+                        child: const Icon(
+                          Icons.local_fire_department_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(width: 16),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      producto.nombre,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: JPColors.textPrimary,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      producto.descripcion,
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (tieneDescuento) ...[
+                          Text(
+                            '\$${producto.precioAnterior!.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                              decoration: TextDecoration.lineThrough,
+                              decorationThickness: 2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '\$${producto.precio.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Botón circular compacto del carrito para pantallas de detalle
+class _CarritoCircularButton extends StatelessWidget {
+  const _CarritoCircularButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ProveedorCarrito>(
+      builder: (context, carrito, _) {
+        final cantidad = carrito.cantidadTotal;
+
+        return GestureDetector(
+          onTap: () => Rutas.irACarrito(context),
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  Icons.shopping_cart_rounded,
+                  color: AppColorsSecondary.main,
+                  size: 28,
+                ),
+                if (cantidad > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      child: Text(
+                        cantidad > 9 ? '9+' : '$cantidad',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

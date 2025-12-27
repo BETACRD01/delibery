@@ -150,12 +150,53 @@ class ApiException implements Exception {
       return list.toString();
     }
 
+    // Manejo especial para errores de datos bancarios
+    if (errors.containsKey('datos_bancarios')) {
+      final bancError = errors['datos_bancarios'];
+      if (bancError is List && bancError.isNotEmpty) {
+        return bancError.first.toString();
+      }
+      if (bancError is String) {
+        return bancError;
+      }
+    }
+
+    // Manejo de campos bancarios específicos
+    final bancarioFields = [
+      'banco_nombre',
+      'banco_tipo_cuenta',
+      'banco_numero_cuenta',
+      'banco_titular',
+      'banco_cedula_titular'
+    ];
+
+    for (final field in bancarioFields) {
+      if (errors.containsKey(field)) {
+        final fieldError = errors[field];
+        if (fieldError is List && fieldError.isNotEmpty) {
+          return fieldError.first.toString();
+        }
+        if (fieldError is String) {
+          return fieldError;
+        }
+      }
+    }
+
     final firstKey = errors.keys.first;
     final firstVal = errors[firstKey];
 
     final errorMsg = (firstVal is List && firstVal.isNotEmpty)
         ? firstVal.first.toString()
         : firstVal.toString();
+
+    // No agregar el nombre del campo si el mensaje ya es descriptivo
+    if (errorMsg.contains('inválido') ||
+        errorMsg.contains('debe') ||
+        errorMsg.contains('Número de cuenta') ||
+        errorMsg.contains('Cédula') ||
+        errorMsg.contains('Nombre')) {
+      return errorMsg;
+    }
 
     final fieldName =
         firstKey[0].toUpperCase() + firstKey.substring(1).replaceAll('_', ' ');

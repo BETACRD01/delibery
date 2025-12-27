@@ -19,9 +19,17 @@ class NotificacionesConfig(AppConfig):
         """
          Se ejecuta cuando Django inicia
         Importa los signals para que se registren automáticamente
+        e inicializa Firebase para notificaciones push.
         """
         try:
             import notificaciones.signals  # noqa
             print("Signals de notificaciones cargados correctamente")
         except Exception as e:
             print(f"Error cargando signals de notificaciones: {e}")
+
+        # Inicializar Firebase al arrancar Django
+        try:
+            from notificaciones.services import inicializar_firebase
+            inicializar_firebase()
+        except Exception as e:
+            print(f"Error inicializando Firebase: {e}")

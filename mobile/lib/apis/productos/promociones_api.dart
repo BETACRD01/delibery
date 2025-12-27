@@ -43,7 +43,7 @@ class PromocionesApi {
 
   /// Crea una promoción (usando endpoint de proveedor)
   Future<Map<String, dynamic>> createPromocion(
-    Map<String, String> data, {
+    Map<String, dynamic> data, {
     File? imagen,
   }) async {
     return await _client.multipart(
@@ -57,7 +57,7 @@ class PromocionesApi {
   /// Actualiza una promoción (usando endpoint de proveedor)
   Future<Map<String, dynamic>> updatePromocion(
     int id,
-    Map<String, String> data, {
+    Map<String, dynamic> data, {
     File? imagen,
   }) async {
     return await _client.multipart(

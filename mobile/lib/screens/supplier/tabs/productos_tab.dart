@@ -264,25 +264,70 @@ class _ProductosTabState extends State<ProductosTab> {
         ),
         const SizedBox(height: 12),
         // Toggle vista agrupada/lista
-        Row(
-          children: [
-            Icon(
-              _vistaAgrupada ? Icons.folder_outlined : Icons.list,
-              size: 18,
-              color: _textoSecundario,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: _vistaAgrupada
+                ? _exito.withValues(alpha: 0.08)
+                : Colors.grey.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: _vistaAgrupada
+                  ? _exito.withValues(alpha: 0.2)
+                  : Colors.grey.withValues(alpha: 0.1),
             ),
-            const SizedBox(width: 8),
-            Text(
-              _vistaAgrupada ? 'Por categoría' : 'Lista plana',
-              style: const TextStyle(fontSize: 13, color: _textoSecundario),
-            ),
-            const Spacer(),
-            Switch.adaptive(
-              value: _vistaAgrupada,
-              onChanged: (v) => setState(() => _vistaAgrupada = v),
-              activeTrackColor: _exito,
-            ),
-          ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: _vistaAgrupada
+                      ? _exito.withValues(alpha: 0.15)
+                      : Colors.grey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  _vistaAgrupada ? Icons.folder : Icons.view_list,
+                  size: 18,
+                  color: _vistaAgrupada ? _exito : _textoSecundario,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _vistaAgrupada
+                          ? 'Vista por Carpetas'
+                          : 'Vista en Lista',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            _vistaAgrupada ? _exito : Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      _vistaAgrupada
+                          ? 'Productos agrupados por categoría'
+                          : 'Todos los productos en orden',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: _textoSecundario,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                value: _vistaAgrupada,
+                onChanged: (v) => setState(() => _vistaAgrupada = v),
+                activeTrackColor: _exito,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -311,57 +356,95 @@ class _ProductosTabState extends State<ProductosTab> {
       final prods = entry.value;
       final expandida = _categoriasExpandidas.contains(categoria);
 
-      // Header de categoría
+      // Header de categoría (carpeta)
       widgets.add(
         GestureDetector(
           onTap: () => _toggleCategoria(categoria),
           child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            margin: EdgeInsets.only(bottom: expandida ? 4 : 8, top: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              gradient: LinearGradient(
+                colors: [
+                  _exito.withValues(alpha: 0.08),
+                  _exito.withValues(alpha: 0.03),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: expandida
+                    ? _exito.withValues(alpha: 0.3)
+                    : Colors.grey.withValues(alpha: 0.15),
+                width: expandida ? 2 : 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  color: _exito.withValues(alpha: 0.1),
+                  blurRadius: expandida ? 12 : 6,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
             child: Row(
               children: [
+                // Icono de carpeta más grande y destacado
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _exito.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: _exito.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _exito.withValues(alpha: 0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Icon(Icons.folder, color: _exito, size: 20),
+                  child: Icon(
+                    expandida ? Icons.folder_open : Icons.folder,
+                    color: _exito,
+                    size: 26,
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         categoria,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: expandida ? _exito : Colors.black87,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         '${prods.length} producto${prods.length != 1 ? 's' : ''}',
-                        style: TextStyle(fontSize: 12, color: _textoSecundario),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: _textoSecundario,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Icon(
-                  expandida ? Icons.expand_less : Icons.expand_more,
-                  color: _textoSecundario,
+                // Flecha animada
+                AnimatedRotation(
+                  turns: expandida ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.keyboard_arrow_down,
+                    color: expandida ? _exito : _textoSecundario,
+                    size: 28,
+                  ),
                 ),
               ],
             ),
@@ -410,6 +493,31 @@ class _ProductosTabState extends State<ProductosTab> {
       child: Dismissible(
         key: ValueKey(producto.id),
         direction: DismissDirection.endToStart,
+        confirmDismiss: (_) async {
+          // Mostrar diálogo de confirmación
+          return await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Eliminar producto'),
+              content: Text(
+                '¿Estás seguro de que deseas eliminar "${producto.nombre}"?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.red.shade400,
+                  ),
+                  child: const Text('Eliminar'),
+                ),
+              ],
+            ),
+          ) ?? false;
+        },
         background: Container(
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20),
@@ -419,14 +527,30 @@ class _ProductosTabState extends State<ProductosTab> {
           ),
           child: const Icon(Icons.delete_outline, color: Colors.white),
         ),
-        onDismissed: (_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Producto "${producto.nombre}" eliminado temporalmente',
-              ),
-            ),
-          );
+        onDismissed: (_) async {
+          // Llamar al API para eliminar el producto
+          try {
+            await controller.eliminarProducto(producto.id);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Producto "${producto.nombre}" eliminado'),
+                  backgroundColor: _exito,
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al eliminar: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              // Recargar para mostrar el producto nuevamente
+              await controller.refrescarProductos();
+            }
+          }
         },
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -495,19 +619,60 @@ class _ProductosTabState extends State<ProductosTab> {
                 ),
               ],
             ),
-            trailing: Switch(
-              value: producto.disponible,
-              onChanged: (_) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      producto.disponible
-                          ? 'Producto pausado'
-                          : 'Producto publicado',
-                    ),
-                  ),
-                );
-              },
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
+                  onPressed: () async {
+                    final confirmar = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Eliminar producto'),
+                        content: Text(
+                          '¿Estás seguro de que deseas eliminar "${producto.nombre}"?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('Cancelar'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.red.shade400,
+                            ),
+                            child: const Text('Eliminar'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmar == true && context.mounted) {
+                      try {
+                        await controller.eliminarProducto(producto.id);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Producto "${producto.nombre}" eliminado'),
+                              backgroundColor: _exito,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error al eliminar: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                ),
+              ],
             ),
           ),
         ),

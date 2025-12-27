@@ -556,6 +556,21 @@ class SupplierController extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> eliminarProducto(String id) async {
+    _error = null;
+    notifyListeners();
+    try {
+      await _productosService.eliminarProductoProveedor(id);
+      _productos.removeWhere((producto) => producto.id == id);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'No se pudo eliminar el producto';
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> eliminarPromocion(int id) async {
     _error = null;
     notifyListeners();

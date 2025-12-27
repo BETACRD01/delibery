@@ -169,39 +169,37 @@ class PedidoService {
     }
   }
 
-  // Calificación rápida (cliente → proveedor)
+  /// Califica al proveedor después de que el pedido fue finalizado
+  ///
+  /// Esta es la ÚNICA forma de calificación permitida desde la app.
+  /// Ya NO se califican productos individuales.
+  ///
+  /// Parámetros:
+  /// - [pedidoId]: ID del pedido finalizado
+  /// - [estrellas]: Calificación general (1-5) - OBLIGATORIO
+  /// - [puntualidad]: Calificación de puntualidad (1-5) - OPCIONAL
+  /// - [amabilidad]: Calificación de amabilidad (1-5) - OPCIONAL
+  /// - [calidadProducto]: Calificación de calidad del producto (1-5) - OPCIONAL
+  /// - [comentario]: Comentario opcional
   Future<void> calificarProveedor({
     required int pedidoId,
+    required int proveedorId,
     required int estrellas,
+    int? puntualidad,
+    int? amabilidad,
+    int? calidadProducto,
     String? comentario,
   }) async {
     try {
       await _pedidosApi.enviarCalificacion({
         'pedido_id': pedidoId,
+        'proveedor_id': proveedorId,  // ✅ Agregado para pedidos multi-proveedor
         'tipo': 'cliente_a_proveedor',
         'estrellas': estrellas,
-        if (comentario != null && comentario.isNotEmpty)
-          'comentario': comentario,
-      });
-    } catch (e) {
-      throw Exception('No se pudo enviar la calificación: $e');
-    }
-  }
-
-  Future<void> calificarProducto({
-    required int pedidoId,
-    required int productoId,
-    int? itemId,
-    required int estrellas,
-    String? comentario,
-  }) async {
-    try {
-      await _pedidosApi.enviarCalificacion({
-        'pedido_id': pedidoId,
-        'tipo': 'cliente_a_producto',
-        'producto_id': productoId,
-        if (itemId != null) 'item_id': itemId,
-        'estrellas': estrellas,
+        if (puntualidad != null && puntualidad > 0) 'puntualidad': puntualidad,
+        if (amabilidad != null && amabilidad > 0) 'amabilidad': amabilidad,
+        if (calidadProducto != null && calidadProducto > 0)
+          'calidad_producto': calidadProducto,
         if (comentario != null && comentario.isNotEmpty)
           'comentario': comentario,
       });

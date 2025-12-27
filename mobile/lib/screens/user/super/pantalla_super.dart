@@ -1,7 +1,7 @@
 // lib/screens/user/super/pantalla_super.dart
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Material, MaterialType;
+import 'package:flutter/material.dart' show Material, MaterialType, Scaffold;
 import 'package:provider/provider.dart';
 
 import '../../../../../theme/app_colors_primary.dart';
@@ -9,6 +9,7 @@ import '../../../controllers/user/super_controller.dart';
 import '../../../models/categoria_super_model.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../widgets/cards/jp_category_card.dart';
+import '../../../widgets/common/carrito_floating_button.dart';
 import '../../../widgets/common/jp_empty_state.dart';
 import '../../../widgets/common/jp_shimmer.dart';
 import 'pantalla_categoria_detalle.dart';
@@ -40,15 +41,20 @@ class _PantallaSuperState extends State<PantallaSuper> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: _controller,
-      child: CupertinoPageScaffold(
+      child: Scaffold(
         backgroundColor: JPCupertinoColors.background(context),
-        child: Material(
+        floatingActionButton: const CarritoFloatingButton(),
+        body: Material(
           type: MaterialType.transparency,
           child: SafeArea(
             child: Consumer<SuperController>(
               builder: (context, controller, _) {
                 if (controller.categorias.isEmpty && controller.loading) {
                   return const _SuperSkeleton();
+                }
+
+                if (controller.error != null) {
+                  return _buildSinConexion(context, controller);
                 }
 
                 if (controller.categorias.isEmpty) {
@@ -94,6 +100,15 @@ class _PantallaSuperState extends State<PantallaSuper> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSinConexion(BuildContext context, SuperController controller) {
+    return JPNoConnectionState(
+      title: 'No se pudieron cargar los datos',
+      message: 'Verifica tu conexión a internet e intenta nuevamente.',
+      actionText: 'Reintentar',
+      onRetry: () => controller.refrescar(),
     );
   }
 

@@ -19,7 +19,7 @@ class PromocionModel {
   final double? valorDescuento; // Valor numérico del descuento
 
   // Campos de navegación
-  final String? productoAsociadoId;
+  final List<String> productosAsociadosIds; // Lista de IDs de productos
   final String? categoriaAsociadaId;
 
   final DateTime? fechaInicio;
@@ -40,7 +40,7 @@ class PromocionModel {
     this.tipoPromocion = 'porcentaje',
     this.tipoPromocionDisplay,
     this.valorDescuento,
-    this.productoAsociadoId,
+    this.productosAsociadosIds = const [], // Lista vacía por defecto
     this.categoriaAsociadaId,
     this.fechaInicio,
     this.fechaFin,
@@ -51,6 +51,16 @@ class PromocionModel {
 
   /// Factory para crear desde JSON (backend)
   factory PromocionModel.fromJson(Map<String, dynamic> json) {
+    // Parsear lista de IDs de productos asociados
+    List<String> productosIds = [];
+    if (json['productos_asociados'] != null) {
+      if (json['productos_asociados'] is List) {
+        productosIds = (json['productos_asociados'] as List)
+            .map((id) => id.toString())
+            .toList();
+      }
+    }
+
     return PromocionModel(
       id: json['id']?.toString() ?? '',
       titulo: json['titulo'] ?? '',
@@ -65,7 +75,7 @@ class PromocionModel {
       valorDescuento: json['valor_descuento'] != null
           ? double.tryParse(json['valor_descuento'].toString())
           : null,
-      productoAsociadoId: json['producto_asociado']?.toString(),
+      productosAsociadosIds: productosIds,
       categoriaAsociadaId: json['categoria_asociada']?.toString(),
       fechaInicio: json['fecha_inicio'] != null
           ? DateTime.parse(json['fecha_inicio'])
@@ -90,7 +100,7 @@ class PromocionModel {
       'imagen_url': imagenUrl,
       'proveedor_id': proveedorId,
       'proveedor_nombre': proveedorNombre,
-      'producto_asociado': productoAsociadoId,
+      'productos_asociados': productosAsociadosIds,
       'categoria_asociada': categoriaAsociadaId,
       'fecha_inicio': fechaInicio?.toIso8601String(),
       'fecha_fin': fechaFin?.toIso8601String(),
@@ -102,13 +112,16 @@ class PromocionModel {
 
   /// Determina el tipo de navegación que tiene el banner
   String get tipoNavegacion {
-    if (productoAsociadoId != null) return 'producto';
+    if (productosAsociadosIds.isNotEmpty) return 'producto';
     if (categoriaAsociadaId != null) return 'categoria';
     return 'ninguno';
   }
 
   /// Verifica si tiene navegación configurada
   bool get tieneNavegacion => tipoNavegacion != 'ninguno';
+
+  /// Cantidad de productos asociados
+  int get cantidadProductos => productosAsociadosIds.length;
 
   /// Texto de días restantes formateado
   String get textoTiempoRestante {
@@ -172,7 +185,7 @@ class PromocionModel {
     String? tipoPromocion,
     String? tipoPromocionDisplay,
     double? valorDescuento,
-    String? productoAsociadoId,
+    List<String>? productosAsociadosIds,
     String? categoriaAsociadaId,
     DateTime? fechaInicio,
     DateTime? fechaFin,
@@ -192,7 +205,7 @@ class PromocionModel {
       tipoPromocion: tipoPromocion ?? this.tipoPromocion,
       tipoPromocionDisplay: tipoPromocionDisplay ?? this.tipoPromocionDisplay,
       valorDescuento: valorDescuento ?? this.valorDescuento,
-      productoAsociadoId: productoAsociadoId ?? this.productoAsociadoId,
+      productosAsociadosIds: productosAsociadosIds ?? this.productosAsociadosIds,
       categoriaAsociadaId: categoriaAsociadaId ?? this.categoriaAsociadaId,
       fechaInicio: fechaInicio ?? this.fechaInicio,
       fechaFin: fechaFin ?? this.fechaFin,

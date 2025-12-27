@@ -1,0 +1,223 @@
+/* Estilos personalizados para el admin de documentos legales */
+
+/* Mejorar la visualización del listado */
+#result_list {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+#result_list thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    padding: 12px 10px;
+    border: none;
+}
+
+#result_list tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+#result_list tbody tr:hover {
+    background-color: #f8f9ff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Mejorar los fieldsets */
+.module h2 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 0;
+}
+
+.module {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+/* Mejorar el textarea del contenido */
+textarea#id_contenido {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    background-color: #fafafa;
+}
+
+textarea#id_contenido:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+    background-color: white;
+}
+
+/* Estilo para la vista previa */
+.field-vista_previa_html {
+    margin-top: 20px;
+}
+
+.field-vista_previa_html h1 {
+    color: #333;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 20px 0 10px 0;
+    border-bottom: 3px solid #667eea;
+    padding-bottom: 10px;
+}
+
+.field-vista_previa_html h2 {
+    color: #444;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 20px 0 10px 0;
+    padding-left: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.field-vista_previa_html h3 {
+    color: #555;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 15px 0 8px 0;
+}
+
+.field-vista_previa_html p {
+    margin: 10px 0;
+    line-height: 1.7;
+}
+
+.field-vista_previa_html ul,
+.field-vista_previa_html ol {
+    margin: 10px 0;
+    padding-left: 30px;
+}
+
+.field-vista_previa_html li {
+    margin: 5px 0;
+    line-height: 1.6;
+}
+
+.field-vista_previa_html strong {
+    color: #333;
+    font-weight: 600;
+}
+
+/* Mejorar botones */
+.submit-row {
+    background: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.submit-row input[type="submit"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    padding: 10px 25px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.submit-row input[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Mejorar help text */
+.help {
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196F3;
+    padding: 12px 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: #1565C0;
+}
+
+/* Animaciones suaves */
+* {
+    transition: background-color 0.2s ease;
+}
+
+/* Mejorar el selector de tipo */
+select#id_tipo {
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+select#id_tipo:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Mejorar inputs */
+input[type="text"],
+input[type="number"] {
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Checkbox de activo */
+input[type="checkbox"]#id_activo {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Mensaje de éxito */
+.messagelist .success {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    border-radius: 6px;
+    padding: 12px 20px;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+/* Scroll personalizado para vista previa */
+.field-vista_previa_html > div > div::-webkit-scrollbar {
+    width: 8px;
+}
+
+.field-vista_previa_html > div > div::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.field-vista_previa_html > div > div::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+.field-vista_previa_html > div > div::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
+}

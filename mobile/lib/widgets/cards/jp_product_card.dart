@@ -14,7 +14,6 @@ class JPProductCard extends StatefulWidget {
   final String nombre;
   final double precio;
   final String? imagenUrl;
-  final double? rating;
   final String? badgeType; // 'oferta', 'nuevo', 'popular'
   final int? porcentajeDescuento;
   final VoidCallback? onTap;
@@ -25,7 +24,6 @@ class JPProductCard extends StatefulWidget {
     required this.nombre,
     required this.precio,
     this.imagenUrl,
-    this.rating,
     this.badgeType,
     this.porcentajeDescuento,
     this.onTap,
@@ -213,9 +211,6 @@ class _JPProductCardState extends State<JPProductCard>
         // Badge tipo (oferta/nuevo/popular) - top left
         if (widget.badgeType != null)
           Positioned(top: 8, left: 8, child: _buildTypeBadge(context)),
-        // Badge rating - top right
-        if (widget.rating != null && widget.rating! > 0)
-          Positioned(top: 8, right: 8, child: _buildRatingBadge(context)),
       ],
     );
   }
@@ -260,35 +255,6 @@ class _JPProductCardState extends State<JPProductCard>
           fontWeight: FontWeight.w700,
           color: textColor,
         ),
-      ),
-    );
-  }
-
-  Widget _buildRatingBadge(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: CupertinoColors.black.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            CupertinoIcons.star_fill,
-            size: 11,
-            color: Color(0xFFFFD700), // Gold
-          ),
-          const SizedBox(width: 3),
-          Text(
-            widget.rating!.toStringAsFixed(1),
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: CupertinoColors.white,
-            ),
-          ),
-        ],
       ),
     );
   }

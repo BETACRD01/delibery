@@ -3,13 +3,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart'
-    show Material, MaterialType, Curves, KeyedSubtree;
+    show Material, MaterialType, Curves, KeyedSubtree, Scaffold;
 import '../../../../../config/rutas.dart';
 import '../../../../../services/productos/productos_service.dart';
 import '../../../../../theme/app_colors_primary.dart';
 import '../../../../../theme/app_colors_support.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/categoria_model.dart';
+import '../../../widgets/common/carrito_floating_button.dart';
 import '../../../widgets/common/jp_shimmer.dart';
 
 /// Pantalla que muestra todas las categorías en formato grid iOS-style
@@ -56,9 +57,10 @@ class _PantallaTodasCategoriasState extends State<PantallaTodasCategorias> {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
+    return Scaffold(
       backgroundColor: JPCupertinoColors.background(context),
-      child: Material(
+      floatingActionButton: const CarritoFloatingButton(),
+      body: Material(
         type: MaterialType.transparency,
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(

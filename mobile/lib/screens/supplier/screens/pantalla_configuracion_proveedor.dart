@@ -36,9 +36,16 @@ class _PantallaConfiguracionProveedorState
         border: null,
       ),
       child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+        child: DefaultTextStyle(
+          style: const TextStyle(
+            fontFamily: '.SF Pro Text',
+            fontSize: 17,
+            color: CupertinoColors.label,
+            decoration: TextDecoration.none,
+          ),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
             // Información de cuenta
             _buildSectionHeader('CUENTA'),
             Consumer<SupplierController>(
@@ -137,7 +144,8 @@ class _PantallaConfiguracionProveedorState
               ),
             ),
             const SizedBox(height: 16),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -209,6 +217,8 @@ class _PantallaConfiguracionProveedorState
                     fontSize: 12,
                     color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -220,6 +230,8 @@ class _PantallaConfiguracionProveedorState
                         CupertinoColors.label.resolveFrom(context),
                     fontWeight: FontWeight.w400,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -262,6 +274,8 @@ class _PantallaConfiguracionProveedorState
                     color: CupertinoColors.label,
                     fontWeight: FontWeight.w400,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   subtitle,
@@ -269,6 +283,8 @@ class _PantallaConfiguracionProveedorState
                     fontSize: 12,
                     color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

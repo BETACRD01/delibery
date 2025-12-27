@@ -65,7 +65,8 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
   bool _activa = true;
   String? _errorFormulario;
   String _tipoSeleccionado = 'descuento';
-  ProductoModel? _productoAsociado;
+  List<ProductoModel> _productosAsociados =
+      []; // Lista de productos seleccionados
 
   static const List<Color> _opcionesColor = [
     Color(0xFFE91E63), // Pink
@@ -80,12 +81,92 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
   void initState() {
     super.initState();
     if (widget.promo != null) {
+      debugPrint('\n🎬 INICIANDO EDICIÓN DE PROMOCIÓN');
+      debugPrint('   Título: ${widget.promo!.titulo}');
+      debugPrint(
+        '   IDs asociados en el modelo: ${widget.promo!.productosAsociadosIds}',
+      );
+
       _tituloController.text = widget.promo!.titulo;
       _descripcionController.text = widget.promo!.descripcion;
       _descuentoController.text = widget.promo!.descuento;
       _activa = widget.promo!.activa;
       _colorSeleccionado = widget.promo!.color;
+
+      // Cargar productos asociados (se cargará después de que el widget esté listo)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _cargarProductosAsociados();
+      });
+    } else {
+      debugPrint('\n🆕 CREANDO NUEVA PROMOCIÓN');
     }
+  }
+
+  /// Carga los productos asociados cuando se edita una promoción
+  Future<void> _cargarProductosAsociados() async {
+    debugPrint('═══════════════════════════════════════');
+    debugPrint('🔄 CARGANDO PRODUCTOS ASOCIADOS');
+
+    if (widget.promo == null) {
+      debugPrint('widget.promo es null');
+      return;
+    }
+
+    debugPrint('Promoción: ${widget.promo!.titulo}');
+    debugPrint(
+      'IDs de productos asociados: ${widget.promo!.productosAsociadosIds}',
+    );
+    debugPrint('Cantidad: ${widget.promo!.productosAsociadosIds.length}');
+
+    if (widget.promo!.productosAsociadosIds.isEmpty) {
+      debugPrint('La lista de productos asociados está vacía');
+      return;
+    }
+
+    final controller = context.read<SupplierController>();
+
+    // Asegurarse de que los productos están cargados
+    if (controller.productos.isEmpty) {
+      debugPrint('🔄 Cargando productos del proveedor...');
+      await controller.refrescarProductos();
+      debugPrint('✅ Productos cargados: ${controller.productos.length}');
+    } else {
+      debugPrint('✅ Productos ya cargados: ${controller.productos.length}');
+    }
+
+    // Debug: Mostrar todos los IDs disponibles
+    final idsDisponibles = controller.productos
+        .map((p) => p.id.toString())
+        .toList();
+    debugPrint('🔍 IDs de productos disponibles: $idsDisponibles');
+
+    // Filtrar productos que están en la lista de IDs
+    final productosSeleccionados = controller.productos.where((producto) {
+      final match = widget.promo!.productosAsociadosIds.contains(
+        producto.id.toString(),
+      );
+      if (match) {
+        debugPrint('   ✅ Match: ${producto.nombre} (ID: ${producto.id})');
+      }
+      return match;
+    }).toList();
+
+    debugPrint('\n📊 Resultado:');
+    debugPrint('   Total seleccionados: ${productosSeleccionados.length}');
+    debugPrint(
+      '   Productos: ${productosSeleccionados.map((p) => p.nombre).join(", ")}',
+    );
+
+    if (mounted) {
+      setState(() {
+        _productosAsociados = productosSeleccionados;
+      });
+      debugPrint(
+        '✅ Estado actualizado con ${_productosAsociados.length} productos',
+      );
+    }
+
+    debugPrint('═══════════════════════════════════════\n');
   }
 
   @override
@@ -449,6 +530,10 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
   }
 
   Widget _buildProductRow(BuildContext context) {
+    final textoDescripcion = _productosAsociados.isEmpty
+        ? 'No seleccionado'
+        : '${_productosAsociados.length} producto${_productosAsociados.length > 1 ? 's' : ''} seleccionado${_productosAsociados.length > 1 ? 's' : ''}';
+
     return CupertinoButton(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       onPressed: () => _mostrarSelectorProducto(context),
@@ -459,19 +544,31 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Producto asociado',
+                  'Productos asociados',
                   style: TextStyle(
                     fontSize: 16,
                     color: CupertinoColors.label.resolveFrom(context),
                   ),
                 ),
                 Text(
-                  _productoAsociado?.nombre ?? 'No seleccionado',
+                  textoDescripcion,
                   style: TextStyle(
                     fontSize: 13,
                     color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
                 ),
+                if (_productosAsociados.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _productosAsociados.map((p) => p.nombre).join(', '),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: CupertinoColors.tertiaryLabel.resolveFrom(context),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
@@ -506,7 +603,10 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
       'color': '#${_colorHex(_colorSeleccionado)}',
       'activa': _activa ? 'true' : 'false',
       'tipo': _tipoSeleccionado,
-      if (_productoAsociado != null) 'producto_asociado': _productoAsociado!.id,
+      if (_productosAsociados.isNotEmpty)
+        'productos_asociados': _productosAsociados
+            .map((p) => int.parse(p.id.toString()))
+            .toList(),
     };
 
     final controller = context.read<SupplierController>();
@@ -575,91 +675,280 @@ class _FormularioPromocionState extends State<FormularioPromocion> {
 
   Future<void> _mostrarSelectorProducto(BuildContext context) async {
     final controller = context.read<SupplierController>();
-    final producto = await showCupertinoModalPopup<ProductoModel>(
+
+    // ✅ Cargar productos si no están cargados
+    if (controller.productos.isEmpty) {
+      await controller.refrescarProductos();
+    }
+
+    if (!context.mounted) return;
+
+    // Crear copia temporal de la selección actual
+    final productosTemporales = List<ProductoModel>.from(_productosAsociados);
+
+    await showCupertinoModalPopup(
       context: context,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.5,
-        decoration: BoxDecoration(
-          color: CupertinoColors.systemBackground.resolveFrom(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Seleccionar Producto',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Icon(CupertinoIcons.xmark_circle_fill),
-                  ),
-                ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => DefaultTextStyle(
+          style: const TextStyle(
+            fontFamily: '.SF Pro Text',
+            fontSize: 17,
+            color: CupertinoColors.label,
+            decoration: TextDecoration.none,
+          ),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.6,
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemBackground.resolveFrom(context),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
               ),
             ),
-            Expanded(
-              child: Material(
-                type: MaterialType.transparency,
-                child: ListView.builder(
-                  itemCount: controller.productos.length,
-                  itemBuilder: (_, index) {
-                    final prod = controller.productos[index];
-                    return CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.pop(ctx, prod),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: CupertinoColors.separator.resolveFrom(
-                                context,
-                              ),
-                              width: 0.5,
-                            ),
-                          ),
-                        ),
-                        child: Row(
+            child: Column(
+              children: [
+                // Handle
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey4,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                prod.nombre,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: CupertinoColors.label.resolveFrom(
-                                    context,
-                                  ),
-                                ),
+                            const Text(
+                              'Seleccionar Productos',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              '\$${prod.precio.toStringAsFixed(2)}',
+                              '${productosTemporales.length} seleccionado${productosTemporales.length != 1 ? 's' : ''}',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 13,
                                 color: CupertinoColors.secondaryLabel
                                     .resolveFrom(context),
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                    );
-                  },
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(30, 30),
+                        onPressed: () {
+                          // Actualizar la selección principal
+                          setState(() {
+                            _productosAsociados = productosTemporales;
+                          });
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text(
+                          'Listo',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: AppColorsPrimary.main,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                // Content
+                Expanded(
+                  child: controller.productos.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                CupertinoIcons.cube_box,
+                                size: 64,
+                                color: CupertinoColors.systemGrey3.resolveFrom(
+                                  context,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No tienes productos',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: CupertinoColors.label.resolveFrom(
+                                    context,
+                                  ),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Crea productos primero para\npoder asociarlos a promociones',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: CupertinoColors.secondaryLabel
+                                      .resolveFrom(context),
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        )
+                      : Material(
+                          type: MaterialType.transparency,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.only(bottom: 20),
+                            itemCount: controller.productos.length,
+                            separatorBuilder: (_, _) => Divider(
+                              height: 1,
+                              indent: 16,
+                              color: CupertinoColors.separator.resolveFrom(
+                                context,
+                              ),
+                            ),
+                            itemBuilder: (_, index) {
+                              final prod = controller.productos[index];
+                              final isSelected = productosTemporales.any(
+                                (p) => p.id == prod.id,
+                              );
+
+                              return CupertinoButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: () {
+                                  setModalState(() {
+                                    if (isSelected) {
+                                      // Deseleccionar
+                                      productosTemporales.removeWhere(
+                                        (p) => p.id == prod.id,
+                                      );
+                                    } else {
+                                      // Seleccionar
+                                      productosTemporales.add(prod);
+                                    }
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  color: isSelected
+                                      ? AppColorsPrimary.main.withValues(
+                                          alpha: 0.1,
+                                        )
+                                      : null,
+                                  child: Row(
+                                    children: [
+                                      // Imagen del producto
+                                      if (prod.imagenUrl != null &&
+                                          prod.imagenUrl!.isNotEmpty)
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          margin: const EdgeInsets.only(
+                                            right: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            image: DecorationImage(
+                                              image: NetworkImage(
+                                                prod.imagenUrl!,
+                                              ),
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          margin: const EdgeInsets.only(
+                                            right: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: CupertinoColors.systemGrey5
+                                                .resolveFrom(context),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            CupertinoIcons.cube_box,
+                                            color: CupertinoColors.systemGrey
+                                                .resolveFrom(context),
+                                          ),
+                                        ),
+                                      // Información
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              prod.nombre,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w600
+                                                    : FontWeight.normal,
+                                                color: CupertinoColors.label
+                                                    .resolveFrom(context),
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '\$${prod.precio.toStringAsFixed(2)}',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColorsPrimary.main,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Checkmark si está seleccionado
+                                      if (isSelected)
+                                        const Icon(
+                                          CupertinoIcons.checkmark_circle_fill,
+                                          color: AppColorsPrimary.main,
+                                          size: 24,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
-    if (producto != null) {
-      setState(() => _productoAsociado = producto);
-    }
   }
 
   String _colorHex(Color color) {

@@ -33,10 +33,11 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 void main() async {
+  
   WidgetsFlutterBinding.ensureInitialized();
 
   assert(() {
-    // Ensure debug paint overlays are disabled.
+    // Ensure debug pa int overlays are disabled.y 
     debugPaintBaselinesEnabled = false;
     debugPaintSizeEnabled = false;
     debugPaintLayerBordersEnabled = false;

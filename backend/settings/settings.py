@@ -103,6 +103,7 @@ INSTALLED_APPS = [
     "reportes.apps.ReportesConfig",
     "calificaciones.apps.CalificacionesConfig",
     "super_categorias.apps.SuperCategoriasConfig",
+    "legal.apps.LegalConfig",
 ]
 
 SITE_ID = 1

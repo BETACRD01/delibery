@@ -185,43 +185,22 @@ class ProviderProductoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def reviews(self, request, pk=None):
         """
-        Retorna el listado completo de reseñas para un producto específico del proveedor.
+        Las calificaciones de productos individuales fueron eliminadas.
+        Ahora solo se califican proveedores.
+        Retorna lista vacía por compatibilidad con versiones anteriores.
         """
-        producto = self.get_object()
-        # Filtrar calificaciones de tipo producto para este producto
-        from calificaciones.models import CalificacionProducto
-        qs = CalificacionProducto.objects.filter(producto=producto).select_related('cliente', 'cliente__perfil').order_by('-creado_en')
-        
-        page = self.paginate_queryset(qs)
-        from .serializers import ResenaProductoSerializer
-        if page is not None:
-            serializer = ResenaProductoSerializer(page, many=True, context={'request': request})
-            return self.get_paginated_response(serializer.data)
-
-        serializer = ResenaProductoSerializer(qs, many=True, context={'request': request})
-        return Response(serializer.data)
+        # Retornar respuesta paginada vacía
+        return Response({'results': [], 'count': 0, 'next': None, 'previous': None})
             
     @action(detail=True, methods=['get'])
     def ratings(self, request, pk=None):
-        producto = self.get_object()
-        from calificaciones.models import CalificacionProducto
-        qs = CalificacionProducto.objects.filter(producto=producto).select_related('cliente').order_by('-creado_en')
-
-        page = self.paginate_queryset(qs)
-        if page is not None:
-            data = []
-            for c in page:
-                data.append({
-                    'id': c.id,
-                    'usuario': c.cliente.get_full_name() or "Anonimo",
-                    'estrellas': c.estrellas,
-                    'comentario': c.comentario,
-                    'fecha': c.creado_en
-                })
-            return self.get_paginated_response(data)
-
-        data = [{'id': c.id, 'estrellas': c.estrellas, 'comentario': c.comentario} for c in qs]
-        return Response(data)
+        """
+        Las calificaciones de productos individuales fueron eliminadas.
+        Ahora solo se califican proveedores.
+        Retorna lista vacía por compatibilidad con versiones anteriores.
+        """
+        # Retornar respuesta paginada vacía
+        return Response({'results': [], 'count': 0, 'next': None, 'previous': None})
 
     @action(detail=False, methods=['get'])
     def estadisticas(self, request):

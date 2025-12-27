@@ -368,11 +368,21 @@ class Pedido(models.Model):
     @property
     def puede_ser_cancelado(self):
         """
-        Regla: No cancelar si el repartidor ya está en camino con el pedido
+        Regla de cancelación para clientes:
+        - Solo puede cancelar si el pedido está PENDIENTE y nadie lo aceptó
+        - Si un repartidor ya aceptó, NO se puede cancelar
+        - Admin siempre puede cancelar
         """
-        if self.estado == EstadoPedido.EN_CAMINO:
+        # No se puede cancelar si ya está entregado o cancelado
+        if self.estado in [EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO]:
             return False
-        return self.estado not in [EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO]
+
+        # Si hay un repartidor asignado, NO se puede cancelar (cliente)
+        # Solo permitir cancelar en estado PENDIENTE_REPARTIDOR (antes de que alguien acepte)
+        if self.repartidor is not None:
+            return False
+
+        return self.estado == EstadoPedido.PENDIENTE_REPARTIDOR
 
     @property
     def tiene_logistica(self):

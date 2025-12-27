@@ -306,7 +306,7 @@ class ApiClient {
   Future<Map<String, dynamic>> multipart(
     String method,
     String endpoint,
-    Map<String, String> fields,
+    Map<String, dynamic> fields,
     Map<String, File> files,
   ) async {
     await _ensureValidToken();
@@ -317,7 +317,18 @@ class ApiClient {
       try {
         final request = http.MultipartRequest(method, Uri.parse(endpoint));
         request.headers.addAll(_multipartHeaders);
-        request.fields.addAll(fields);
+
+        // Manejar campos regulares y listas
+        fields.forEach((key, value) {
+          if (value is List) {
+            // Para listas, enviar como JSON array string
+            // Django Rest Framework puede parsear esto correctamente
+            request.fields[key] = jsonEncode(value);
+          } else if (value != null) {
+            // Para valores regulares
+            request.fields[key] = value.toString();
+          }
+        });
 
         for (final entry in files.entries) {
           final file = entry.value;

@@ -77,21 +77,80 @@ class ProductoAdmin(admin.ModelAdmin):
 # ═══════════════════════════════════════════════════════════════════════
 @admin.register(Promocion)
 class PromocionAdmin(admin.ModelAdmin):
-    list_display = ['titulo', 'descuento', 'activa', 'es_vigente']
+    list_display = ['titulo', 'descuento', 'proveedor', 'activa', 'es_vigente']
     list_filter = ['activa', 'proveedor']
-    
+
     fieldsets = (
+        ('Información Básica', {
+            'fields': ('proveedor', 'tipo_promocion', 'valor_descuento')
+        }),
         ('Visual', {
             'fields': ('titulo', 'descripcion', 'descuento', 'color', 'imagen', 'imagen_url')
         }),
         ('Navegación (Al hacer click)', {
-            'fields': ('producto_asociado', 'categoria_asociada'),
-            'description': 'Elige A DÓNDE llevará el banner cuando el usuario lo toque.'
+            'fields': ('productos_asociados', 'categoria_asociada'),
+            'description': 'Elige QUÉ PRODUCTOS aparecerán en esta promoción. Puedes seleccionar varios productos. Los productos y categorías se filtran automáticamente según el proveedor seleccionado.'
         }),
         ('Vigencia', {
             'fields': ('activa', 'fecha_inicio', 'fecha_fin')
         }),
     )
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        """
+        Filtra los productos según el proveedor seleccionado.
+        """
+        # Obtener el objeto promoción si estamos editando (no creando)
+        obj_id = request.resolver_match.kwargs.get('object_id')
+
+        if db_field.name == "productos_asociados":
+            if obj_id:
+                # Editando: filtrar por el proveedor de la promoción
+                from .models import Promocion
+                try:
+                    promocion = Promocion.objects.get(pk=obj_id)
+                    if promocion.proveedor:
+                        kwargs["queryset"] = Producto.objects.filter(
+                            proveedor=promocion.proveedor,
+                            disponible=True
+                        )
+                    else:
+                        kwargs["queryset"] = Producto.objects.filter(disponible=True)
+                except Promocion.DoesNotExist:
+                    kwargs["queryset"] = Producto.objects.filter(disponible=True)
+            else:
+                # Creando: mostrar todos los productos disponibles
+                # (se filtrará después de seleccionar proveedor)
+                kwargs["queryset"] = Producto.objects.filter(disponible=True)
+
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Filtra las categorías según el proveedor seleccionado.
+        """
+        # Obtener el objeto promoción si estamos editando (no creando)
+        obj_id = request.resolver_match.kwargs.get('object_id')
+
+        if db_field.name == "categoria_asociada":
+            if obj_id:
+                # Editando: filtrar por el proveedor de la promoción
+                from .models import Promocion
+                try:
+                    promocion = Promocion.objects.get(pk=obj_id)
+                    if promocion.proveedor:
+                        kwargs["queryset"] = Categoria.objects.filter(
+                            productos__proveedor=promocion.proveedor
+                        ).distinct()
+                    else:
+                        kwargs["queryset"] = Categoria.objects.all()
+                except Promocion.DoesNotExist:
+                    kwargs["queryset"] = Categoria.objects.all()
+            else:
+                # Creando: mostrar todas las categorías
+                kwargs["queryset"] = Categoria.objects.all()
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 # ═══════════════════════════════════════════════════════════════════════

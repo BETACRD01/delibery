@@ -215,22 +215,29 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
           border: null,
         ),
         child: SafeArea(
-          child: CustomScrollView(
-            slivers: <Widget>[
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate(<Widget>[
-                    _buildDatosBancariosCard(),
-                    const SizedBox(height: 24),
-                    _buildSeccionComprobante(),
-                    const SizedBox(height: 32),
-                    _buildBotonSubir(),
-                    const SizedBox(height: 16),
-                  ]),
+          child: DefaultTextStyle(
+            style: TextStyle(
+              fontSize: 16,
+              color: JPCupertinoColors.label(context),
+              fontFamily: '.SF Pro Text',
+            ),
+            child: Column(
+              children: <Widget>[
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: <Widget>[
+                      _buildDatosBancariosCard(),
+                      const SizedBox(height: 24),
+                      _buildSeccionComprobante(),
+                      const SizedBox(height: 32),
+                      _buildBotonSubir(),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -296,6 +303,8 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                     color: JPCupertinoColors.label(context),
                     letterSpacing: -0.5,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                 ),
               ),
             ],
@@ -362,6 +371,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
+                  flex: 3,
                   child: Text(
                     'Monto a transferir',
                     style: TextStyle(
@@ -370,18 +380,24 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                       color: JPCupertinoColors.label(context),
                     ),
                     overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  '\$${widget.datosBancarios.montoATransferir}',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: AppColorsPrimary.main,
-                    letterSpacing: -1,
+                Flexible(
+                  flex: 2,
+                  child: Text(
+                    '\$${widget.datosBancarios.montoATransferir}',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: AppColorsPrimary.main,
+                      letterSpacing: -1,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    textAlign: TextAlign.right,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -397,43 +413,80 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            'Comprobante de transferencia',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: JPCupertinoColors.label(context),
-              letterSpacing: -0.5,
-            ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColorsPrimary.main.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  CupertinoIcons.doc_text_fill,
+                  size: 18,
+                  color: AppColorsPrimary.main,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Comprobante de transferencia',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: JPCupertinoColors.label(context),
+                    letterSpacing: -0.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ),
+            ],
           ),
         ),
         _buildImagenSelector(),
         if (_imagenComprobante != null) ...<Widget>[
           const SizedBox(height: 16),
           Center(
-            child: CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              color: JPCupertinoColors.systemGrey6(context),
-              borderRadius: BorderRadius.circular(14),
-              onPressed: _mostrarOpcionesImagen,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(
-                    CupertinoIcons.arrow_2_circlepath,
-                    size: 18,
-                    color: AppColorsPrimary.main,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Cambiar imagen',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColorsPrimary.main,
-                      fontWeight: FontWeight.w600,
-                    ),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: AppColorsPrimary.main.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
+              ),
+              child: CupertinoButton(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                color: CupertinoColors.white,
+                borderRadius: BorderRadius.circular(14),
+                onPressed: _mostrarOpcionesImagen,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(
+                      CupertinoIcons.arrow_2_circlepath,
+                      size: 20,
+                      color: AppColorsPrimary.main,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        'Cambiar imagen',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColorsPrimary.main,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -445,10 +498,14 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
   Widget _buildImagenSelector() {
     return GestureDetector(
       onTap: _mostrarOpcionesImagen,
-      child: Container(
-        width: double.infinity,
-        height: _imagenComprobante != null ? 340 : 220,
-        decoration: BoxDecoration(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: _imagenComprobante != null ? 340 : 220,
+          minHeight: 220,
+        ),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
           color: _imagenComprobante != null
               ? CupertinoColors.transparent
               : JPCupertinoColors.systemGrey6(context),
@@ -481,37 +538,50 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                       right: 16,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
+                          horizontal: 16,
+                          vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: JPCupertinoColors.systemGreen(context),
+                          gradient: LinearGradient(
+                            colors: <Color>[
+                              JPCupertinoColors.systemGreen(context),
+                              JPCupertinoColors.systemGreen(context)
+                                  .withValues(alpha: 0.85),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: <BoxShadow>[
                             BoxShadow(
                               color: CupertinoColors.black.withValues(
-                                alpha: 0.25,
+                                alpha: 0.3,
                               ),
-                              blurRadius: 12,
+                              blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
-                            Icon(
-                              CupertinoIcons.checkmark_circle_fill,
+                            const Icon(
+                              CupertinoIcons.checkmark_alt_circle_fill,
                               color: CupertinoColors.white,
-                              size: 18,
+                              size: 20,
                             ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Imagen seleccionada',
-                              style: TextStyle(
-                                color: CupertinoColors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Listo',
+                                style: const TextStyle(
+                                  color: CupertinoColors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -521,47 +591,35 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                   ],
                 ),
               )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: JPCupertinoColors.systemGrey5(context),
-                      shape: BoxShape.circle,
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: CupertinoColors.black.withValues(alpha: 0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
+            : Center(
+                child: Container(
+                  padding: const EdgeInsets.all(26),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: <Color>[
+                        AppColorsPrimary.main.withValues(alpha: 0.15),
+                        AppColorsPrimary.main.withValues(alpha: 0.08),
                       ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    child: Icon(
-                      CupertinoIcons.camera_fill,
-                      size: 48,
-                      color: JPCupertinoColors.systemGrey(context),
-                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: AppColorsPrimary.main.withValues(alpha: 0.1),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Toca para agregar imagen',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: JPCupertinoColors.label(context),
-                    ),
+                  child: Icon(
+                    CupertinoIcons.camera_fill,
+                    size: 52,
+                    color: AppColorsPrimary.main,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Cámara o galería',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: JPCupertinoColors.secondaryLabel(context),
-                    ),
-                  ),
-                ],
+                ),
               ),
+        ),
       ),
     );
   }
@@ -592,41 +650,51 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
           disabledColor: JPCupertinoColors.systemGrey4(context),
           onPressed: _isLoading ? null : _subirComprobante,
           child: _isLoading
-              ? const Row(
+              ? Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    CupertinoActivityIndicator(
+                    const CupertinoActivityIndicator(
                       color: CupertinoColors.white,
                       radius: 11,
                     ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Subiendo...',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: CupertinoColors.white,
-                        letterSpacing: -0.5,
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        'Subiendo...',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: CupertinoColors.white,
+                          letterSpacing: -0.5,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                   ],
                 )
-              : const Row(
+              : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Icon(
+                    const Icon(
                       CupertinoIcons.cloud_upload_fill,
                       color: CupertinoColors.white,
                       size: 24,
                     ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Subir Comprobante',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: CupertinoColors.white,
-                        letterSpacing: -0.5,
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        'Subir Comprobante',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: CupertinoColors.white,
+                          letterSpacing: -0.5,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                   ],
@@ -666,6 +734,8 @@ class _DatoRow extends StatelessWidget {
                   color: JPCupertinoColors.secondaryLabel(context),
                   fontWeight: FontWeight.w500,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
               const SizedBox(height: 2),
               Text(
@@ -675,6 +745,8 @@ class _DatoRow extends StatelessWidget {
                   color: JPCupertinoColors.label(context),
                   fontWeight: FontWeight.w600,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ],
           ),

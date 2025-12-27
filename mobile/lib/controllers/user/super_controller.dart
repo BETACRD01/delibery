@@ -35,15 +35,13 @@ class SuperController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Intenta cargar desde el backend, si falla usa las predefinidas
       _categorias = await _superService.obtenerCategoriasSuper();
       _loading = false;
       _error = null;
       notifyListeners();
     } catch (e) {
-      // Si hay error, usar categorías predefinidas como fallback
-      _categorias = CategoriaSuperModel.categoriasPredefinidas;
-      _error = null; // No mostrar error si tenemos fallback
+      _categorias = [];
+      _error = 'No se pudieron cargar los datos';
       _loading = false;
       notifyListeners();
     }

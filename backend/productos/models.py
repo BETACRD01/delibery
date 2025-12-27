@@ -246,9 +246,12 @@ class Promocion(models.Model):
     imagen_url = models.URLField(blank=True, null=True)
     
     # LOGICA DE NAVEGACIÓN
-    producto_asociado = models.ForeignKey(
-        Producto, on_delete=models.SET_NULL, null=True, blank=True,
-        help_text="Si se selecciona, al hacer click llevará a este producto."
+    productos_asociados = models.ManyToManyField(
+        Producto,
+        blank=True,
+        related_name='promociones',
+        verbose_name='Productos Asociados',
+        help_text="Productos que aparecerán en esta promoción. Puedes seleccionar varios."
     )
     categoria_asociada = models.ForeignKey(
         Categoria, on_delete=models.SET_NULL, null=True, blank=True,

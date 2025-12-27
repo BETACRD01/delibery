@@ -1,12 +1,14 @@
 // lib/screens/auth/recuperacion/pantalla_verificar_codigo.dart
 
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../config/rutas.dart';
 import '../../../config/api_config.dart';
 import '../../../apis/helpers/api_exception.dart';
+import '../../../theme/jp_theme.dart';
+import '../../../theme/app_colors_primary.dart';
 
 /// Pantalla para verificar el código de 6 dígitos
 /// ✅ Maneja rate limiting y bloqueos
@@ -38,11 +40,6 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
   int? _intentosRestantes;
   bool _bloqueado = false;
 
-  // ============================================
-  // COLORES
-  // ============================================
-  static const Color _azulPrincipal = Color(0xFF4FC3F7);
-  static const Color _azulOscuro = Color(0xFF0288D1);
 
   // ============================================
   // CICLO DE VIDA
@@ -154,13 +151,24 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
       if (mounted) {
         setState(() => _loading = false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Nuevo código enviado a tu email'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        unawaited(
+          showCupertinoDialog(
+            context: context,
+            builder: (context) => CupertinoAlertDialog(
+              title: const Text('Código Enviado'),
+              content: const Text('Nuevo código enviado a tu email'),
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Entendido',
+                    style: TextStyle(
+                      color: AppColorsPrimary.main,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -203,61 +211,48 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
   void _mostrarDialogoBloqueado(ApiException error) {
     final tiempoEspera = error.retryAfter ?? 900; // 15 minutos por defecto
 
-    showDialog(
+    showCupertinoDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.block, color: Colors.red[700], size: 28),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text('Código Bloqueado', style: TextStyle(fontSize: 18)),
-            ),
-          ],
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text(
+          'Código Bloqueado',
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'Has excedido el número máximo de intentos para verificar el código.',
-              style: TextStyle(fontSize: 15, color: Colors.grey[800]),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
+                color: JPCupertinoColors.systemYellow(context).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange[300]!),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.schedule, color: Colors.orange[700], size: 20),
+                      Icon(
+                        CupertinoIcons.timer,
+                        size: 18,
+                        color: JPCupertinoColors.systemYellow(context),
+                      ),
                       const SizedBox(width: 8),
                       Text(
-                        'Tiempo de espera:',
+                        'Espera ${_formatearTiempoEspera(tiempoEspera)}',
                         style: TextStyle(
-                          color: Colors.orange[900],
-                          fontWeight: FontWeight.bold,
+                          color: JPCupertinoColors.systemYellow(context),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    // ✅ CORREGIDO: Usamos el método local
-                    _formatearTiempoEspera(tiempoEspera),
-                    style: TextStyle(
-                      color: Colors.orange[900],
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
                   ),
                 ],
               ),
@@ -265,17 +260,26 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
             const SizedBox(height: 12),
             Text(
               'Por seguridad, deberás solicitar un nuevo código después de este tiempo.',
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 13,
+                color: JPCupertinoColors.secondaryLabel(context),
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () {
               Navigator.pop(context); // Cerrar diálogo
               Navigator.pop(context); // Volver a recuperar password
             },
-            child: const Text('Volver'),
+            child: Text(
+              'Volver',
+              style: TextStyle(
+                color: AppColorsPrimary.main,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -306,54 +310,85 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: _azulOscuro),
-          onPressed: () => Navigator.pop(context),
+    return CupertinoPageScaffold(
+      backgroundColor: JPCupertinoColors.background(context),
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: JPCupertinoColors.surface(context).withValues(alpha: 0.95),
+        border: Border(
+          bottom: BorderSide(
+            color: JPCupertinoColors.separator(context),
+            width: 0.5,
+          ),
+        ),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Navigator.of(context).pop(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CupertinoIcons.back,
+                color: AppColorsPrimary.main,
+                size: 28,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Atrás',
+                style: TextStyle(
+                  color: AppColorsPrimary.main,
+                  fontSize: 17,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [_azulPrincipal.withValues(alpha: 0.1), Colors.white],
-          ),
+      child: DefaultTextStyle(
+        style: TextStyle(
+          fontSize: 17,
+          color: JPCupertinoColors.label(context),
+          fontFamily: '.SF Pro Text',
         ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Icono
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    height: 96,
+                    width: 96,
                     decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorsPrimary.main.withValues(alpha: 0.15),
+                          AppColorsPrimary.main.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       shape: BoxShape.circle,
-                      color: _azulPrincipal.withValues(alpha: 0.1),
                     ),
-                    child: const Icon(
-                      Icons.verified_user,
-                      size: 80,
-                      color: _azulPrincipal,
+                    child: Icon(
+                      CupertinoIcons.checkmark_shield,
+                      size: 48,
+                      color: AppColorsPrimary.main,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
 
                   // Título
-                  const Text(
+                  Text(
                     'Verificar Código',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF212121),
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: JPCupertinoColors.label(context),
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -365,7 +400,7 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.grey[600],
+                        color: JPCupertinoColors.secondaryLabel(context),
                         height: 1.5,
                       ),
                     ),
@@ -376,47 +411,35 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(6, (index) {
                       return Container(
-                        width: 50,
-                        height: 60,
+                        width: 48,
+                        height: 56,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
-                        child: TextField(
+                        decoration: BoxDecoration(
+                          color: _bloqueado
+                              ? JPCupertinoColors.tertiarySurface(context)
+                              : JPCupertinoColors.surface(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: JPCupertinoColors.separator(context),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: CupertinoTextField(
                           controller: _controllers[index],
                           focusNode: _focusNodes[index],
                           enabled: !_loading && !_bloqueado,
                           textAlign: TextAlign.center,
                           keyboardType: TextInputType.number,
                           maxLength: 1,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
+                            color: JPCupertinoColors.label(context),
                           ),
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
                           ],
-                          decoration: InputDecoration(
-                            counterText: '',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.grey[300]!,
-                                width: 2,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: _azulPrincipal,
-                                width: 2,
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: _bloqueado
-                                ? Colors.grey[100]
-                                : Colors.white,
-                          ),
+                          decoration: const BoxDecoration(),
                           onChanged: (value) => _onChanged(index, value),
                         ),
                       );
@@ -428,26 +451,29 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
                   // Mensaje de error
                   if (_error != null) ...[
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red[300]!, width: 1),
+                        color: JPCupertinoColors.systemRed(context).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: JPCupertinoColors.systemRed(context).withValues(alpha: 0.3),
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            Icons.error_outline,
-                            color: Colors.red[700],
-                            size: 20,
+                            CupertinoIcons.exclamationmark_circle,
+                            size: 22,
+                            color: JPCupertinoColors.systemRed(context),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               _error!,
                               style: TextStyle(
-                                color: Colors.red[700],
-                                fontSize: 14,
+                                color: JPCupertinoColors.systemRed(context),
+                                fontSize: 15,
                               ),
                             ),
                           ),
@@ -458,109 +484,103 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
                   ],
 
                   // Intentos restantes
-                  if (_intentosRestantes != null &&
-                      _intentosRestantes! > 0) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber[50],
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.amber[300]!, width: 1),
-                      ),
+                  if (_intentosRestantes != null && _intentosRestantes! > 0) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.warning_amber,
-                            color: Colors.amber[700],
-                            size: 20,
+                            CupertinoIcons.info_circle,
+                            size: 14,
+                            color: JPCupertinoColors.systemYellow(context),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Te quedan $_intentosRestantes ${_intentosRestantes == 1 ? "intento" : "intentos"}',
-                              style: TextStyle(
-                                color: Colors.amber[900],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Intentos restantes: $_intentosRestantes',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: JPCupertinoColors.systemYellow(context),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
                   ],
 
                   // Info de expiración
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.blue[200]!, width: 1),
+                      color: JPCupertinoColors.systemBlue(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.info_outline,
-                          color: Colors.blue[700],
-                          size: 20,
+                          CupertinoIcons.clock,
+                          size: 18,
+                          color: JPCupertinoColors.systemBlue(context),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'El código expira en ${ApiConfig.codigoExpiracionMinutos} minutos',
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontSize: 13,
-                            ),
+                        Text(
+                          'Expira en ${ApiConfig.codigoExpiracionMinutos} minutos',
+                          style: TextStyle(
+                            color: JPCupertinoColors.systemBlue(context),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 32),
 
-                  // Botón verificar (manual)
+                  // Botón verificar
                   if (!_loading)
                     Container(
                       height: 54,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: _codigoCompleto() && !_bloqueado
-                              ? [_azulPrincipal, _azulOscuro]
-                              : [Colors.grey[300]!, Colors.grey[400]!],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
+                        gradient: _codigoCompleto() && !_bloqueado
+                            ? LinearGradient(
+                                colors: [
+                                  AppColorsPrimary.main,
+                                  AppColorsPrimary.main.withValues(alpha: 0.85),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(14),
                         boxShadow: _codigoCompleto() && !_bloqueado
                             ? [
                                 BoxShadow(
-                                  color: _azulPrincipal.withValues(alpha: 0.4),
+                                  color: AppColorsPrimary.main.withValues(alpha: 0.3),
                                   blurRadius: 12,
                                   offset: const Offset(0, 6),
                                 ),
                               ]
-                            : [],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: _codigoCompleto() && !_bloqueado
-                            ? _verificarCodigo
                             : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
+                      ),
+                      child: CupertinoButton(
+                        onPressed: _codigoCompleto() && !_bloqueado ? _verificarCodigo : null,
+                        color: _codigoCompleto() && !_bloqueado
+                            ? CupertinoColors.transparent
+                            : JPCupertinoColors.quaternaryLabel(context),
+                        borderRadius: BorderRadius.circular(14),
+                        padding: EdgeInsets.zero,
+                        child: Text(
                           'Verificar Código',
                           style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 0.5,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: _codigoCompleto() && !_bloqueado
+                                ? CupertinoColors.white
+                                : JPCupertinoColors.tertiaryLabel(context),
+                            letterSpacing: 0.2,
                           ),
                         ),
                       ),
@@ -568,28 +588,30 @@ class _PantallaVerificarCodigoState extends State<PantallaVerificarCodigo> {
 
                   // Indicador de carga
                   if (_loading) ...[
-                    const Center(child: CupertinoActivityIndicator(radius: 14)),
+                    const Center(child: CupertinoActivityIndicator(radius: 16)),
                     const SizedBox(height: 16),
                     Text(
                       'Verificando código...',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(
+                        color: JPCupertinoColors.secondaryLabel(context),
+                      ),
                     ),
                   ],
 
                   const SizedBox(height: 20),
 
                   // Botón solicitar nuevo código
-                  TextButton(
-                    onPressed: (_loading || _bloqueado)
-                        ? null
-                        : _solicitarNuevoCodigo,
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    onPressed: (_loading || _bloqueado) ? null : _solicitarNuevoCodigo,
                     child: Text(
                       '¿No recibiste el código? Solicitar uno nuevo',
                       style: TextStyle(
                         color: (_loading || _bloqueado)
-                            ? Colors.grey
-                            : _azulOscuro,
+                            ? JPCupertinoColors.quaternaryLabel(context)
+                            : AppColorsPrimary.main,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),

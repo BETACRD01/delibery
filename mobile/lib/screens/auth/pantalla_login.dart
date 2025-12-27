@@ -1,11 +1,14 @@
 // lib/screens/auth/pantalla_login.dart
 
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../apis/helpers/api_exception.dart';
 import '../../config/rutas.dart';
 import '../../services/auth/auth_service.dart';
+import '../../theme/app_colors_primary.dart';
 import '../../theme/jp_theme.dart';
 import './pantalla_recuperar_password.dart';
 import './pantalla_registro.dart';
@@ -27,12 +30,15 @@ class _PantallaLoginState extends State<PantallaLogin> {
   String? _error;
   int? _intentosRestantes;
 
-  // ============================================
-  // LÓGICA DE NEGOCIO (Intacta)
-  // ============================================
+  @override
+  void initState() {
+    super.initState();
+    // Listener para actualizar el botón cuando cambien los campos
+    _usuarioController.addListener(() => setState(() {}));
+    _passwordController.addListener(() => setState(() {}));
+  }
 
   Future<void> _login() async {
-    // Ocultar teclado
     FocusScope.of(context).unfocus();
 
     if (_usuarioController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -52,8 +58,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
         password: _passwordController.text,
       );
 
-      // CORREGIDO: Usar pushReplacementNamed en lugar de MaterialPageRoute
-      // Esto evita el doble push y usa el sistema de rutas correctamente
       if (mounted) {
         await Navigator.pushReplacementNamed(context, Rutas.router);
       }
@@ -79,40 +83,62 @@ class _PantallaLoginState extends State<PantallaLogin> {
   }
 
   void _mostrarDialogoBloqueado(int? tiempoEspera) {
-    showDialog(
+    showCupertinoDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Acceso Bloqueado'),
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text(
+          'Acceso Bloqueado',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 8),
             const Text('Has excedido el número de intentos.'),
             if (tiempoEspera != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: JPColors.warning.withValues(alpha: 0.1),
+                  color: JPCupertinoColors.systemYellow(
+                    context,
+                  ).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  'Espera $tiempoEspera segundos',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: JPColors.warning,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      CupertinoIcons.timer,
+                      size: 18,
+                      color: JPCupertinoColors.systemYellow(context),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Espera $tiempoEspera segundos',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: JPCupertinoColors.systemYellow(context),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ],
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Entendido'),
+            child: Text(
+              'Entendido',
+              style: TextStyle(
+                color: AppColorsPrimary.main,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -126,35 +152,40 @@ class _PantallaLoginState extends State<PantallaLogin> {
     super.dispose();
   }
 
-  // ============================================
-  // UI OPTIMIZADA
-  // ============================================
   @override
   Widget build(BuildContext context) {
-    // Usamos un fondo blanco limpio para aspecto profesional
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildLogo(),
-                  const SizedBox(height: 32),
-                  _buildHeader(),
-                  const SizedBox(height: 32),
-                  _buildInputs(),
-                  if (_error != null) _buildErrorMessage(),
-                  const SizedBox(height: 24),
-                  _buildLoginButton(),
-                  const SizedBox(height: 24),
-                  _buildFooter(),
-                ],
+    return CupertinoPageScaffold(
+      backgroundColor: JPCupertinoColors.background(context),
+      child: DefaultTextStyle(
+        style: TextStyle(
+          fontSize: 17,
+          color: JPCupertinoColors.label(context),
+          fontFamily: '.SF Pro Text',
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildLogo(),
+                    const SizedBox(height: 36),
+                    _buildHeader(),
+                    const SizedBox(height: 40),
+                    _buildInputs(),
+                    if (_error != null) _buildErrorMessage(),
+                    const SizedBox(height: 32),
+                    _buildLoginButton(),
+                    const SizedBox(height: 28),
+                    _buildFooter(),
+                    const SizedBox(height: 40),
+                    _buildVersion(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -166,15 +197,15 @@ class _PantallaLoginState extends State<PantallaLogin> {
   Widget _buildLogo() {
     return Center(
       child: SizedBox(
-        width: 190,
-        height: 190,
+        width: 200,
+        height: 200,
         child: Image.asset(
           'assets/images/Beta.png',
           fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const Icon(
-            Icons.local_shipping_outlined,
-            size: 80,
-            color: JPColors.primary,
+          errorBuilder: (_, _, _) => Icon(
+            CupertinoIcons.cube_box,
+            size: 90,
+            color: AppColorsPrimary.main,
           ),
         ),
       ),
@@ -182,23 +213,26 @@ class _PantallaLoginState extends State<PantallaLogin> {
   }
 
   Widget _buildHeader() {
-    return const Column(
+    return Column(
       children: [
         Text(
           'Bienvenido',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: JPColors.textPrimary,
-            letterSpacing: -0.5,
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: JPCupertinoColors.label(context),
+            letterSpacing: -0.8,
           ),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 10),
         Text(
           'Ingresa a tu cuenta JP Express',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: JPColors.textSecondary),
+          style: TextStyle(
+            fontSize: 15,
+            color: JPCupertinoColors.secondaryLabel(context),
+          ),
         ),
       ],
     );
@@ -207,35 +241,34 @@ class _PantallaLoginState extends State<PantallaLogin> {
   Widget _buildInputs() {
     return Column(
       children: [
-        _buildTextField(
+        _buildCupertinoField(
           controller: _usuarioController,
-          label: 'Correo electrónico',
-          icon: Icons.email_outlined,
-          inputType: TextInputType.emailAddress,
+          placeholder: 'Correo electrónico',
+          icon: CupertinoIcons.mail,
+          keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        _buildCupertinoPasswordField(
           controller: _passwordController,
-          label: 'Contraseña',
-          icon: Icons.lock_outline,
-          isPassword: true,
-          isObscure: _obscurePassword,
-          onToggleVisibility: () =>
-              setState(() => _obscurePassword = !_obscurePassword),
+          placeholder: 'Contraseña',
+          obscure: _obscurePassword,
+          onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton(
+          child: CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
             onPressed: _loading ? null : _irARecuperarPassword,
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(50, 30),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text(
+            child: Text(
               '¿Olvidaste tu contraseña?',
-              style: TextStyle(color: JPColors.textSecondary, fontSize: 13),
+              style: TextStyle(
+                color: _loading
+                    ? JPCupertinoColors.quaternaryLabel(context)
+                    : JPCupertinoColors.secondaryLabel(context),
+                fontSize: 14,
+              ),
             ),
           ),
         ),
@@ -243,56 +276,116 @@ class _PantallaLoginState extends State<PantallaLogin> {
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildCupertinoField({
     required TextEditingController controller,
-    required String label,
+    required String placeholder,
     required IconData icon,
-    bool isPassword = false,
-    bool isObscure = false,
-    VoidCallback? onToggleVisibility,
-    TextInputType inputType = TextInputType.text,
+    TextInputType keyboardType = TextInputType.text,
   }) {
-    return TextField(
-      controller: controller,
-      obscureText: isObscure,
-      keyboardType: inputType,
-      enabled: !_loading,
-      style: const TextStyle(fontSize: 15),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: JPColors.textSecondary),
-        prefixIcon: Icon(icon, size: 20, color: JPColors.textSecondary),
-        suffixIcon: isPassword
-            ? IconButton(
-                icon: Icon(
-                  isObscure
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  size: 20,
-                  color: JPColors.textSecondary,
+    final hasError = _error != null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasError
+              ? JPCupertinoColors.systemRed(context).withValues(alpha: 0.5)
+              : JPCupertinoColors.separator(context),
+          width: hasError ? 1.5 : 0.5,
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: hasError
+                ? JPCupertinoColors.systemRed(context)
+                : AppColorsPrimary.main,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: placeholder,
+              placeholderStyle: TextStyle(
+                color: JPCupertinoColors.placeholder(context),
+                fontSize: 17,
+              ),
+              style: TextStyle(
+                color: JPCupertinoColors.label(context),
+                fontSize: 17,
+              ),
+              keyboardType: keyboardType,
+              autocorrect: false,
+              enabled: !_loading,
+              decoration: const BoxDecoration(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCupertinoPasswordField({
+    required TextEditingController controller,
+    required String placeholder,
+    required bool obscure,
+    required VoidCallback onToggle,
+  }) {
+    final hasError = _error != null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasError
+              ? JPCupertinoColors.systemRed(context).withValues(alpha: 0.5)
+              : JPCupertinoColors.separator(context),
+          width: hasError ? 1.5 : 0.5,
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Icon(
+            CupertinoIcons.lock,
+            color: hasError
+                ? JPCupertinoColors.systemRed(context)
+                : AppColorsPrimary.main,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: placeholder,
+              obscureText: obscure,
+              placeholderStyle: TextStyle(
+                color: JPCupertinoColors.placeholder(context),
+                fontSize: 17,
+              ),
+              style: TextStyle(
+                color: JPCupertinoColors.label(context),
+                fontSize: 17,
+              ),
+              enabled: !_loading,
+              decoration: const BoxDecoration(),
+              suffix: CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: onToggle,
+                child: Icon(
+                  obscure ? CupertinoIcons.eye_slash : CupertinoIcons.eye,
+                  color: JPCupertinoColors.secondaryLabel(context),
+                  size: 22,
                 ),
-                onPressed: onToggleVisibility,
-              )
-            : null,
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 16,
-        ),
-        // Borde limpio y minimalista
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: JPColors.primary, width: 1.5),
-        ),
-        filled: true,
-        fillColor: const Color(0xFFFAFAFA), // Gris muy claro para el input
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -303,24 +396,34 @@ class _PantallaLoginState extends State<PantallaLogin> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: JPColors.error.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: JPColors.error.withValues(alpha: 0.3)),
+              color: JPCupertinoColors.systemRed(
+                context,
+              ).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: JPCupertinoColors.systemRed(
+                  context,
+                ).withValues(alpha: 0.3),
+                width: 1,
+              ),
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.error_outline_rounded,
-                  size: 20,
-                  color: JPColors.error,
+                Icon(
+                  CupertinoIcons.exclamationmark_circle,
+                  size: 22,
+                  color: JPCupertinoColors.systemRed(context),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _error!,
-                    style: const TextStyle(color: JPColors.error, fontSize: 13),
+                    style: TextStyle(
+                      color: JPCupertinoColors.systemRed(context),
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ],
@@ -328,13 +431,25 @@ class _PantallaLoginState extends State<PantallaLogin> {
           ),
           if (_intentosRestantes != null && _intentosRestantes! > 0)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Intentos restantes: $_intentosRestantes',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: JPColors.textSecondary,
-                ),
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    CupertinoIcons.info_circle,
+                    size: 14,
+                    color: JPCupertinoColors.systemYellow(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Intentos restantes: $_intentosRestantes',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: JPCupertinoColors.systemYellow(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -343,29 +458,57 @@ class _PantallaLoginState extends State<PantallaLogin> {
   }
 
   Widget _buildLoginButton() {
-    return SizedBox(
-      height: 50,
-      child: ElevatedButton(
-        onPressed: _loading ? null : _login,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _loading
-              ? JPColors.primary.withValues(alpha: 0.7)
-              : JPColors.primary,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
+    final canLogin =
+        _usuarioController.text.trim().isNotEmpty &&
+        _passwordController.text.isNotEmpty &&
+        !_loading;
+
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        gradient: canLogin
+            ? LinearGradient(
+                colors: [
+                  AppColorsPrimary.main,
+                  AppColorsPrimary.main.withValues(alpha: 0.85),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: canLogin
+            ? [
+                BoxShadow(
+                  color: AppColorsPrimary.main.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
+      ),
+      child: CupertinoButton(
+        onPressed: canLogin ? _login : null,
+        color: canLogin
+            ? Colors.transparent
+            : JPCupertinoColors.quaternaryLabel(context),
+        borderRadius: BorderRadius.circular(14),
+        padding: EdgeInsets.zero,
         child: _loading
             ? const CupertinoActivityIndicator(
-                color: Colors.white,
-                radius: 10,
+                color: CupertinoColors.white,
+                radius: 12,
               )
-            : const Text(
-                'INICIAR SESIÓN',
+            : Text(
+                'Iniciar Sesión',
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 0.5,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: canLogin
+                      ? CupertinoColors.white
+                      : JPCupertinoColors.tertiaryLabel(context),
+                  letterSpacing: 0.2,
                 ),
               ),
       ),
@@ -376,18 +519,25 @@ class _PantallaLoginState extends State<PantallaLogin> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           '¿Nuevo en JP Express? ',
-          style: TextStyle(color: JPColors.textSecondary, fontSize: 14),
+          style: TextStyle(
+            color: JPCupertinoColors.secondaryLabel(context),
+            fontSize: 15,
+          ),
         ),
-        GestureDetector(
-          onTap: _loading ? null : _irARegistro,
-          child: const Text(
-            'Crear cuenta',
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: Size.zero,
+          onPressed: _loading ? null : _irARegistro,
+          child: Text(
+            'Crear Cuenta',
             style: TextStyle(
-              color: JPColors.primary,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+              color: _loading
+                  ? JPCupertinoColors.quaternaryLabel(context)
+                  : AppColorsPrimary.main,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
             ),
           ),
         ),
@@ -395,17 +545,30 @@ class _PantallaLoginState extends State<PantallaLogin> {
     );
   }
 
+  Widget _buildVersion() {
+    return Center(
+      child: Text(
+        'Versión 1.0.0',
+        style: TextStyle(
+          color: JPCupertinoColors.tertiaryLabel(context),
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    );
+  }
+
   void _irARegistro() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const PantallaRegistro()),
+      CupertinoPageRoute(builder: (_) => const PantallaRegistro()),
     );
   }
 
   void _irARecuperarPassword() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const PantallaRecuperarPassword()),
+      CupertinoPageRoute(builder: (_) => const PantallaRecuperarPassword()),
     );
   }
 }

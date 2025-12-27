@@ -71,7 +71,20 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        JPSnackbar.error(context, 'Error al cargar datos: $e');
+
+        // Extraer mensaje de error claro
+        String mensajeError = 'Error al cargar datos bancarios';
+
+        if (e.toString().contains('ApiException:')) {
+          final match = RegExp(r'ApiException: (.+?) \|').firstMatch(e.toString());
+          if (match != null) {
+            mensajeError = match.group(1) ?? mensajeError;
+          }
+        } else {
+          mensajeError = e.toString();
+        }
+
+        JPSnackbar.error(context, mensajeError);
       }
     }
   }
@@ -98,7 +111,20 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
       }
     } catch (e) {
       if (mounted) {
-        JPSnackbar.error(context, 'Error al guardar: $e');
+        // Extraer mensaje de error claro
+        String mensajeError = 'Error al guardar los datos bancarios';
+
+        if (e.toString().contains('ApiException:')) {
+          // Extraer el mensaje limpio del ApiException
+          final match = RegExp(r'ApiException: (.+?) \|').firstMatch(e.toString());
+          if (match != null) {
+            mensajeError = match.group(1) ?? mensajeError;
+          }
+        } else {
+          mensajeError = e.toString();
+        }
+
+        JPSnackbar.error(context, mensajeError);
       }
     } finally {
       if (mounted) {

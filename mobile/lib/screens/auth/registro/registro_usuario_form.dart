@@ -7,6 +7,9 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../apis/helpers/api_exception.dart';
 import '../../pantalla_router.dart';
+import '../../../widgets/legal/pantalla_documento_legal.dart';
+import '../../../theme/app_colors_primary.dart';
+import '../../../theme/jp_theme.dart';
 
 class RegistroUsuarioForm extends StatefulWidget {
   const RegistroUsuarioForm({super.key});
@@ -16,7 +19,6 @@ class RegistroUsuarioForm extends StatefulWidget {
 }
 
 class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
-  final _formKey = GlobalKey<FormState>();
   final _api = AuthService();
 
   final _nombreController = TextEditingController();
@@ -37,9 +39,13 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
   DateTime? _fechaNacimiento;
   String? _error;
 
-  static const Color _azulPrincipal = Color(0xFF4FC3F7);
-  static const Color _azulOscuro = Color(0xFF0288D1);
-  static const Color _verde = Color(0xFF4CAF50);
+  // Validaciones en tiempo real
+  String? _nombreError;
+  String? _apellidoError;
+  String? _usernameError;
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmarPasswordError;
 
   @override
   void dispose() {
@@ -54,32 +60,80 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
   }
 
   Future<void> _seleccionarFecha() async {
-    final DateTime? picked = await showDatePicker(
+    await showCupertinoModalPopup<void>(
       context: context,
-      initialDate: DateTime(2000),
-      firstDate: DateTime(1920),
-      lastDate: DateTime.now(),
-      helpText: 'Selecciona tu fecha de nacimiento',
-      cancelText: 'Cancelar',
-      confirmText: 'Aceptar',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: _azulPrincipal,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
+      builder: (BuildContext context) {
+        return Container(
+          height: 300,
+          color: JPCupertinoColors.surface(context),
+          child: Column(
+            children: [
+              // Header con botón Listo
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: JPCupertinoColors.separator(context),
+                      width: 0.5,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        'Cancelar',
+                        style: TextStyle(
+                          color: JPCupertinoColors.secondaryLabel(context),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Fecha de Nacimiento',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: JPCupertinoColors.label(context),
+                        ),
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        'Listo',
+                        style: TextStyle(
+                          color: AppColorsPrimary.main,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Date picker
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: _fechaNacimiento ?? DateTime(2000),
+                  minimumDate: DateTime(1920),
+                  maximumDate: DateTime.now(),
+                  onDateTimeChanged: (DateTime newDate) {
+                    setState(() => _fechaNacimiento = newDate);
+                  },
+                ),
+              ),
+            ],
           ),
-          child: child!,
         );
       },
     );
-
-    if (picked != null) {
-      setState(() => _fechaNacimiento = picked);
-    }
   }
 
   int _calcularEdad() {
@@ -103,274 +157,228 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
     return '${_fechaNacimiento!.year}-${_fechaNacimiento!.month.toString().padLeft(2, '0')}-${_fechaNacimiento!.day.toString().padLeft(2, '0')}';
   }
 
-  Future<void> _registrar() async {
-    setState(() => _error = null);
+  bool _validarCampos() {
+    bool esValido = true;
 
-    // Validar formulario
-    if (!_formKey.currentState!.validate()) {
-      debugPrint('Formulario no válido');
-      return;
+    // Validar nombre
+    if (_nombreController.text.trim().isEmpty) {
+      setState(() => _nombreError = 'El nombre es requerido');
+      esValido = false;
+    } else {
+      setState(() => _nombreError = null);
     }
-     
-    //  Validar Celular
+
+    // Validar apellido
+    if (_apellidoController.text.trim().isEmpty) {
+      setState(() => _apellidoError = 'El apellido es requerido');
+      esValido = false;
+    } else {
+      setState(() => _apellidoError = null);
+    }
+
+    // Validar username
+    if (_usernameController.text.trim().isEmpty) {
+      setState(() => _usernameError = 'El usuario es requerido');
+      esValido = false;
+    } else {
+      setState(() => _usernameError = null);
+    }
+
+    // Validar email
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _emailError = 'El correo es requerido');
+      esValido = false;
+    } else if (!email.contains('@')) {
+      setState(() => _emailError = 'Correo inválido');
+      esValido = false;
+    } else {
+      setState(() => _emailError = null);
+    }
+
+    // Validar celular
     if (_celularCompleto.isEmpty || _celularCompleto.length < 8) {
-      setState(() => _error = 'Por favor ingresa un número de celular válido');
-      return;
+      setState(() => _error = 'Ingresa un número de celular válido');
+      esValido = false;
     }
 
     // Validar fecha
     if (_fechaNacimiento == null) {
-      setState(() => _error = 'Debes ingresar tu fecha de nacimiento');
-      return;
-    }
-
-    if (_calcularEdad() < 18) {
-      setState(() => _error = 'Debes ser mayor de 18 años para registrarte');
-      return;
-    }
-
-    // Validar términos
-    if (!_aceptaTerminos) {
-      setState(() => _error = 'Debes aceptar los términos y condiciones');
-      return;
+      setState(() => _error = 'Ingresa tu fecha de nacimiento');
+      esValido = false;
+    } else if (_calcularEdad() < 18) {
+      setState(() => _error = 'Debes ser mayor de 18 años');
+      esValido = false;
     }
 
     // Validar contraseñas
     final password = _passwordController.text.trim();
     final password2 = _confirmarPasswordController.text.trim();
 
-    if (password.isEmpty || password2.isEmpty) {
-      setState(() => _error = 'La contraseña no puede estar vacía');
+    if (password.isEmpty) {
+      setState(() => _passwordError = 'La contraseña es requerida');
+      esValido = false;
+    } else if (password.length < 8) {
+      setState(() => _passwordError = 'Mínimo 8 caracteres');
+      esValido = false;
+    } else {
+      setState(() => _passwordError = null);
+    }
+
+    if (password2.isEmpty) {
+      setState(() => _confirmarPasswordError = 'Confirma tu contraseña');
+      esValido = false;
+    } else if (password != password2) {
+      setState(() => _confirmarPasswordError = 'Las contraseñas no coinciden');
+      esValido = false;
+    } else {
+      setState(() => _confirmarPasswordError = null);
+    }
+
+    // Validar términos
+    if (!_aceptaTerminos) {
+      setState(() => _error = 'Debes aceptar los términos y condiciones');
+      esValido = false;
+    }
+
+    return esValido;
+  }
+
+  Future<void> _registrar() async {
+    setState(() => _error = null);
+
+    if (!_validarCampos()) {
       return;
     }
 
-    if (password != password2) {
-      setState(() => _error = 'Las contraseñas no coinciden');
-      return;
-    }
-
-    setState(() {
-      _loading = true;
-    });
+    setState(() => _loading = true);
 
     try {
-      //  CONSTRUIR DATOS
       final data = {
         'first_name': _nombreController.text.trim(),
         'last_name': _apellidoController.text.trim(),
         'username': _usernameController.text.trim(),
         'email': _emailController.text.trim(),
-        
-        // Enviamos el número ya limpio y formateado internacionalmente
-        'celular': _celularCompleto, 
-        
+        'celular': _celularCompleto,
         'fecha_nacimiento': _formatearFechaParaBackend(),
-        'password': password,
-        'password2': password2,
+        'password': _passwordController.text.trim(),
+        'password2': _confirmarPasswordController.text.trim(),
         'terminos_aceptados': _aceptaTerminos,
         'rol': 'USUARIO',
       };
 
-      // DEBUG
-      debugPrint(' ============ REGISTRO USUARIO ============');
-      debugPrint('Celular procesado: $_celularCompleto');
-      debugPrint('===========================================');
-
       await _api.register(data);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white),
-                SizedBox(width: 10),
-                Text('¡Registro exitoso! Bienvenido'),
-              ],
-            ),
-            backgroundColor: _verde,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-
         await Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const PantallaRouter()),
+          CupertinoPageRoute(builder: (_) => const PantallaRouter()),
           (route) => false,
         );
       }
     } on ApiException catch (e) {
-      debugPrint('ApiException: ${e.message}');
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      debugPrint('Error inesperado: $e');
       if (mounted) setState(() => _error = 'Error de conexión');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  // ... (Funciones de términos y privacidad sin cambios)
+  /// Muestra la pantalla de términos y condiciones estilo iPhone
   void _mostrarTerminos() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, controller) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: _azulPrincipal.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.description_rounded,
-                      color: _azulOscuro,
-                      size: 26,
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Términos y Condiciones',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: _azulOscuro,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  controller: controller,
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    _buildSeccion(
-                      '1. Aceptación',
-                      'Al registrarte en JP Express aceptas estos términos.',
-                    ),
-                    // ... resto de términos
-                  ],
-                ),
-              ),
-            ],
-          ),
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) => const PantallaDocumentoLegal(
+          tipo: TipoDocumento.terminos,
         ),
       ),
     );
   }
 
+  /// Muestra la pantalla de política de privacidad estilo iPhone
   void _mostrarPrivacidad() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, controller) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: _verde.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.privacy_tip_rounded,
-                      color: _verde,
-                      size: 26,
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Política de Privacidad',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: _verde,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  controller: controller,
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    _buildSeccion('1. Datos', 'Recopilamos nombre, email y teléfono.'),
-                    // ... resto de privacidad
-                  ],
-                ),
-              ),
-            ],
-          ),
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) => const PantallaDocumentoLegal(
+          tipo: TipoDocumento.privacidad,
         ),
       ),
     );
   }
 
-  Widget _buildSeccion(String titulo, String texto) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  // ================== iOS-STYLE PHONE FIELD ==================
+  Widget _buildCampoCelularInternacional() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
         children: [
-          Text(
-            titulo,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: _azulOscuro,
-            ),
+          Icon(
+            CupertinoIcons.phone,
+            color: AppColorsPrimary.main,
+            size: 24,
           ),
-          const SizedBox(height: 6),
-          Text(
-            texto,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-              height: 1.5,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: SizedBox(
+                height: 48,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: IntlPhoneField(
+                    controller: _celularController,
+                    decoration: InputDecoration(
+                      hintText: '991234567',
+                      hintStyle: TextStyle(
+                        color: JPCupertinoColors.placeholder(context),
+                        fontSize: 17,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      counterText: '',
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      isDense: false,
+                    ),
+                    initialCountryCode: 'EC',
+                    languageCode: 'es',
+                    showCountryFlag: true,
+                    flagsButtonPadding: const EdgeInsets.only(right: 8),
+                    dropdownIconPosition: IconPosition.trailing,
+                    dropdownIcon: Icon(
+                      CupertinoIcons.chevron_down,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                      size: 16,
+                    ),
+                    dropdownTextStyle: TextStyle(
+                      fontSize: 17,
+                      color: JPCupertinoColors.label(context),
+                    ),
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: JPCupertinoColors.label(context),
+                      height: 1.2,
+                    ),
+                    disableLengthCheck: false,
+                    invalidNumberMessage: 'Número inválido',
+                    onChanged: (phone) {
+                      String numeroUsuario = phone.number;
+                      if (numeroUsuario.startsWith('0')) {
+                        numeroUsuario = numeroUsuario.substring(1);
+                      }
+                      setState(() {
+                        _celularCompleto = '${phone.countryCode}$numeroUsuario';
+                      });
+                    },
+                    onCountryChanged: (country) {
+                      _celularController.clear();
+                      _celularCompleto = '';
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -378,373 +386,212 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
     );
   }
 
-  // ✅ WIDGET BLINDADO: Campo de Celular Internacional "Anti-Ceros"
-  Widget _buildCampoCelularInternacional() {
-    return IntlPhoneField(
-      controller: _celularController,
-      decoration: InputDecoration(
-        labelText: 'Número de celular',
-        hintText: '991234567', // Sugerencia sin el 0
-        counterText: '',
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _azulPrincipal, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-      initialCountryCode: 'EC', // Ecuador por defecto
-      languageCode: 'es',
-      dropdownTextStyle: const TextStyle(fontSize: 15),
-      style: const TextStyle(fontSize: 15),
-      
-      // Deshabilitamos validación estricta de longitud visual
-      // para que no marque error mientras el usuario escribe
-      disableLengthCheck: false, 
-      invalidNumberMessage: 'Número inválido',
-      
-      // 🛡️ LÓGICA DE PROTECCIÓN
-      onChanged: (phone) {
-        // Obtenemos el número que el usuario está escribiendo
-        String numeroUsuario = phone.number;
-        
-        // SIEMPRE quitamos el cero inicial si existe
-        if (numeroUsuario.startsWith('0')) {
-          numeroUsuario = numeroUsuario.substring(1);
-        }
-
-        // Armamos el número final: Código País + Número Limpio
-        // Ej: +593 + 991234567 = +593991234567
-        setState(() {
-          _celularCompleto = '${phone.countryCode}$numeroUsuario';
-        });
-      },
-      
-      onCountryChanged: (country) {
-        debugPrint('País cambiado a: ${country.name}');
-        _celularController.clear();
-        _celularCompleto = '';
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
+    return DefaultTextStyle(
+      style: TextStyle(
+        fontSize: 17,
+        color: JPCupertinoColors.secondaryLabel(context),
+        fontFamily: '.SF Pro Text',
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildCampo(
-            controller: _nombreController,
-            label: 'Nombre',
-            icono: Icons.person_outline_rounded,
-            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-          ),
-          const SizedBox(height: 14),
-          _buildCampo(
-            controller: _apellidoController,
-            label: 'Apellido',
-            icono: Icons.person_outline_rounded,
-            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-          ),
-          const SizedBox(height: 14),
-          _buildCampo(
-            controller: _usernameController,
-            label: 'Usuario',
-            icono: Icons.alternate_email_rounded,
-            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-          ),
-          const SizedBox(height: 14),
-          _buildCampo(
-            controller: _emailController,
-            label: 'Correo electrónico',
-            icono: Icons.email_outlined,
-            tipo: TextInputType.emailAddress,
-            validator: (v) {
-              if (v!.isEmpty) return 'Requerido';
-              if (!v.contains('@')) return 'Email inválido';
-              return null;
-            },
-          ),
-          const SizedBox(height: 14),
-          
-          // Usamos el campo inteligente
-          _buildCampoCelularInternacional(),
-          
-          const SizedBox(height: 14),
-          _buildCampoFecha(),
-          const SizedBox(height: 14),
-          _buildCampoPassword(
-            controller: _passwordController,
-            label: 'Contraseña',
-            obscure: _obscurePassword,
-            onToggle: () =>
-                setState(() => _obscurePassword = !_obscurePassword),
-            validator: (v) {
-              if (v!.isEmpty) return 'Requerido';
-              if (v.length < 8) return 'Mínimo 8 caracteres';
-              return null;
-            },
-          ),
-          const SizedBox(height: 14),
-          _buildCampoPassword(
-            controller: _confirmarPasswordController,
-            label: 'Confirmar contraseña',
-            obscure: _obscureConfirmar,
-            onToggle: () =>
-                setState(() => _obscureConfirmar = !_obscureConfirmar),
-            validator: (v) {
-              if (v!.isEmpty) return 'Requerido';
-              if (v != _passwordController.text) return 'No coinciden';
-              return null;
-            },
-          ),
-          const SizedBox(height: 20),
-          _buildTerminos(),
-          if (_error != null) _buildError(),
+          // Sección de información personal
+          _buildSectionHeader('INFORMACIÓN PERSONAL'),
+          const SizedBox(height: 8),
+          _buildGroupedSection([
+            _buildCupertinoField(
+              controller: _nombreController,
+              placeholder: 'Nombre',
+              icon: CupertinoIcons.person,
+              error: _nombreError,
+              onChanged: (_) => setState(() => _nombreError = null),
+            ),
+            _buildDivider(),
+            _buildCupertinoField(
+              controller: _apellidoController,
+              placeholder: 'Apellido',
+              icon: CupertinoIcons.person_fill,
+              error: _apellidoError,
+              onChanged: (_) => setState(() => _apellidoError = null),
+            ),
+          ]),
+
           const SizedBox(height: 24),
+
+          // Sección de cuenta
+          _buildSectionHeader('CUENTA'),
+          const SizedBox(height: 8),
+          _buildGroupedSection([
+            _buildCupertinoField(
+              controller: _usernameController,
+              placeholder: 'Usuario',
+              icon: CupertinoIcons.at,
+              error: _usernameError,
+              onChanged: (_) => setState(() => _usernameError = null),
+            ),
+            _buildDivider(),
+            _buildCupertinoField(
+              controller: _emailController,
+              placeholder: 'Correo electrónico',
+              icon: CupertinoIcons.mail,
+              keyboardType: TextInputType.emailAddress,
+              error: _emailError,
+              onChanged: (_) => setState(() => _emailError = null),
+            ),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // Sección de contacto
+          _buildSectionHeader('CONTACTO'),
+          const SizedBox(height: 8),
+          _buildGroupedSection([
+            _buildCampoCelularInternacional(),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // Sección de fecha de nacimiento
+          _buildSectionHeader('FECHA DE NACIMIENTO'),
+          const SizedBox(height: 8),
+          _buildGroupedSection([
+            _buildCampoFecha(),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // Sección de seguridad
+          _buildSectionHeader('SEGURIDAD'),
+          const SizedBox(height: 8),
+          _buildGroupedSection([
+            _buildCupertinoPasswordField(
+              controller: _passwordController,
+              placeholder: 'Contraseña',
+              obscure: _obscurePassword,
+              error: _passwordError,
+              onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
+              onChanged: (_) => setState(() => _passwordError = null),
+            ),
+            _buildDivider(),
+            _buildCupertinoPasswordField(
+              controller: _confirmarPasswordController,
+              placeholder: 'Confirmar contraseña',
+              obscure: _obscureConfirmar,
+              error: _confirmarPasswordError,
+              onToggle: () => setState(() => _obscureConfirmar = !_obscureConfirmar),
+              onChanged: (_) => setState(() => _confirmarPasswordError = null),
+            ),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // Términos y condiciones
+          _buildTerminos(),
+
+          // Error general
+          if (_error != null) _buildError(),
+
+          const SizedBox(height: 24),
+
+          // Botón de registro
           _buildBoton(),
         ],
       ),
     );
   }
 
-  Widget _buildCampo({
-    required TextEditingController controller,
-    required String label,
-    String? hint,
-    required IconData icono,
-    TextInputType tipo = TextInputType.text,
-    int? maxLength,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: tipo,
-      maxLength: maxLength,
-      enabled: !_loading,
-      validator: validator,
-      style: const TextStyle(fontSize: 15),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icono, color: _azulOscuro, size: 22),
-        counterText: '',
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _azulPrincipal, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildCampoFecha() {
-    return InkWell(
-      onTap: _loading ? null : _seleccionarFecha,
-      borderRadius: BorderRadius.circular(12),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Fecha de nacimiento',
-          prefixIcon: const Icon(
-            Icons.calendar_today_rounded,
-            color: _azulOscuro,
-            size: 22,
-          ),
-          suffixIcon: _fechaNacimiento != null
-              ? Chip(
-                  label: Text(
-                    '${_calcularEdad()} años',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: _calcularEdad() >= 18 ? _verde : Colors.red[700],
-                    ),
-                  ),
-                  backgroundColor: _calcularEdad() >= 18
-                      ? _verde.withValues(alpha: 0.1)
-                      : Colors.red[50],
-                  side: BorderSide.none,
-                )
-              : null,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey[300]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _azulPrincipal, width: 2),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-        ),
-        child: Text(
-          _formatearFechaParaMostrar(),
-          style: TextStyle(
-            fontSize: 15,
-            color: _fechaNacimiento == null ? Colors.grey[600] : Colors.black,
-          ),
+  // ================== iOS-STYLE SECTION HEADER ==================
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: JPCupertinoColors.tertiaryLabel(context),
+          letterSpacing: -0.08,
         ),
       ),
     );
   }
 
-  Widget _buildCampoPassword({
-    required TextEditingController controller,
-    required String label,
-    required bool obscure,
-    required VoidCallback onToggle,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscure,
-      enabled: !_loading,
-      validator: validator,
-      style: const TextStyle(fontSize: 15),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: const Icon(
-          Icons.lock_outline_rounded,
-          color: _azulOscuro,
-          size: 22,
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-            color: Colors.grey[600],
-            size: 22,
-          ),
-          onPressed: onToggle,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _azulPrincipal, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildTerminos() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 20,
-          width: 20,
-          child: Checkbox(
-            value: _aceptaTerminos,
-            onChanged: _loading
-                ? null
-                : (v) => setState(() => _aceptaTerminos = v!),
-            activeColor: _azulPrincipal,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[700],
-                height: 1.5,
-              ),
-              children: [
-                const TextSpan(text: 'Acepto los '),
-                TextSpan(
-                  text: 'Términos y Condiciones',
-                  style: const TextStyle(
-                    color: _azulPrincipal,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
-                  ),
-                  recognizer: TapGestureRecognizer()..onTap = _mostrarTerminos,
-                ),
-                const TextSpan(text: ' y la '),
-                TextSpan(
-                  text: 'Política de Privacidad',
-                  style: const TextStyle(
-                    color: _verde,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
-                  ),
-                  recognizer: TapGestureRecognizer()
-                    ..onTap = _mostrarPrivacidad,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildError() {
+  // ================== iOS-STYLE GROUPED SECTION ==================
+  Widget _buildGroupedSection(List<Widget> children) {
     return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red[50],
+        color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.red[200]!),
       ),
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  // ================== iOS-STYLE DIVIDER ==================
+  Widget _buildDivider() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 52),
+      child: Container(
+        height: 0.5,
+        color: JPCupertinoColors.separator(context),
+      ),
+    );
+  }
+
+  // ================== iOS-STYLE TEXT FIELD ==================
+  Widget _buildCupertinoField({
+    required TextEditingController controller,
+    required String placeholder,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    String? error,
+    Function(String)? onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Icon(Icons.error_outline_rounded, color: Colors.red[700], size: 20),
-          const SizedBox(width: 10),
+          Icon(
+            icon,
+            color: AppColorsPrimary.main,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              _error!,
-              style: TextStyle(color: Colors.red[700], fontSize: 13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CupertinoTextField(
+                  controller: controller,
+                  placeholder: placeholder,
+                  placeholderStyle: TextStyle(
+                    color: JPCupertinoColors.placeholder(context),
+                    fontSize: 17,
+                  ),
+                  style: TextStyle(
+                    color: JPCupertinoColors.label(context),
+                    fontSize: 17,
+                  ),
+                  decoration: const BoxDecoration(),
+                  keyboardType: keyboardType,
+                  enabled: !_loading,
+                  onChanged: onChanged,
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    error,
+                    style: TextStyle(
+                      color: JPCupertinoColors.systemRed(context),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -752,32 +599,289 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
     );
   }
 
-  Widget _buildBoton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: _loading ? null : _registrar,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _verde,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey[300],
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+  // ================== iOS-STYLE PASSWORD FIELD ==================
+  Widget _buildCupertinoPasswordField({
+    required TextEditingController controller,
+    required String placeholder,
+    required bool obscure,
+    required VoidCallback onToggle,
+    String? error,
+    Function(String)? onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(
+            CupertinoIcons.lock,
+            color: AppColorsPrimary.main,
+            size: 24,
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CupertinoTextField(
+                  controller: controller,
+                  placeholder: placeholder,
+                  obscureText: obscure,
+                  placeholderStyle: TextStyle(
+                    color: JPCupertinoColors.placeholder(context),
+                    fontSize: 17,
+                  ),
+                  style: TextStyle(
+                    color: JPCupertinoColors.label(context),
+                    fontSize: 17,
+                  ),
+                  decoration: const BoxDecoration(),
+                  enabled: !_loading,
+                  onChanged: onChanged,
+                  suffix: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: onToggle,
+                    child: Icon(
+                      obscure ? CupertinoIcons.eye_slash : CupertinoIcons.eye,
+                      color: JPCupertinoColors.secondaryLabel(context),
+                      size: 22,
+                    ),
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    error,
+                    style: TextStyle(
+                      color: JPCupertinoColors.systemRed(context),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================== iOS-STYLE DATE PICKER FIELD ==================
+  Widget _buildCampoFecha() {
+    return GestureDetector(
+      onTap: _loading ? null : _seleccionarFecha,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: JPCupertinoColors.surface(context),
+        child: Row(
+          children: [
+            Icon(
+              CupertinoIcons.calendar,
+              color: AppColorsPrimary.main,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _formatearFechaParaMostrar(),
+                style: TextStyle(
+                  fontSize: 17,
+                  color: _fechaNacimiento == null
+                      ? JPCupertinoColors.placeholder(context)
+                      : JPCupertinoColors.label(context),
+                ),
+              ),
+            ),
+            if (_fechaNacimiento != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _calcularEdad() >= 18
+                      ? JPCupertinoColors.systemGreen(context).withValues(alpha: 0.15)
+                      : JPCupertinoColors.systemRed(context).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_calcularEdad()} años',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _calcularEdad() >= 18
+                        ? JPCupertinoColors.systemGreen(context)
+                        : JPCupertinoColors.systemRed(context),
+                  ),
+                ),
+              ),
+            const SizedBox(width: 8),
+            Icon(
+              CupertinoIcons.chevron_right,
+              color: JPCupertinoColors.separator(context),
+              size: 20,
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  // ================== iOS-STYLE TERMS & CONDITIONS ==================
+  Widget _buildTerminos() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.surface(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _aceptaTerminos
+              ? AppColorsPrimary.main.withValues(alpha: 0.3)
+              : JPCupertinoColors.separator(context),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Transform.scale(
+            scale: 0.9,
+            child: CupertinoSwitch(
+              value: _aceptaTerminos,
+              activeTrackColor: AppColorsPrimary.main,
+              onChanged: _loading ? null : (v) => setState(() => _aceptaTerminos = v),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: JPCupertinoColors.label(context),
+                    height: 1.5,
+                    fontFamily: '.SF Pro Text',
+                  ),
+                  children: [
+                    const TextSpan(
+                      text: 'Acepto los ',
+                      style: TextStyle(fontWeight: FontWeight.w400),
+                    ),
+                    TextSpan(
+                      text: 'Términos y Condiciones',
+                      style: TextStyle(
+                        color: AppColorsPrimary.main,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColorsPrimary.main.withValues(alpha: 0.4),
+                      ),
+                      recognizer: TapGestureRecognizer()..onTap = _mostrarTerminos,
+                    ),
+                    const TextSpan(
+                      text: ' y la ',
+                      style: TextStyle(fontWeight: FontWeight.w400),
+                    ),
+                    TextSpan(
+                      text: 'Política de Privacidad',
+                      style: TextStyle(
+                        color: AppColorsPrimary.main,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColorsPrimary.main.withValues(alpha: 0.4),
+                      ),
+                      recognizer: TapGestureRecognizer()..onTap = _mostrarPrivacidad,
+                    ),
+                    const TextSpan(
+                      text: '.',
+                      style: TextStyle(fontWeight: FontWeight.w400),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================== iOS-STYLE ERROR MESSAGE ==================
+  Widget _buildError() {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: JPCupertinoColors.systemRed(context).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: JPCupertinoColors.systemRed(context).withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            CupertinoIcons.exclamationmark_circle,
+            color: JPCupertinoColors.systemRed(context),
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _error!,
+              style: TextStyle(
+                color: JPCupertinoColors.systemRed(context),
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================== iOS-STYLE BUTTON ==================
+  Widget _buildBoton() {
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        gradient: _loading
+            ? null
+            : LinearGradient(
+                colors: [
+                  AppColorsPrimary.main,
+                  AppColorsPrimary.main.withValues(alpha: 0.85),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: _loading
+            ? null
+            : [
+                BoxShadow(
+                  color: AppColorsPrimary.main.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+      ),
+      child: CupertinoButton(
+        onPressed: _loading ? null : _registrar,
+        color: _loading ? JPCupertinoColors.quaternaryLabel(context) : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        padding: EdgeInsets.zero,
         child: _loading
             ? const CupertinoActivityIndicator(
-                color: Colors.white,
-                radius: 10,
+                color: CupertinoColors.white,
+                radius: 12,
               )
             : const Text(
                 'Crear Cuenta',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: CupertinoColors.white,
+                  letterSpacing: 0.2,
                 ),
               ),
       ),

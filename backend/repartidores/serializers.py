@@ -949,7 +949,7 @@ class DatosBancariosUpdateSerializer(serializers.ModelSerializer):
             value = value.strip()
             if len(value) < 3:
                 raise serializers.ValidationError(
-                    'El nombre del banco debe tener al menos 3 caracteres'
+                    'Nombre del banco inválido. Debe tener al menos 3 caracteres'
                 )
         return value
 
@@ -962,12 +962,17 @@ class DatosBancariosUpdateSerializer(serializers.ModelSerializer):
 
             if not value_clean.isdigit():
                 raise serializers.ValidationError(
-                    'El número de cuenta solo debe contener números'
+                    'Número de cuenta inválido. Solo debe contener números (sin letras ni caracteres especiales)'
                 )
 
-            if len(value_clean) < 8 or len(value_clean) > 20:
+            if len(value_clean) < 8:
                 raise serializers.ValidationError(
-                    'El número de cuenta debe tener entre 8 y 20 dígitos'
+                    f'Número de cuenta muy corto. Tiene {len(value_clean)} dígitos, necesita mínimo 8 dígitos'
+                )
+
+            if len(value_clean) > 20:
+                raise serializers.ValidationError(
+                    f'Número de cuenta muy largo. Tiene {len(value_clean)} dígitos, máximo permitido son 20 dígitos'
                 )
 
         return value
@@ -978,7 +983,7 @@ class DatosBancariosUpdateSerializer(serializers.ModelSerializer):
             value = value.strip()
             if len(value) < 3:
                 raise serializers.ValidationError(
-                    'El nombre del titular debe tener al menos 3 caracteres'
+                    'Nombre del titular inválido. Debe tener al menos 3 caracteres'
                 )
         return value
 
@@ -986,7 +991,13 @@ class DatosBancariosUpdateSerializer(serializers.ModelSerializer):
         """Valida cédula del titular"""
         if value:
             value = value.strip()
-            ValidadorCedula.validar_formato(value)
+            try:
+                ValidadorCedula.validar_formato(value)
+            except serializers.ValidationError as e:
+                # Mejorar el mensaje de error para que sea más claro
+                raise serializers.ValidationError(
+                    f'Cédula del titular inválida. {str(e.detail[0]) if e.detail else "Debe tener 10 dígitos"}'
+                )
 
         return value
 
@@ -1003,15 +1014,15 @@ class DatosBancariosUpdateSerializer(serializers.ModelSerializer):
             'banco_cedula_titular'
         ]
 
-        # Obtener valores actuales del instance si existe
+        # Obtener valores actuales (merge de instance + data)
         if self.instance:
-            valores_actuales = {
-                'banco_nombre': self.instance.banco_nombre or data.get('banco_nombre'),
-                'banco_tipo_cuenta': self.instance.banco_tipo_cuenta or data.get('banco_tipo_cuenta'),
-                'banco_numero_cuenta': self.instance.banco_numero_cuenta or data.get('banco_numero_cuenta'),
-                'banco_titular': self.instance.banco_titular or data.get('banco_titular'),
-                'banco_cedula_titular': self.instance.banco_cedula_titular or data.get('banco_cedula_titular'),
-            }
+            valores_actuales = {}
+            for campo in campos_bancarios:
+                # Priorizar data, luego instance
+                if campo in data:
+                    valores_actuales[campo] = data[campo]
+                else:
+                    valores_actuales[campo] = getattr(self.instance, campo, None)
         else:
             valores_actuales = data
 
@@ -1026,8 +1037,17 @@ class DatosBancariosUpdateSerializer(serializers.ModelSerializer):
                 campo for campo in campos_bancarios
                 if not valores_actuales.get(campo)
             ]
+            # Traducir nombres de campos a español
+            nombres_campos = {
+                'banco_nombre': 'Nombre del banco',
+                'banco_tipo_cuenta': 'Tipo de cuenta',
+                'banco_numero_cuenta': 'Número de cuenta',
+                'banco_titular': 'Nombre del titular',
+                'banco_cedula_titular': 'Cédula del titular'
+            }
+            faltantes_spanish = [nombres_campos.get(c, c) for c in campos_faltantes]
             raise serializers.ValidationError({
-                'datos_bancarios': f'Para guardar datos bancarios, todos los campos son obligatorios. Faltan: {", ".join(campos_faltantes)}'
+                'datos_bancarios': f'Datos bancarios incompletos. Faltan: {", ".join(faltantes_spanish)}'
             })
 
         return data

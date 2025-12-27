@@ -184,6 +184,13 @@ class PromocionSerializer(serializers.ModelSerializer):
     # Mostrar el display name del tipo
     tipo_promocion_display = serializers.CharField(source='get_tipo_promocion_display', read_only=True)
 
+    # Lista de IDs de productos asociados
+    productos_asociados = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Producto.objects.all(),
+        required=False
+    )
+
     class Meta:
         model = Promocion
         fields = [
@@ -193,7 +200,7 @@ class PromocionSerializer(serializers.ModelSerializer):
             'proveedor_id', 'proveedor_nombre',
 
             # Campos de navegación
-            'producto_asociado', 'categoria_asociada',
+            'productos_asociados', 'categoria_asociada',
 
             'fecha_inicio', 'fecha_fin', 'activa',
             'es_vigente', 'dias_restantes'
@@ -207,9 +214,37 @@ class PromocionSerializer(serializers.ModelSerializer):
                 # 🔥 CORRECCIÓN CRÍTICA: Devuelve la URL absoluta (http://ip:8000/media/...)
                 return request.build_absolute_uri(obj.imagen.url)
             return obj.imagen.url
-            
+
         # 2. Si no hay archivo, usa la URL externa (si existe)
         return obj.imagen_url
+
+    def create(self, validated_data):
+        # Extraer productos_asociados antes de crear la promoción
+        productos = validated_data.pop('productos_asociados', [])
+
+        # Crear la promoción
+        promocion = Promocion.objects.create(**validated_data)
+
+        # Asignar los productos asociados (ManyToMany)
+        if productos:
+            promocion.productos_asociados.set(productos)
+
+        return promocion
+
+    def update(self, instance, validated_data):
+        # Extraer productos_asociados antes de actualizar
+        productos = validated_data.pop('productos_asociados', None)
+
+        # Actualizar campos regulares
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Actualizar productos asociados si se proporcionaron
+        if productos is not None:
+            instance.productos_asociados.set(productos)
+
+        return instance
 
 # ... (El resto de serializers de Carrito se mantienen igual) ...
 class ItemCarritoSerializer(serializers.ModelSerializer):
@@ -303,21 +338,10 @@ class ProviderProductoDetailSerializer(ProductoDetalleSerializer):
         ]
 
     def get_rating_breakdown(self, obj):
-        # Desglose de estrellas 5, 4, 3, 2, 1
-        # Se calcula consultando CalificacionProducto
-        # Idealmente esto se cachéa, pero para MVP lo consultamos directo.
-        from django.db.models import Count
-        breakdown = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-        
-        # Usamos related_name='calificaciones_producto' definido en CalificacionProducto
-        qs = obj.calificaciones_producto.values('estrellas').annotate(count=Count('id'))
-        
-        for item in qs:
-            estrellas = item.get('estrellas')
-            if estrellas in breakdown:
-                breakdown[estrellas] = item.get('count')
-                
-        return breakdown
+        # Las calificaciones de productos individuales fueron eliminadas
+        # Ahora solo se califican proveedores
+        # Retornamos estructura vacía por compatibilidad
+        return {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
 
     def get_ingresos_estimados(self, obj):
         # Calculo simple: veces_vendido * precio actual
@@ -325,18 +349,10 @@ class ProviderProductoDetailSerializer(ProductoDetalleSerializer):
         return obj.veces_vendido * obj.precio
 
     def get_resenas_preview(self, obj):
-        # Últimas 3 reseñas
-        qs = obj.calificaciones_producto.select_related('cliente').order_by('-creado_en')[:3]
-        data = []
-        for c in qs:
-            data.append({
-                'id': c.id,
-                'usuario': c.cliente.get_full_name() or "Usuario",
-                'estrellas': c.estrellas,
-                'comentario': c.comentario,
-                'fecha': c.creado_en
-            })
-        return data
+        # Las calificaciones de productos individuales fueron eliminadas
+        # Ahora solo se califican proveedores
+        # Retornamos lista vacía por compatibilidad
+        return []
         
     def get_conversion_rate(self, obj):
         # Dato simulado o calculado si tuviéramos tabla de 'Vistas'
@@ -352,24 +368,6 @@ class ProviderProductoDetailSerializer(ProductoDetalleSerializer):
             'precio': str(p.precio),
             'imagen_url': _build_media_url(p.imagen, self.context.get('request')) if p.imagen else p.imagen_url,
         } for p in relacionados]
-
-class ResenaProductoSerializer(serializers.ModelSerializer):
-    usuario_nombre = serializers.SerializerMethodField()
-    usuario_foto = serializers.SerializerMethodField()
-    fecha = serializers.DateTimeField(source='creado_en', read_only=True)
-
-    class Meta:
-        from calificaciones.models import CalificacionProducto
-        model = CalificacionProducto
-        fields = ['id', 'usuario_nombre', 'usuario_foto', 'estrellas', 'comentario', 'fecha', 'pedido_id']
-
-    def get_usuario_nombre(self, obj):
-        return obj.cliente.get_full_name() or "Usuario"
-
-    def get_usuario_foto(self, obj):
-        request = self.context.get('request')
-        foto = getattr(getattr(obj.cliente, 'perfil', None), 'foto_perfil', None)
-        return _build_media_url(foto, request)
 
 class ProviderProductoSerializer(ProductoCreateUpdateSerializer):
     """

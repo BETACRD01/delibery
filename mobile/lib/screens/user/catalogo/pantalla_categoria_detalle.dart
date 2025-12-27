@@ -1,7 +1,7 @@
 // lib/screens/user/catalogo/pantalla_categoria_detalle.dart
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Material, MaterialType;
+import 'package:flutter/material.dart' show Material, MaterialType, Scaffold;
 import 'package:provider/provider.dart';
 
 import '../../../../../config/rutas.dart';
@@ -13,6 +13,7 @@ import '../../../models/categoria_model.dart';
 import '../../../models/producto_model.dart';
 import '../../../services/core/toast_service.dart';
 import '../../../widgets/cards/jp_product_card.dart';
+import '../../../widgets/common/carrito_floating_button.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 
 /// Pantalla que muestra todos los productos de una categoría específica
@@ -113,9 +114,10 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
   Widget build(BuildContext context) {
     final categoria = Rutas.obtenerArgumentos<CategoriaModel>(context);
 
-    return CupertinoPageScaffold(
+    return Scaffold(
       backgroundColor: JPCupertinoColors.background(context),
-      child: Material(
+      floatingActionButton: const CarritoFloatingButton(),
+      body: Material(
         type: MaterialType.transparency,
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(
@@ -255,7 +257,6 @@ class _PantallaCategoriaDetalleState extends State<PantallaCategoriaDetalle> {
             nombre: producto.nombre,
             precio: producto.precio,
             imagenUrl: producto.imagenUrl,
-            rating: producto.rating,
             badgeType: producto.enOferta ? 'oferta' : null,
             porcentajeDescuento: producto.porcentajeDescuento.toInt(),
             onTap: () => Rutas.irAProductoDetalle(context, producto),

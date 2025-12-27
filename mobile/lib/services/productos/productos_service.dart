@@ -192,8 +192,9 @@ class ProductosService {
     File? imagen,
   }) async {
     try {
+      // Enviar data directamente sin mapear a String para preservar listas
       final response = await _promocionesApi.createPromocion(
-        _mapearCampos(data),
+        data,
         imagen: imagen,
       );
       final payload = response['promocion'] ?? response;
@@ -209,9 +210,10 @@ class ProductosService {
     File? imagen,
   }) async {
     try {
+      // Enviar data directamente sin mapear a String para preservar listas
       final response = await _promocionesApi.updatePromocion(
         id,
-        _mapearCampos(data),
+        data,
         imagen: imagen,
       );
       final payload = response['promocion'] ?? response;
@@ -355,6 +357,15 @@ class ProductosService {
       return data.map((json) => ResenaPreview.fromJson(json)).toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  /// Elimina un producto del proveedor
+  Future<void> eliminarProductoProveedor(String id) async {
+    try {
+      await _productosApi.deleteProductoProveedor(int.parse(id));
+    } catch (e) {
+      rethrow;
     }
   }
 

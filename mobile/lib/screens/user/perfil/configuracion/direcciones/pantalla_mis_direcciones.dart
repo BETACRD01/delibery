@@ -22,6 +22,7 @@ import '../../../../../services/core/toast_service.dart';
 import '../../../../../services/usuarios/usuarios_service.dart';
 import '../../../../../theme/app_colors_primary.dart';
 import '../../../../../theme/jp_theme.dart';
+import '../../../../../widgets/maps/map_location_picker.dart';
 
 /// 📍 Pantalla optimizada para gestionar direcciones
 /// ✅ Modo unificado: Crea O Edita según el contexto
@@ -564,11 +565,32 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
     );
   }
 
-  /// Placeholder temporal para selección en mapa (si no hay integración de mapa)
-  void _mostrarSeleccionMapaPlaceholder() {
-    ToastService().showInfo(
-      context,
-      'Seleccionar en mapa se habilitará próximamente',
+  /// Abre el selector de mapa para elegir ubicación
+  void _mostrarSeleccionMapaPlaceholder() async {
+    await Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) => MapLocationPicker(
+          initialLatitude: _latitud,
+          initialLongitude: _longitud,
+          onLocationSelected: (lat, lng, address) {
+            setState(() {
+              _latitud = lat;
+              _longitud = lng;
+              // Actualizar el campo de dirección con el nombre claro de la ubicación
+              if (_direccionController.text.isEmpty ||
+                  _direccionController.text == 'Moviendo mapa...') {
+                _direccionController.text = address;
+              }
+            });
+
+            // Mostrar confirmación sutil
+            ToastService().showSuccess(
+              context,
+              'Ubicación seleccionada correctamente',
+            );
+          },
+        ),
+      ),
     );
   }
 

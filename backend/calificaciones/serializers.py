@@ -306,24 +306,30 @@ class EstadisticasCalificacionSerializer(serializers.Serializer):
 
 class CalificacionRapidaSerializer(serializers.Serializer):
     """
-    Serializer simplificado para calificación rápida (solo estrellas).
+    Serializer simplificado para calificación rápida.
     Útil para el flujo de entrega en la app móvil.
+    Ahora incluye campos opcionales detallados para calificación de proveedores.
     """
 
     pedido_id = serializers.IntegerField()
+    proveedor_id = serializers.IntegerField(required=False, allow_null=True)  # ✅ Para pedidos multi-proveedor
     tipo = serializers.ChoiceField(choices=TipoCalificacion.choices)
     estrellas = serializers.IntegerField(min_value=1, max_value=5)
-    producto_id = serializers.IntegerField(required=False)
-    item_id = serializers.IntegerField(required=False)
     comentario = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
+    # Campos opcionales para calificación detallada (proveedores)
+    puntualidad = serializers.IntegerField(
+        required=False, min_value=1, max_value=5, allow_null=True
+    )
+    amabilidad = serializers.IntegerField(
+        required=False, min_value=1, max_value=5, allow_null=True
+    )
+    calidad_producto = serializers.IntegerField(
+        required=False, min_value=1, max_value=5, allow_null=True
+    )
+
     def validate(self, data):
-        if data.get("tipo") == TipoCalificacion.CLIENTE_A_PRODUCTO and not data.get(
-            "producto_id"
-        ):
-            raise serializers.ValidationError(
-                {"producto_id": "Se requiere el producto para calificar por separado."}
-            )
+        # Validaciones adicionales si son necesarias
         return data
 
     def validate_pedido_id(self, value):
@@ -334,50 +340,56 @@ class CalificacionRapidaSerializer(serializers.Serializer):
         except Pedido.DoesNotExist:
             raise serializers.ValidationError("Pedido no encontrado.")
 
+        # Validar que el pedido esté en estado correcto para calificar
+        if self._pedido.estado not in ['entregado', 'finalizado']:
+            estado_actual = self._pedido.get_estado_display()
+            raise serializers.ValidationError(
+                f"Solo puedes calificar pedidos entregados o finalizados. Estado actual del pedido: {estado_actual}"
+            )
+
         return value
 
     def create(self, validated_data):
         user = self.context["request"].user
         pedido = self._pedido
         tipo = validated_data["tipo"]
+        proveedor_id = validated_data.get("proveedor_id")
 
-        if tipo == TipoCalificacion.CLIENTE_A_PRODUCTO:
-            Producto = apps.get_model("productos", "Producto")
-            ItemPedido = apps.get_model("pedidos", "ItemPedido")
-
-            try:
-                producto = Producto.objects.get(id=validated_data["producto_id"])
-            except Producto.DoesNotExist:
-                raise serializers.ValidationError(
-                    {"producto_id": "Producto no encontrado."}
-                )
-
-            item = None
-            item_id = validated_data.get("item_id")
-            if item_id:
-                try:
-                    item = ItemPedido.objects.get(id=item_id, pedido=pedido)
-                except ItemPedido.DoesNotExist:
-                    raise serializers.ValidationError(
-                        {"item_id": "Item inválido para este pedido."}
-                    )
-
-            return CalificacionService.crear_calificacion_producto(
-                pedido=pedido,
-                cliente=user,
-                producto=producto,
-                estrellas=validated_data["estrellas"],
-                comentario=validated_data.get("comentario"),
-                item=item,
-            )
-
-        # Obtener calificado (simplificado)
+        # Obtener calificado según el tipo
         calificado = None
 
         if tipo == TipoCalificacion.CLIENTE_A_REPARTIDOR and pedido.repartidor:
             calificado = pedido.repartidor.user
-        elif tipo == TipoCalificacion.CLIENTE_A_PROVEEDOR and pedido.proveedor:
-            calificado = pedido.proveedor.user
+
+        elif tipo == TipoCalificacion.CLIENTE_A_PROVEEDOR:
+            # ✅ Soporte para pedidos multi-proveedor
+            if proveedor_id:
+                # Si se proporciona proveedor_id, usar ese proveedor específico
+                from proveedores.models import Proveedor
+                try:
+                    proveedor = Proveedor.objects.get(id=proveedor_id)
+                    calificado = proveedor.user
+                except Proveedor.DoesNotExist:
+                    raise serializers.ValidationError(
+                        f"Proveedor con ID {proveedor_id} no encontrado."
+                    )
+            elif pedido.proveedor:
+                # Pedido de un solo proveedor
+                calificado = pedido.proveedor.user
+            else:
+                # Intentar obtener proveedor desde los items (pedido multi-proveedor)
+                proveedores_items = pedido.items.values_list(
+                    'producto__proveedor', flat=True
+                ).distinct()
+                if proveedores_items.count() == 1:
+                    # Solo hay un proveedor en los items
+                    from proveedores.models import Proveedor
+                    try:
+                        proveedor = Proveedor.objects.get(id=proveedores_items.first())
+                        calificado = proveedor.user
+                    except Proveedor.DoesNotExist:
+                        pass
+
         elif tipo == TipoCalificacion.REPARTIDOR_A_CLIENTE and pedido.cliente:
             calificado = pedido.cliente.user
         elif tipo == TipoCalificacion.REPARTIDOR_A_PROVEEDOR and pedido.proveedor:
@@ -387,12 +399,15 @@ class CalificacionRapidaSerializer(serializers.Serializer):
 
         if not calificado:
             raise serializers.ValidationError(
-                "No se pudo determinar a quién calificar."
+                "No se pudo determinar a quién calificar. "
+                "Para pedidos multi-proveedor, proporciona el 'proveedor_id'."
             )
 
-        # Evitar autocalificación (ej: cliente = repartidor en entornos de prueba)
+        # Evitar autocalificación
         if calificado.id == user.id:
-            raise serializers.ValidationError("No puedes calificarte a ti mismo.")
+            raise serializers.ValidationError(
+                "No puedes calificarte a ti mismo. El cliente y el repartidor son la misma persona en este pedido."
+            )
 
         try:
             return CalificacionService.crear_calificacion(
@@ -402,6 +417,9 @@ class CalificacionRapidaSerializer(serializers.Serializer):
                 tipo=tipo,
                 estrellas=validated_data["estrellas"],
                 comentario=validated_data.get("comentario"),
+                puntualidad=validated_data.get("puntualidad"),
+                amabilidad=validated_data.get("amabilidad"),
+                calidad_producto=validated_data.get("calidad_producto"),
             )
         except ValidationError as e:
             # Normalizar errores de modelo a respuesta DRF

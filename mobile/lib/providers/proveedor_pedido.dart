@@ -311,7 +311,11 @@ class PedidoProvider extends ChangeNotifier {
 
   Future<bool> calificarProveedor({
     required int pedidoId,
+    required int proveedorId,
     required int estrellas,
+    int? puntualidad,
+    int? amabilidad,
+    int? calidadProducto,
     String? comentario,
   }) async {
     _isLoading = true;
@@ -321,41 +325,11 @@ class PedidoProvider extends ChangeNotifier {
     try {
       await _service.calificarProveedor(
         pedidoId: pedidoId,
+        proveedorId: proveedorId,
         estrellas: estrellas,
-        comentario: comentario,
-      );
-
-      _pedidoActual = await _service.obtenerDetalle(pedidoId);
-      _actualizarPedidoEnLista(_pedidoActual!);
-
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<bool> calificarProducto({
-    required int pedidoId,
-    required int productoId,
-    int? itemId,
-    required int estrellas,
-    String? comentario,
-  }) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      await _service.calificarProducto(
-        pedidoId: pedidoId,
-        productoId: productoId,
-        itemId: itemId,
-        estrellas: estrellas,
+        puntualidad: puntualidad,
+        amabilidad: amabilidad,
+        calidadProducto: calidadProducto,
         comentario: comentario,
       );
 

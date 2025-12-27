@@ -148,4 +148,9 @@ class ProductosApi {
   Future<dynamic> getRatingsProductoProveedor(int id) async {
     return await _client.get(ApiConfig.providerProductRatings(id));
   }
+
+  /// Elimina un producto del proveedor
+  Future<void> deleteProductoProveedor(int id) async {
+    await _client.delete(ApiConfig.providerProductDetail(id));
+  }
 }

@@ -53,25 +53,37 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F9),
-      body: CustomScrollView(
-        slivers: [
-          // AppBar con imagen
-          _buildSliverAppBar(producto),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              // AppBar con imagen
+              _buildSliverAppBar(producto),
 
-          // Contenido
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(producto),
-                const Divider(height: 32),
-                _buildDescripcion(producto),
-                const SizedBox(height: 24),
-                _buildInformacionAdicional(producto),
-                const SizedBox(height: 20),
-                _buildSugerencias(),
-                const SizedBox(height: 100), // Espacio para el botón flotante
-              ],
+              // Contenido
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(producto),
+                    const Divider(height: 32),
+                    _buildDescripcion(producto),
+                    const SizedBox(height: 24),
+                    _buildInformacionAdicional(producto),
+                    const SizedBox(height: 20),
+                    _buildSugerencias(),
+                    const SizedBox(height: 100), // Espacio para el botón flotante
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // FAB del carrito flotante - Versión circular compacta
+          Positioned(
+            top: 8,
+            right: 8,
+            child: SafeArea(
+              child: _CarritoCircularButton(),
             ),
           ),
         ],
@@ -736,6 +748,74 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
 // ══════════════════════════════════════════════════════════════════════════════
 // WIDGETS AUXILIARES
 // ══════════════════════════════════════════════════════════════════════════════
+
+/// Botón circular compacto del carrito para pantallas de detalle
+class _CarritoCircularButton extends StatelessWidget {
+  const _CarritoCircularButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ProveedorCarrito>(
+      builder: (context, carrito, _) {
+        final cantidad = carrito.cantidadTotal;
+
+        return GestureDetector(
+          onTap: () => Rutas.irACarrito(context),
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  Icons.shopping_cart_rounded,
+                  color: AppColorsPrimary.main,
+                  size: 28,
+                ),
+                if (cantidad > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      child: Text(
+                        cantidad > 9 ? '9+' : '$cantidad',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 class _InfoItem extends StatelessWidget {
   final IconData icono;

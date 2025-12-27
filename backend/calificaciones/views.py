@@ -4,12 +4,12 @@ import logging
 from django.apps import apps
 from django.db.models import Avg, Count, Q
 from django.core.cache import cache
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from .models import Calificacion, CalificacionProducto, ResumenCalificacion, TipoCalificacion
+from .models import Calificacion, ResumenCalificacion, TipoCalificacion
 from .serializers import (
     CalificacionListSerializer,
     CalificacionDetailSerializer,
@@ -58,14 +58,6 @@ class CalificacionViewSet(viewsets.ModelViewSet):
 
     def _obtener_queryset_entidad(self, entity_type, entity_id):
         entity_type = (entity_type or '').lower()
-
-        if entity_type == 'producto':
-            Producto = apps.get_model('productos', 'Producto')
-            producto = get_object_or_404(Producto, id=entity_id)
-            queryset = CalificacionProducto.objects.filter(
-                producto=producto
-            ).select_related('cliente').order_by('-creado_en')
-            return queryset, producto
 
         if entity_type == 'repartidor':
             Repartidor = apps.get_model('repartidores', 'Repartidor')
@@ -120,16 +112,10 @@ class CalificacionViewSet(viewsets.ModelViewSet):
         return None
 
     def _serializar_resena(self, obj, entity_type, entity_id):
-        if isinstance(obj, CalificacionProducto):
-            autor = obj.cliente
-            fecha = obj.creado_en
-            estrellas = obj.estrellas
-            comentario = obj.comentario
-        else:
-            autor = obj.calificador
-            fecha = obj.created_at
-            estrellas = obj.estrellas
-            comentario = obj.comentario
+        autor = obj.calificador
+        fecha = obj.created_at
+        estrellas = obj.estrellas
+        comentario = obj.comentario
 
         autor_nombre = autor.get_full_name() or autor.email or 'Usuario'
 
@@ -143,6 +129,9 @@ class CalificacionViewSet(viewsets.ModelViewSet):
             'puntuacion': float(estrellas),
             'comentario': comentario,
             'fecha': fecha.isoformat(),
+            'puntualidad': obj.puntualidad,
+            'amabilidad': obj.amabilidad,
+            'calidad_producto': obj.calidad_producto,
         }
     
     def get_queryset(self):
@@ -338,28 +327,24 @@ class CalificacionViewSet(viewsets.ModelViewSet):
     def rapida(self, request):
         """
         Calificación rápida (solo estrellas, sin comentario).
-        
+
         Útil para el flujo rápido en la app móvil.
         """
+        logger.info(f"[RAPIDA] user={request.user.email}, data={request.data}")
         serializer = CalificacionRapidaSerializer(
             data=request.data,
             context={'request': request}
         )
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            logger.warning(f"[RAPIDA] Validation errors: {serializer.errors}")
+            raise serializers.ValidationError(serializer.errors)
+        logger.info(f"[RAPIDA] validated_data={serializer.validated_data}")
         calificacion = serializer.save()
         payload = {
-            'id': getattr(calificacion, 'id', None),
+            'id': calificacion.id,
             'estrellas': calificacion.estrellas,
+            'tipo': calificacion.tipo,
         }
-
-        if isinstance(calificacion, CalificacionProducto):
-            payload.update({
-                'tipo': TipoCalificacion.CLIENTE_A_PRODUCTO,
-                'producto_id': calificacion.producto_id,
-                'item_id': calificacion.item_id,
-            })
-        else:
-            payload['tipo'] = calificacion.tipo
 
         return Response({
             'message': '¡Gracias por tu calificación!',

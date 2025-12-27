@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../../../../theme/jp_theme.dart' hide JPSnackbar;
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../../../services/auth/auth_service.dart';
 import '../../../../../widgets/jp_snackbar.dart';
 
@@ -44,7 +45,6 @@ class _DialogoCambiarPasswordState extends State<DialogoCambiarPassword> {
 
       if (mounted) {
         Navigator.of(context).pop(true);
-        JPSnackbar.success(context, 'Contraseña actualizada correctamente');
       }
     } catch (e) {
       if (mounted) {
@@ -293,7 +293,7 @@ class _DialogoCambiarPasswordState extends State<DialogoCambiarPassword> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: CupertinoColors.systemBlue.withValues(alpha: 0.1),
+                          color: AppColorsPrimary.main.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
@@ -301,7 +301,7 @@ class _DialogoCambiarPasswordState extends State<DialogoCambiarPassword> {
                           children: [
                             const Icon(
                               CupertinoIcons.info_circle_fill,
-                              color: CupertinoColors.systemBlue,
+                              color: AppColorsPrimary.main,
                               size: 20,
                             ),
                             const SizedBox(width: 10),
@@ -310,9 +310,7 @@ class _DialogoCambiarPasswordState extends State<DialogoCambiarPassword> {
                                 'Tu contraseña debe tener al menos 5 caracteres.',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: CupertinoColors.systemBlue.resolveFrom(
-                                    context,
-                                  ),
+                                  color: AppColorsPrimary.main,
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
@@ -351,7 +349,7 @@ class _DialogoCambiarPasswordState extends State<DialogoCambiarPassword> {
                           fontWeight: FontWeight.w400,
                           color: _isLoading
                               ? CupertinoColors.systemGrey
-                              : CupertinoColors.systemBlue,
+                              : AppColorsPrimary.main,
                         ),
                       ),
                     ),
@@ -372,7 +370,7 @@ class _DialogoCambiarPasswordState extends State<DialogoCambiarPassword> {
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w600,
-                                color: CupertinoColors.systemBlue,
+                                color: AppColorsPrimary.main,
                               ),
                             ),
                     ),

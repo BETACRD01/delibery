@@ -1,15 +1,17 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../models/pedido_model.dart';
 import '../../../providers/proveedor_pedido.dart';
 import '../../../services/pago/pago_service.dart';
+import '../../../widgets/ratings/dialogo_calificar_proveedor.dart';
+import '../../../widgets/ratings/dialogo_calificar_repartidor.dart';
 import 'pantalla_subir_comprobante.dart';
 import 'pantalla_ver_comprobante_usuario.dart';
-import '../../../widgets/ratings/dialogo_calificar_repartidor.dart';
-import '../../../widgets/ratings/dialogo_calificar_producto.dart';
 
 class PedidoDetalleScreen extends StatefulWidget {
   final int pedidoId;
@@ -23,13 +25,6 @@ class PedidoDetalleScreen extends StatefulWidget {
 class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   bool _isCancelling = false;
   final bool _enviandoCalificacion = false;
-  bool _enviandoCalificacionProveedor = false;
-  // Obsoleto: flujos de calificación migrados a DialogoCalificarProducto
-  // bool _enviandoCalificacionProducto = false;
-  final TextEditingController _comentarioCtrl = TextEditingController();
-  final TextEditingController _comentarioProveedorCtrl =
-      TextEditingController();
-  final TextEditingController _comentarioProductoCtrl = TextEditingController();
   final PagoService _pagoService = PagoService();
   @override
   void initState() {
@@ -47,17 +42,9 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   }
 
   @override
-  void dispose() {
-    _comentarioCtrl.dispose();
-    _comentarioProveedorCtrl.dispose();
-    _comentarioProductoCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final groupedBackground =
-        CupertinoColors.systemGroupedBackground.resolveFrom(context);
+    final groupedBackground = CupertinoColors.systemGroupedBackground
+        .resolveFrom(context);
     return Scaffold(
       backgroundColor: groupedBackground,
       appBar: AppBar(
@@ -110,6 +97,11 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
 
                   _buildDireccionesCard(pedido),
                   const SizedBox(height: 16),
+
+                  if (pedido.proveedor != null) ...[
+                    _buildProveedorCard(pedido),
+                    const SizedBox(height: 8),
+                  ],
 
                   if (pedido.estado == 'entregado' &&
                       pedido.puedeCalificarProveedor) ...[
@@ -205,7 +197,34 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.star_rate_rounded, color: Colors.amber),
+          // Foto de perfil del repartidor
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.green.withValues(alpha: 0.1),
+            child:
+                pedido.repartidor?.fotoPerfil != null &&
+                    pedido.repartidor!.fotoPerfil!.isNotEmpty
+                ? ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: pedido.repartidor!.fotoPerfil!,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          const CupertinoActivityIndicator(radius: 10),
+                      errorWidget: (context, url, error) => const Icon(
+                        Icons.delivery_dining,
+                        color: Colors.green,
+                        size: 20,
+                      ),
+                    ),
+                  )
+                : const Icon(
+                    Icons.delivery_dining,
+                    color: Colors.green,
+                    size: 20,
+                  ),
+          ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
@@ -282,18 +301,59 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.store_mall_directory_rounded, color: Colors.orange),
+          // Foto de perfil del proveedor
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.orange.withValues(alpha: 0.1),
+            child:
+                pedido.proveedor?.fotoPerfil != null &&
+                    pedido.proveedor!.fotoPerfil!.isNotEmpty
+                ? ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: pedido.proveedor!.fotoPerfil!,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          const CupertinoActivityIndicator(radius: 10),
+                      errorWidget: (context, url, error) => const Icon(
+                        Icons.store_mall_directory_rounded,
+                        color: Colors.orange,
+                        size: 20,
+                      ),
+                    ),
+                  )
+                : const Icon(
+                    Icons.store_mall_directory_rounded,
+                    color: Colors.orange,
+                    size: 20,
+                  ),
+          ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
-              'Califica los productos',
+              'Califica al proveedor',
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             ),
           ),
           ElevatedButton(
-            onPressed: _enviandoCalificacionProveedor
-                ? null
-                : () => _mostrarSheetCalificacionProveedor(pedido),
+            onPressed: () async {
+              final result = await showCupertinoModalPopup<bool>(
+                context: context,
+                builder: (context) => DialogoCalificarProveedor(
+                  pedidoId: pedido.id,
+                  proveedorId: pedido.proveedor?.id ?? 0,
+                  proveedorNombre: pedido.proveedor?.nombre ?? 'Proveedor',
+                  proveedorFoto: pedido.proveedor?.fotoPerfil,
+                ),
+              );
+              if (result == true && mounted) {
+                // Recargar el pedido para actualizar la UI
+                final provider = context.read<PedidoProvider>();
+                provider.limpiarError();
+                await provider.cargarDetalle(widget.pedidoId);
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
@@ -321,7 +381,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
           const Icon(Icons.verified, color: Colors.green),
           const SizedBox(width: 8),
           Text(
-            'Productos calificados: ${pedido.calificacionProveedor?.toStringAsFixed(1) ?? ''} ⭐',
+            'Proveedor calificado: ${pedido.calificacionProveedor?.toStringAsFixed(1) ?? ''} ⭐',
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ],
@@ -396,24 +456,10 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
             ),
             const SizedBox(height: 8),
             ...pedido.items.map((item) {
-              final comentario = item.calificacionProductoInfo?.comentario;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildProductoItemRow(item, pedido),
-                  if (comentario != null && comentario.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8, bottom: 6),
-                      child: Text(
-                        comentario,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: CupertinoColors.secondaryLabel
-                              .resolveFrom(context),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
                   const SizedBox(height: 4),
                 ],
               );
@@ -450,11 +496,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
             _buildRowIcon(Icons.store, 'Retiro', pedido.direccionOrigen!),
             const SizedBox(height: 12),
           ],
-          _buildRowIcon(
-            Icons.location_on,
-            'Entrega',
-            pedido.direccionEntrega,
-          ),
+          _buildRowIcon(Icons.location_on, 'Entrega', pedido.direccionEntrega),
         ],
       ),
     );
@@ -490,88 +532,37 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
   }
 
   Widget _buildProductoItemRow(ItemPedido item, Pedido pedido) {
-    final rating = item.calificacionProductoInfo?.estrellas;
-    final bool puedeCalificar =
-        item.puedeCalificarProducto && pedido.estado == 'entregado';
-
-    return InkWell(
-      onTap: puedeCalificar
-          ? () async {
-              final result = await showCupertinoModalPopup<bool>(
-                context: context,
-                builder: (context) => DialogoCalificarProducto(
-                  pedidoId: pedido.id,
-                  items: [item],
-                ),
-              );
-              if (result == true && mounted) {
-                setState(() {});
-              }
-            }
-          : null,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Text(
-              '${item.cantidad}x ${item.productoNombre}',
-              style: const TextStyle(fontSize: 14),
-            ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            '${item.cantidad}x ${item.productoNombre}',
+            style: const TextStyle(fontSize: 14),
           ),
-          if (rating != null) ...[
-            _buildStarsRow(rating),
-            const SizedBox(width: 6),
-            Text(
-              '${rating.toStringAsFixed(1)} ⭐',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(width: 12),
-          ],
-          if (rating == null && puedeCalificar)
-            OutlinedButton(
-              onPressed: () async {
-                final result = await showCupertinoModalPopup<bool>(
-                  context: context,
-                  builder: (context) => DialogoCalificarProducto(
-                    pedidoId: pedido.id,
-                    items: [item],
-                  ),
-                );
-                if (result == true && mounted) {
-                  setState(() {});
-                }
-              },
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Calificar', style: TextStyle(fontSize: 12)),
-            ),
-          Text(
-            '\$${item.subtotal.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
+        ),
+        Text(
+          '\$${item.subtotal.toStringAsFixed(2)}',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
 
-  Widget _buildStarsRow(double rating) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (index) {
-        final isFilled = index < rating;
-        return Icon(
-          isFilled ? Icons.star : Icons.star_border,
-          color: Colors.amber,
-          size: 16,
-        );
-      }),
+  Widget _buildProveedorCard(Pedido pedido) {
+    return _buildContactoCard(
+      titulo: 'Proveedor',
+      nombre: pedido.proveedor!.nombre,
+      detalle: pedido.proveedor!.direccion ?? pedido.proveedor!.telefono ?? 'Sin información',
+      icono: Icons.store_mall_directory_rounded,
+      color: Colors.orange,
+      fotoPerfil: pedido.proveedor!.fotoPerfil,
+      onWhatsapp: pedido.proveedor!.telefono != null
+          ? () => _abrirWhatsapp(pedido.proveedor!.telefono, pedido)
+          : null,
+      onCall: pedido.proveedor!.telefono != null
+          ? () => _llamar(pedido.proveedor!.telefono)
+          : null,
     );
   }
 
@@ -582,6 +573,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
       detalle: pedido.repartidor!.telefono ?? 'Sin teléfono',
       icono: Icons.delivery_dining,
       color: Colors.green,
+      fotoPerfil: pedido.repartidor!.fotoPerfil,
       onWhatsapp: pedido.repartidor!.telefono != null
           ? () => _abrirWhatsapp(pedido.repartidor!.telefono, pedido)
           : null,
@@ -597,6 +589,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     required String detalle,
     required IconData icono,
     required Color color,
+    String? fotoPerfil,
     VoidCallback? onWhatsapp,
     VoidCallback? onCall,
   }) {
@@ -605,8 +598,25 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
       child: Row(
         children: [
           CircleAvatar(
+            radius: 24,
             backgroundColor: color.withValues(alpha: 0.12),
-            child: Icon(icono, color: color),
+            child: fotoPerfil != null && fotoPerfil.isNotEmpty
+                ? ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: fotoPerfil,
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          const CupertinoActivityIndicator(radius: 12),
+                      errorWidget: (context, url, error) => Icon(
+                        icono,
+                        color: color,
+                        size: 24,
+                      ),
+                    ),
+                  )
+                : Icon(icono, color: color, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -829,6 +839,8 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
               ],
             ),
           ),
+        if (mostrarComprobanteCargado && isCancelVisible)
+          const SizedBox(height: 16),
         if (isCancelVisible)
           OutlinedButton.icon(
             onPressed: _isCancelling
@@ -894,7 +906,8 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     return Container(
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: backgroundColor ??
+        color:
+            backgroundColor ??
             CupertinoColors.systemBackground.resolveFrom(context),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
@@ -989,145 +1002,6 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     }
   }
 
-  // Obsoleto: reemplazado por DialogoCalificarRepartidor
-  // Future<void> _mostrarSheetCalificacion(Pedido pedido) async {}
-
-  Future<void> _mostrarSheetCalificacionProveedor(Pedido pedido) async {
-    double rating = 5;
-    _comentarioProveedorCtrl.clear();
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setStateModal) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Califica los productos',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (index) {
-                      final isFilled = index < rating;
-                      return IconButton(
-                        iconSize: 34,
-                        onPressed: () =>
-                            setStateModal(() => rating = index + 1.0),
-                        icon: Icon(
-                          isFilled
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          color: Colors.orange,
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _comentarioProveedorCtrl,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'Comentario (opcional)',
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _enviandoCalificacionProveedor
-                          ? null
-                          : () async {
-                              Navigator.of(ctx).pop();
-                              await _enviarCalificacionProveedor(
-                                pedido,
-                                rating.round(),
-                                _comentarioProveedorCtrl.text,
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        _enviandoCalificacionProveedor
-                            ? 'Enviando...'
-                            : 'Enviar',
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  // Obsoleto: reemplazado por DialogoCalificarProducto
-  // Future<void> _mostrarSheetCalificacionProducto(
-  //   Pedido pedido,
-  //   ItemPedido item,
-  // ) async {}
-
-  Future<void> _enviarCalificacionProveedor(
-    Pedido pedido,
-    int rating,
-    String comentario,
-  ) async {
-    setState(() => _enviandoCalificacionProveedor = true);
-    final provider = context.read<PedidoProvider>();
-
-    final ok = await provider.calificarProveedor(
-      pedidoId: pedido.id,
-      estrellas: rating,
-      comentario: comentario,
-    );
-
-    setState(() => _enviandoCalificacionProveedor = false);
-
-    if (ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Gracias por tu calificación!'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } else if (provider.error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.error ?? 'Error al calificar'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
-  }
-
   Future<void> _abrirSubirComprobante(Pedido pedido) async {
     if (pedido.pagoId == null) return;
     final pagoId = pedido.pagoId!;
@@ -1149,8 +1023,27 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
       await provider.cargarDetalle(pedido.id);
     } catch (e) {
       if (!mounted) return;
+
+      // Extraer mensaje limpio del error
+      String mensaje = 'No se pudo obtener datos bancarios';
+      if (e.toString().contains('ApiException:')) {
+        // Extraer solo el mensaje de ApiException
+        final match = RegExp(
+          r'ApiException: (.+?) \|',
+        ).firstMatch(e.toString());
+        if (match != null) {
+          mensaje = match.group(1) ?? mensaje;
+        }
+      } else {
+        mensaje = e.toString();
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo obtener datos bancarios: $e')),
+        SnackBar(
+          content: Text(mensaje),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }

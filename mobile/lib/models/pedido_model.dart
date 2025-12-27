@@ -278,12 +278,14 @@ class ProveedorInfo {
   final String nombre;
   final String? telefono;
   final String? direccion;
+  final String? fotoPerfil;
 
   ProveedorInfo({
     required this.id,
     required this.nombre,
     this.telefono,
     this.direccion,
+    this.fotoPerfil,
   });
 
   factory ProveedorInfo.fromJson(Map<String, dynamic> json) {
@@ -292,6 +294,7 @@ class ProveedorInfo {
       nombre: (json['nombre'] ?? '').toString(),
       telefono: json['telefono']?.toString(),
       direccion: json['direccion']?.toString(),
+      fotoPerfil: json['foto_perfil']?.toString() ?? json['foto']?.toString(),
     );
   }
 }

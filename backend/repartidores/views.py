@@ -2312,6 +2312,9 @@ def datos_bancarios_repartidor(request):
 
     elif request.method in ['PUT', 'PATCH']:
         from .serializers import DatosBancariosUpdateSerializer
+        import logging
+
+        logger = logging.getLogger('repartidores')
 
         partial = request.method == 'PATCH'
         serializer = DatosBancariosUpdateSerializer(
@@ -2321,18 +2324,31 @@ def datos_bancarios_repartidor(request):
         )
 
         if serializer.is_valid():
-            serializer.save()
+            try:
+                serializer.save()
 
-            # Retornar datos actualizados
-            from .serializers import DatosBancariosSerializer
-            response_serializer = DatosBancariosSerializer(repartidor)
+                # Retornar datos actualizados
+                from .serializers import DatosBancariosSerializer
+                response_serializer = DatosBancariosSerializer(repartidor)
 
-            return Response(
-                {
-                    'message': 'Datos bancarios actualizados correctamente',
-                    'datos_bancarios': response_serializer.data
-                },
-                status=status.HTTP_200_OK
-            )
+                return Response(
+                    {
+                        'message': 'Datos bancarios actualizados correctamente',
+                        'datos_bancarios': response_serializer.data
+                    },
+                    status=status.HTTP_200_OK
+                )
+            except Exception as e:
+                logger.error(
+                    f'Error al guardar datos bancarios del repartidor {repartidor.id}: {str(e)}',
+                    exc_info=True
+                )
+                return Response(
+                    {
+                        'error': 'Error al guardar los datos bancarios',
+                        'detail': str(e)
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
