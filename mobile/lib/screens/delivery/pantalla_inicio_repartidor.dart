@@ -12,14 +12,13 @@ import '../../models/pedido_repartidor.dart';
 import '../../models/entrega_historial.dart';
 import '../../widgets/mapa_pedidos_widget.dart';
 import '../../controllers/delivery/repartidor_controller.dart';
-import 'widgets/repartidor_drawer.dart';
 import 'widgets/lista_vacia_widget.dart';
 import '../../services/auth/session_cleanup.dart';
 import '../../widgets/ratings/dialogo_calificar_cliente.dart';
 import 'pantalla_ver_comprobante.dart';
 
-/// ✅ REFACTORIZADA: Pantalla principal para REPARTIDORES
-/// UI limpia que delega toda la lógica al controller
+/// ✅ REFACTORIZADA: Pantalla principal para REPARTIDORES (iOS Native Style)
+/// UI limpia estilo iPhone que delega toda la lógica al controller
 class PantallaInicioRepartidor extends StatefulWidget {
   const PantallaInicioRepartidor({super.key});
 
@@ -28,25 +27,26 @@ class PantallaInicioRepartidor extends StatefulWidget {
       _PantallaInicioRepartidorState();
 }
 
-class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
-    with SingleTickerProviderStateMixin {
+class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   // ============================================
   // CONTROLLER Y TABS
   // ============================================
   late final RepartidorController _controller;
-  late final TabController _tabController;
   int? _ultimoPedidoNuevo;
   Map<String, dynamic>? _ultimoPayload;
 
   // ============================================
-  // COLORES
+  // COLORES iOS STYLE
   // ============================================
   static const Color _accent = Color(0xFF0A84FF);
   static const Color _success = Color(0xFF34C759);
-  static const Color _rojo = Color(0xFFF44336);
-  static const Color _surface = Color(0xFFF2F4F7);
-  static const Color _cardBorder = Color(0xFFE1E4EB);
+  static const Color _rojo = Color(0xFFFF3B30);
+  static const Color _surface = CupertinoColors.systemGroupedBackground;
+  static const Color _cardBg = CupertinoColors.white;
+  static const Color _cardBorder = Color(0xFFE5E5EA);
   static const Color _shadowColor = Color(0x1A000000);
+  static const Color _textPrimary = CupertinoColors.label;
+  static const Color _textSecondary = CupertinoColors.secondaryLabel;
 
   // ============================================
   // CICLO DE VIDA
@@ -56,7 +56,6 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
   void initState() {
     super.initState();
     _controller = RepartidorController();
-    _tabController = TabController(length: 3, vsync: this);
     _inicializar();
     _suscribirPushPedidos();
   }
@@ -64,7 +63,6 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
   @override
   void dispose() {
     _pedidoSub?.cancel();
-    _tabController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -146,27 +144,20 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
 
     if (!mounted) return;
 
-    // Mover al tab de pendientes para que sea visible
-    _tabController.index = 0;
     setState(() {
       _ultimoPedidoNuevo = pedidoId;
       _ultimoPayload = data;
     });
 
-    // Aviso rápido
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Nuevo encargo #$pedidoId disponible'),
-        action: SnackBarAction(
-          label: 'Ver',
-          onPressed: () => _mostrarDialogoNuevoPedido(pedidoId, data),
-        ),
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    // Notificación iOS estilo banner con animación
+    _mostrarNotificacionNuevoPedido(pedidoId, data);
 
-    // Diálogo de detalle
-    _mostrarDialogoNuevoPedido(pedidoId, data);
+    // Diálogo de detalle después de un momento
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _mostrarDialogoNuevoPedido(pedidoId, data);
+      }
+    });
   }
 
   /// Remueve un pedido de la lista de disponibles cuando otro repartidor lo acepta
@@ -181,6 +172,36 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     );
   }
 
+  /// Muestra una notificación estilo iOS banner animada
+  void _mostrarNotificacionNuevoPedido(
+    int pedidoId,
+    Map<String, dynamic> data,
+  ) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => _NotificacionBanner(
+        pedidoId: pedidoId,
+        data: data,
+        onTap: () {
+          overlayEntry.remove();
+          _mostrarDialogoNuevoPedido(pedidoId, data);
+        },
+        onDismiss: () => overlayEntry.remove(),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    // Auto-dismiss después de 5 segundos
+    Future.delayed(const Duration(seconds: 5), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
   Future<void> _mostrarDialogoNuevoPedido(
     int pedidoId,
     Map<String, dynamic> data,
@@ -188,41 +209,64 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     final cliente = data['cliente']?.toString() ?? 'Cliente';
     final total = data['total']?.toString() ?? '—';
 
-    await showDialog(
+    await showCupertinoDialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => AlertDialog(
-        title: const Text('Nuevo pedido disponible'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (_) => CupertinoAlertDialog(
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Pedido #$pedidoId'),
-            const SizedBox(height: 6),
-            Text('Cliente: $cliente'),
-            if (total != '—') ...[
-              const SizedBox(height: 6),
-              Text('Total: $total'),
-            ],
-            const SizedBox(height: 12),
-            const Text(
-              '¿Quieres aceptarlo?',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
+            Icon(CupertinoIcons.bell_fill, color: _accent, size: 22),
+            SizedBox(width: 8),
+            Text('Nuevo Pedido'),
           ],
         ),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pedido #$pedidoId',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text('Cliente: $cliente'),
+              if (total != '—') ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Total: $total',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+              const SizedBox(height: 12),
+              const Text(
+                '¿Quieres aceptar este pedido?',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: _textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
+            isDestructiveAction: true,
             child: const Text('Ignorar'),
           ),
-          ElevatedButton(
+          CupertinoDialogAction(
             onPressed: () async {
               Navigator.pop(context);
               await _aceptarPedido(pedidoId);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: _success),
-            child: const Text('Aceptar'),
+            isDefaultAction: true,
+            child: const Text('Aceptar Pedido'),
           ),
         ],
       ),
@@ -245,36 +289,78 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
           }
         });
 
-        // Cambiar a la pestaña "En Curso" para que el usuario vea el pedido aceptado
-        _tabController.animateTo(1);
-
-        // Mostrar mensaje con información del pedido aceptado
+        // Mostrar notificación de éxito estilo iOS
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Pedido #${detallePedido.numeroPedido} aceptado\n'
+        _mostrarNotificacionExito(
+          'Pedido Aceptado',
+          'Pedido #${detallePedido.numeroPedido}\n'
               'Cliente: ${detallePedido.cliente.nombre}\n'
               'Destino: ${detallePedido.direccionEntrega}',
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
-          ),
         );
+
+        // Recargar datos
+        await _controller.cargarDatos();
       } else {
         final mensajeError =
             _controller.error ?? 'No se pudo aceptar el pedido';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
-        );
+        _mostrarNotificacionError(mensajeError);
       }
     } catch (e) {
       if (!mounted) return;
       final mensajeError = _controller.error ?? 'Error aceptando el pedido';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
-      );
+      _mostrarNotificacionError(mensajeError);
     }
+  }
+
+  void _mostrarNotificacionExito(String titulo, String mensaje) {
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => CupertinoAlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(CupertinoIcons.check_mark_circled_solid,
+                color: _success, size: 22),
+            const SizedBox(width: 8),
+            Text(titulo),
+          ],
+        ),
+        content: Text(mensaje),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            isDefaultAction: true,
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarNotificacionError(String mensaje) {
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => CupertinoAlertDialog(
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(CupertinoIcons.xmark_circle_fill, color: _rojo, size: 22),
+            SizedBox(width: 8),
+            Text('Error'),
+          ],
+        ),
+        content: Text(mensaje),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            isDefaultAction: true,
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _manejarAccesoDenegado() {
@@ -362,53 +448,87 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
         ? EstadoRepartidor.fueraServicio
         : EstadoRepartidor.disponible;
 
+    // Mostrar indicador de carga
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CupertinoActivityIndicator(radius: 20),
+      ),
+    );
+
     final exito = await _controller.cambiarEstado(nuevoEstado);
 
     if (!mounted) return;
+    Navigator.pop(context); // Cerrar indicador
 
     if (exito) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
+      // Notificación iOS de éxito
+      showCupertinoDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => CupertinoAlertDialog(
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                _controller.getIconoEstado(nuevoEstado),
-                color: Colors.white,
+                _controller.estaDisponible
+                    ? CupertinoIcons.checkmark_circle_fill
+                    : CupertinoIcons.pause_circle_fill,
+                color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey,
+                size: 22,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('Estado actualizado: ${nuevoEstado.nombre}'),
-              ),
+              const SizedBox(width: 8),
+              const Text('Estado Actualizado'),
             ],
           ),
-          backgroundColor: _controller.getColorEstado(nuevoEstado),
-          behavior: SnackBarBehavior.floating,
+          content: Text(
+            _controller.estaDisponible
+                ? 'Ahora estás disponible para recibir pedidos'
+                : 'Te has pausado. No recibirás nuevos pedidos',
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(context),
+              isDefaultAction: true,
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
+
+      // Auto-cerrar después de 2 segundos
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+      });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_controller.error ?? 'Error al cambiar estado'),
-          backgroundColor: _rojo,
-        ),
-      );
+      _mostrarNotificacionError(_controller.error ?? 'Error al cambiar estado');
     }
   }
 
   Future<void> _cerrarSesion() async {
-    final confirmar = await Rutas.mostrarDialogo<bool>(
-      context,
-      AlertDialog(
-        title: const Text('Cerrar Sesión'),
+    final confirmar = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(CupertinoIcons.power, color: _rojo, size: 22),
+            SizedBox(width: 8),
+            Text('Cerrar Sesión'),
+          ],
+        ),
         content: const Text('¿Estás seguro que deseas cerrar sesión?'),
         actions: [
-          TextButton(
-            onPressed: () => Rutas.volver(context, false),
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
-          ElevatedButton(
-            onPressed: () => Rutas.volver(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _rojo),
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context, true),
+            isDestructiveAction: true,
             child: const Text('Cerrar Sesión'),
           ),
         ],
@@ -417,9 +537,22 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
 
     if (confirmar == true) {
       if (!mounted) return;
+
+      // Mostrar indicador de carga
+      showCupertinoDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: CupertinoActivityIndicator(radius: 20),
+        ),
+      );
+
       await SessionCleanup.clearProviders(context);
       await _controller.cerrarSesion();
+
       if (!mounted) return;
+      Navigator.pop(context); // Cerrar indicador
+
       await Rutas.irAYLimpiar(context, Rutas.login);
     }
   }
@@ -427,48 +560,6 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
   // ============================================
   // FUNCIONES DE WHATSAPP Y NAVEGACIÓN
   // ============================================
-
-  /// Abre WhatsApp con un mensaje prellenado con información del pedido
-  Future<void> _abrirWhatsAppCliente(PedidoDetalladoRepartidor pedido) async {
-    final telefono = pedido.cliente.telefono;
-    if (telefono == null || telefono.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay teléfono registrado para este cliente'),
-          backgroundColor: _rojo,
-        ),
-      );
-      return;
-    }
-
-    // Limpiar el número (quitar espacios, guiones, paréntesis)
-    final telefonoLimpio = telefono.replaceAll(RegExp(r'[^\d+]'), '');
-
-    // Construir el mensaje con toda la información del pedido
-    final mensaje = _construirMensajePedido(pedido);
-
-    // URL de WhatsApp con el número y mensaje prellenado
-    final url = Uri.parse(
-      'https://wa.me/$telefonoLimpio?text=${Uri.encodeComponent(mensaje)}',
-    );
-
-    try {
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'No se pudo abrir WhatsApp';
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al abrir WhatsApp: $e'),
-          backgroundColor: _rojo,
-        ),
-      );
-    }
-  }
 
   /// Construye el mensaje prellenado para WhatsApp con toda la información del pedido
   String _construirMensajePedido(PedidoDetalladoRepartidor pedido) {
@@ -558,12 +649,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
 
     if (url == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay información de ubicación disponible'),
-          backgroundColor: _rojo,
-        ),
-      );
+      _mostrarNotificacionError('No hay información de ubicación disponible');
       return;
     }
 
@@ -575,12 +661,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al abrir navegación: $e'),
-          backgroundColor: _rojo,
-        ),
-      );
+      _mostrarNotificacionError('Error al abrir navegación: $e');
     }
   }
 
@@ -588,12 +669,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
   Future<void> _llamarCliente(String? telefono) async {
     if (telefono == null || telefono.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay teléfono registrado para este cliente'),
-          backgroundColor: _rojo,
-        ),
-      );
+      _mostrarNotificacionError('No hay teléfono registrado para este cliente');
       return;
     }
 
@@ -609,17 +685,44 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al realizar la llamada: $e'),
-          backgroundColor: _rojo,
-        ),
-      );
+      _mostrarNotificacionError('Error al realizar la llamada: $e');
+    }
+  }
+
+  /// Abre WhatsApp con un mensaje prellenado
+  Future<void> _abrirWhatsAppCliente(PedidoDetalladoRepartidor pedido) async {
+    final telefono = pedido.cliente.telefono;
+    if (telefono == null || telefono.isEmpty) {
+      if (!mounted) return;
+      _mostrarNotificacionError('No hay teléfono registrado para este cliente');
+      return;
+    }
+
+    // Limpiar el número (quitar espacios, guiones, paréntesis)
+    final telefonoLimpio = telefono.replaceAll(RegExp(r'[^\d+]'), '');
+
+    // Construir el mensaje con toda la información del pedido
+    final mensaje = _construirMensajePedido(pedido);
+
+    // URL de WhatsApp con el número y mensaje prellenado
+    final url = Uri.parse(
+      'https://wa.me/$telefonoLimpio?text=${Uri.encodeComponent(mensaje)}',
+    );
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'No se pudo abrir WhatsApp';
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarNotificacionError('Error al abrir WhatsApp: $e');
     }
   }
 
   // ============================================
-  // UI - BUILD PRINCIPAL
+  // UI - BUILD PRINCIPAL (iOS STYLE)
   // ============================================
 
   @override
@@ -627,160 +730,357 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, child) {
-        return Scaffold(
-          backgroundColor: _surface,
-          appBar: _buildAppBar(),
-          drawer: _buildDrawer(),
-          body: _buildBody(),
+        return CupertinoTabScaffold(
+          tabBar: CupertinoTabBar(
+            backgroundColor: CupertinoColors.systemBackground,
+            activeColor: _accent,
+            inactiveColor: CupertinoColors.systemGrey,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.square_list),
+                label: 'Pendientes',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.location_fill),
+                label: 'En Curso',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.time),
+                label: 'Historial',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.person_circle),
+                label: 'Perfil',
+              ),
+            ],
+          ),
+          tabBuilder: (context, index) {
+            return CupertinoTabView(
+              builder: (context) {
+                switch (index) {
+                  case 0:
+                    return _buildTabPendientes();
+                  case 1:
+                    return _buildTabEnCurso();
+                  case 2:
+                    return _buildTabHistorial();
+                  case 3:
+                    return _buildTabPerfil();
+                  default:
+                    return _buildTabPendientes();
+                }
+              },
+            );
+          },
         );
       },
     );
   }
 
   // ============================================
-  // APP BAR
+  // TABS iOS STYLE
   // ============================================
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      centerTitle: false,
-      title: const Text(
-        'Dashboard',
-        style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+  Widget _buildTabPendientes() {
+    return CupertinoPageScaffold(
+      backgroundColor: _surface,
+      navigationBar: _buildNavBar('Pedidos Disponibles'),
+      child: SafeArea(
+        child: _controller.loading
+            ? _buildCargando()
+            : _buildPedidosPendientes(),
       ),
-      iconTheme: const IconThemeData(color: Colors.black87),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.map),
-          onPressed: _abrirMapaPedidos,
-          tooltip: 'Ver mapa de pedidos',
-        ),
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: Center(
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _cardBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _controller.getIconoEstado(_controller.estadoActual),
-                        color: _controller.estaDisponible
-                            ? _success
-                            : Colors.grey,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _controller.estadoActual.nombre,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: () => _controller.cargarDatos(),
-          tooltip: 'Actualizar',
-        ),
-      ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F5F9),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _cardBorder),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                color: _accent,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              indicatorPadding: const EdgeInsets.symmetric(
-                horizontal: 6,
-                vertical: 6,
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.grey[600],
-              tabs: const [
-                Tab(text: 'Pendientes'),
-                Tab(text: 'En curso'),
-                Tab(text: 'Historial'),
-              ],
-            ),
-          ),
-        ),
+    );
+  }
+
+  Widget _buildTabEnCurso() {
+    return CupertinoPageScaffold(
+      backgroundColor: _surface,
+      navigationBar: _buildNavBar('En Curso'),
+      child: SafeArea(
+        child: _controller.loading
+            ? _buildCargando()
+            : _buildPedidosEnCurso(),
+      ),
+    );
+  }
+
+  Widget _buildTabHistorial() {
+    return CupertinoPageScaffold(
+      backgroundColor: _surface,
+      navigationBar: _buildNavBar('Historial'),
+      child: SafeArea(
+        child: _controller.loading
+            ? _buildCargando()
+            : _buildHistorial(),
+      ),
+    );
+  }
+
+  Widget _buildTabPerfil() {
+    return CupertinoPageScaffold(
+      backgroundColor: _surface,
+      navigationBar: _buildNavBar('Mi Perfil'),
+      child: SafeArea(
+        child: _buildPerfilContent(),
       ),
     );
   }
 
   // ============================================
-  // DRAWER
+  // NAVIGATION BAR iOS STYLE
   // ============================================
 
-  Widget _buildDrawer() {
-    return RepartidorDrawer(
-      perfil: _controller.perfil,
-      estaDisponible: _controller.estaDisponible,
-      onCambiarDisponibilidad: _cambiarDisponibilidad,
-      onAbrirMapa: _abrirMapaPedidos,
-      onCerrarSesion: _cerrarSesion,
+  CupertinoNavigationBar _buildNavBar(String title) {
+    return CupertinoNavigationBar(
+      backgroundColor: CupertinoColors.systemBackground.withOpacity(0.9),
+      border: null,
+      middle: Text(
+        title,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildEstadoChip(),
+          const SizedBox(width: 8),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () => _controller.cargarDatos(),
+            child: const Icon(CupertinoIcons.refresh, size: 22),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstadoChip() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _controller.estaDisponible
+            ? _success.withValues(alpha: 0.15)
+            : CupertinoColors.systemGrey5,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey3,
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _controller.estaDisponible
+                ? CupertinoIcons.checkmark_circle_fill
+                : CupertinoIcons.pause_circle_fill,
+            color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey,
+            size: 14,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            _controller.estadoActual.nombre,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   // ============================================
-  // BODY
+  // PERFIL CONTENT
   // ============================================
 
-  Widget _buildBody() {
-    if (_controller.loading) {
-      return _buildCargando();
+  Widget _buildPerfilContent() {
+    if (_controller.perfil == null) {
+      return const Center(
+        child: Text('Cargando perfil...'),
+      );
     }
 
-    if (_controller.error != null && _controller.perfil == null) {
-      return _buildError();
-    }
+    final perfil = _controller.perfil!;
 
-    return Column(
-      children: [
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
             children: [
-              _buildPedidosPendientes(),
-              _buildPedidosEnCurso(),
-              _buildHistorial(),
+              const SizedBox(height: 20),
+              // Avatar
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _accent.withValues(alpha: 0.1),
+                  border: Border.all(color: _accent, width: 3),
+                ),
+                child: perfil.fotoPerfil != null && perfil.fotoPerfil!.isNotEmpty
+                    ? ClipOval(
+                        child: Image.network(
+                          perfil.fotoPerfil!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Icon(
+                            CupertinoIcons.person_fill,
+                            size: 50,
+                            color: _accent,
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        CupertinoIcons.person_fill,
+                        size: 50,
+                        color: _accent,
+                      ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                perfil.nombreCompleto,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                perfil.email,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: _textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Botón de disponibilidad
+              _buildBotonDisponibilidad(),
+              const SizedBox(height: 20),
+              // Opciones de menú
+              _buildMenuOptions(),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBotonDisponibilidad() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: CupertinoButton(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey,
+        borderRadius: BorderRadius.circular(14),
+        onPressed: _cambiarDisponibilidad,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _controller.estaDisponible
+                  ? CupertinoIcons.checkmark_circle_fill
+                  : CupertinoIcons.pause_circle_fill,
+              color: CupertinoColors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _controller.estaDisponible
+                  ? 'Disponible - Toca para pausar'
+                  : 'Fuera de servicio - Toca para activar',
+              style: const TextStyle(
+                color: CupertinoColors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuOptions() {
+    return Column(
+      children: [
+        _buildMenuTile(
+          icon: CupertinoIcons.map_fill,
+          title: 'Ver Mapa de Pedidos',
+          onTap: _abrirMapaPedidos,
+        ),
+        _buildMenuTile(
+          icon: CupertinoIcons.money_dollar_circle,
+          title: 'Ganancias',
+          onTap: () => Navigator.pushNamed(context, '/delivery/ganancias'),
+        ),
+        _buildMenuTile(
+          icon: CupertinoIcons.person_circle,
+          title: 'Mi Perfil',
+          onTap: () => Navigator.pushNamed(context, '/delivery/perfil'),
+        ),
+        _buildMenuTile(
+          icon: CupertinoIcons.settings,
+          title: 'Configuración',
+          onTap: () => Navigator.pushNamed(context, '/delivery/configuracion'),
+        ),
+        _buildMenuTile(
+          icon: CupertinoIcons.question_circle,
+          title: 'Ayuda y Soporte',
+          onTap: () => Navigator.pushNamed(context, '/delivery/ayuda'),
+        ),
+        const SizedBox(height: 20),
+        _buildMenuTile(
+          icon: CupertinoIcons.arrow_right_square,
+          title: 'Cerrar Sesión',
+          onTap: _cerrarSesion,
+          isDestructive: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMenuTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _cardBorder),
+      ),
+      child: CupertinoButton(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        onPressed: onTap,
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isDestructive ? _rojo : _accent,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: isDestructive ? _rojo : _textPrimary,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_right,
+              color: CupertinoColors.systemGrey,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1548,21 +1848,28 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
   }
 
   Future<void> _marcarEnCamino(PedidoDetalladoRepartidor pedido) async {
-    final confirmar = await showDialog<bool>(
+    final confirmar = await showCupertinoDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Marcar como En Camino'),
+      builder: (context) => CupertinoAlertDialog(
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(CupertinoIcons.car_fill, color: _accent, size: 22),
+            SizedBox(width: 8),
+            Text('En Camino'),
+          ],
+        ),
         content: Text(
           '¿Confirmas que ya recogiste el pedido #${pedido.numeroPedido} y estás en camino hacia el cliente?',
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
-          ElevatedButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _accent),
+            isDefaultAction: true,
             child: const Text('Confirmar'),
           ),
         ],
@@ -1573,13 +1880,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       if (!mounted) return;
 
       // Mostrar indicador de carga
-      unawaited(
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) =>
-              const Center(child: CupertinoActivityIndicator(radius: 14)),
-        ),
+      showCupertinoDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) =>
+            const Center(child: CupertinoActivityIndicator(radius: 20)),
       );
 
       // Marcar como en camino
@@ -1594,19 +1899,13 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       Navigator.pop(context);
 
       if (exito) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Pedido #${pedido.numeroPedido} marcado como en camino',
-            ),
-            backgroundColor: _accent,
-          ),
+        _mostrarNotificacionExito(
+          'En Camino',
+          'Pedido #${pedido.numeroPedido} marcado como en camino',
         );
       } else {
         final errorMsg = _controller.error ?? 'Error al marcar como en camino';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: _rojo),
-        );
+        _mostrarNotificacionError(errorMsg);
       }
     }
   }
@@ -1781,17 +2080,14 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
 
     if (resultado == null || !mounted) return;
     if (resultado) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Pedido #${pedido.numeroPedido} marcado como entregado',
-          ),
-          backgroundColor: _success,
-        ),
+      // Notificación de éxito
+      _mostrarNotificacionExito(
+        'Pedido Entregado',
+        'Pedido #${pedido.numeroPedido} marcado como entregado exitosamente',
       );
 
       // Mostrar diálogo de calificación del cliente después de entregar
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 800));
       if (!mounted) return;
 
       await showCupertinoModalPopup<bool>(
@@ -1806,9 +2102,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
       return;
     }
     final errorMsg = _controller.error ?? 'Error al marcar como entregado';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(errorMsg), backgroundColor: _rojo),
-    );
+    _mostrarNotificacionError(errorMsg);
   }
 
   Widget _buildHistorial() {
@@ -2264,6 +2558,226 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================
+// WIDGET DE NOTIFICACIÓN BANNER iOS STYLE
+// ============================================
+
+class _NotificacionBanner extends StatefulWidget {
+  final int pedidoId;
+  final Map<String, dynamic> data;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  const _NotificacionBanner({
+    required this.pedidoId,
+    required this.data,
+    required this.onTap,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_NotificacionBanner> createState() => _NotificacionBannerState();
+}
+
+class _NotificacionBannerState extends State<_NotificacionBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleDismiss() async {
+    await _controller.reverse();
+    widget.onDismiss();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cliente = widget.data['cliente']?.toString() ?? 'Cliente';
+    final total = widget.data['total']?.toString() ?? '—';
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: GestureDetector(
+            onTap: widget.onTap,
+            onVerticalDragEnd: (details) {
+              if (details.primaryVelocity! < -500) {
+                _handleDismiss();
+              }
+            },
+            child: Container(
+              margin: const EdgeInsets.only(
+                left: 12,
+                right: 12,
+                top: 50,
+              ),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF0A84FF),
+                    Color(0xFF0066CC),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0A84FF).withValues(alpha: 0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: widget.onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        // Icono animado
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.bell_fill,
+                            color: CupertinoColors.white,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        // Contenido
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.sparkles,
+                                    color: Colors.yellowAccent,
+                                    size: 16,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'NUEVO PEDIDO DISPONIBLE',
+                                    style: TextStyle(
+                                      color: CupertinoColors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Pedido #${widget.pedidoId}',
+                                style: const TextStyle(
+                                  color: CupertinoColors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Cliente: $cliente',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              if (total != '—') ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Total: $total',
+                                  style: const TextStyle(
+                                    color: Colors.greenAccent,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        // Botón cerrar
+                        CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: _handleDismiss,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.xmark,
+                              color: CupertinoColors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
