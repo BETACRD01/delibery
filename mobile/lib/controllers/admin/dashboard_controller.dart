@@ -80,12 +80,14 @@ class DashboardController extends ChangeNotifier {
       final proveedores = data['proveedores'] as Map<String, dynamic>? ?? {};
       final repartidores = data['repartidores'] as Map<String, dynamic>? ?? {};
       final pedidos = data['pedidos'] as Map<String, dynamic>? ?? {};
-      final solicitudes = data['solicitudes_cambio_rol'] as Map<String, dynamic>? ?? {};
+      final solicitudes =
+          data['solicitudes_cambio_rol'] as Map<String, dynamic>? ?? {};
 
       _totalUsuarios = (usuarios['total'] as num?)?.toInt() ?? 0;
       _totalProveedores = (proveedores['total'] as num?)?.toInt() ?? 0;
       _totalRepartidores = (repartidores['total'] as num?)?.toInt() ?? 0;
-      _proveedoresPendientes = (proveedores['pendientes'] as num?)?.toInt() ?? 0;
+      _proveedoresPendientes =
+          (proveedores['pendientes'] as num?)?.toInt() ?? 0;
 
       // Pedidos activos: suma estados que no sean entregado/cancelado
       _pedidosActivos = _calcularPedidosActivos(pedidos['por_estado']);
@@ -93,7 +95,8 @@ class DashboardController extends ChangeNotifier {
       _ventasTotales = (pedidos['mes'] as num?)?.toDouble() ?? 0.0;
 
       // Solicitudes
-      _solicitudesPendientesCount = (solicitudes['pendientes'] as num?)?.toInt() ?? 0;
+      _solicitudesPendientesCount =
+          (solicitudes['pendientes'] as num?)?.toInt() ?? 0;
       notifyListeners();
     } catch (e) {
       _error = 'No se pudieron cargar las estadísticas';
@@ -145,10 +148,10 @@ class DashboardController extends ChangeNotifier {
   // ACCIONES DE SOLICITUDES
   // ============================================
 
-  Future<void> aceptarSolicitud(String solicitudId) async {
+  Future<void> aceptarSolicitud(String solicitudId, {String? motivo}) async {
     await _solicitudesApi.aceptarSolicitud(
       solicitudId,
-      motivoRespuesta: 'Solicitud aprobada por administrador',
+      motivoRespuesta: motivo ?? 'Solicitud aprobada por administrador',
     );
     await cargarSolicitudesPendientes();
   }
@@ -159,6 +162,21 @@ class DashboardController extends ChangeNotifier {
       motivoRespuesta: motivo,
     );
     await cargarSolicitudesPendientes();
+  }
+
+  Future<void> actualizarFotoPerfil(dynamic imagen) async {
+    _loading = true;
+    notifyListeners();
+    try {
+      await _api.actualizarFotoPerfil(imagen);
+      // Recargar perfil para obtener la nueva URL
+      await cargarDatos();
+    } catch (e) {
+      _error = 'Error al actualizar foto de perfil';
+      _loading = false;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> cerrarSesion() async {

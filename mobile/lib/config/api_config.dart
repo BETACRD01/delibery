@@ -12,7 +12,7 @@ class ApiConfig {
   // ============================================================================
 
   // CAMBIA ESTO CADA VEZ QUE REINICIES NGROK (Sin la barra / al final)
-  static const String _ngrokUrl = 'https://d9926dcc06b9.ngrok-free.app';
+  static const String _ngrokUrl = 'https://3eee4a569de2.ngrok-free.app';
 
   // URL para producción (cuando subas a Play Store)
   static const String _prodUrl = 'https://api.tu-dominio-real.com';
@@ -69,6 +69,9 @@ class ApiConfig {
       '$_auth/preferencias-notificaciones/';
   static String get desactivarCuenta => '$_auth/desactivar-cuenta/';
   static String get tokenRefresh => '$_auth/token/refresh/';
+  static String get authDispositivos => '$_auth/dispositivos/';
+  static String authCerrarSesionDispositivo(int id) =>
+      '$_auth/dispositivos/$id/logout/';
 
   // ============================================================================
   // 5. ENDPOINTS: USUARIOS

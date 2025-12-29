@@ -3,10 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import '../../theme/jp_theme.dart' hide JPSnackbar;
 import '../../services/repartidor/repartidor_datos_bancarios_service.dart';
 import '../../models/datos_bancarios.dart';
-import '../../widgets/jp_snackbar.dart';
 
 /// Pantalla para gestionar los datos bancarios del repartidor
 class PantallaDatosBancarios extends StatefulWidget {
@@ -29,6 +27,19 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _modoEdicion = false;
+
+  static const Color _accent = Color(0xFF0CB7F2); // Celeste corporativo
+  static const Color _success = Color(0xFF34C759);
+  static const Color _errorColor = Color(0xFFFF3B30);
+
+  // Dynamic Colors
+  Color get _surface =>
+      CupertinoColors.systemGroupedBackground.resolveFrom(context);
+  Color get _cardBg =>
+      CupertinoColors.secondarySystemGroupedBackground.resolveFrom(context);
+  Color get _textPrimary => CupertinoColors.label.resolveFrom(context);
+  Color get _textSecondary =>
+      CupertinoColors.secondaryLabel.resolveFrom(context);
 
   final List<Map<String, String>> _tiposCuenta = [
     {'value': 'ahorros', 'label': 'Ahorros'},
@@ -55,6 +66,7 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
 
     try {
       final datos = await _datosService.obtenerDatosBancarios();
+      if (!mounted) return;
       setState(() {
         _datosActuales = datos;
         _isLoading = false;
@@ -71,26 +83,34 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-
-        // Extraer mensaje de error claro
-        String mensajeError = 'Error al cargar datos bancarios';
-
-        if (e.toString().contains('ApiException:')) {
-          final match = RegExp(r'ApiException: (.+?) \|').firstMatch(e.toString());
-          if (match != null) {
-            mensajeError = match.group(1) ?? mensajeError;
-          }
-        } else {
-          mensajeError = e.toString();
-        }
-
-        JPSnackbar.error(context, mensajeError);
+        _mostrarToast(
+          _extraerMensajeError(e),
+          color: _errorColor,
+          icono: CupertinoIcons.exclamationmark_circle_fill,
+        );
       }
     }
   }
 
+  String _extraerMensajeError(dynamic e) {
+    String mensajeError = 'Error al cargar datos';
+    if (e.toString().contains('ApiException:')) {
+      final match = RegExp(r'ApiException: (.+?) \|').firstMatch(e.toString());
+      if (match != null) {
+        mensajeError = match.group(1) ?? mensajeError;
+      }
+    } else {
+      mensajeError = e.toString();
+    }
+    return mensajeError;
+  }
+
   Future<void> _guardarDatos() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_tipoCuentaSeleccionada == null) {
+      _mostrarToast('Selecciona el tipo de cuenta', color: _errorColor);
+      return;
+    }
 
     setState(() => _isSaving = true);
 
@@ -104,27 +124,20 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
       );
 
       if (mounted) {
-        JPSnackbar.success(
-            context, 'Datos bancarios actualizados correctamente');
+        _mostrarToast(
+          'Datos actualizados',
+          icono: CupertinoIcons.checkmark_circle_fill,
+        );
         setState(() => _modoEdicion = false);
         await _cargarDatos();
       }
     } catch (e) {
       if (mounted) {
-        // Extraer mensaje de error claro
-        String mensajeError = 'Error al guardar los datos bancarios';
-
-        if (e.toString().contains('ApiException:')) {
-          // Extraer el mensaje limpio del ApiException
-          final match = RegExp(r'ApiException: (.+?) \|').firstMatch(e.toString());
-          if (match != null) {
-            mensajeError = match.group(1) ?? mensajeError;
-          }
-        } else {
-          mensajeError = e.toString();
-        }
-
-        JPSnackbar.error(context, mensajeError);
+        _mostrarToast(
+          _extraerMensajeError(e),
+          color: _errorColor,
+          icono: CupertinoIcons.exclamationmark_circle_fill,
+        );
       }
     } finally {
       if (mounted) {
@@ -133,38 +146,119 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: JPColors.background,
-      appBar: AppBar(
-        title: const Text('Datos Bancarios'),
-        backgroundColor: JPColors.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          if (_datosActuales?.estanCompletos == true && !_modoEdicion)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => setState(() => _modoEdicion = true),
+  void _mostrarToast(String mensaje, {IconData? icono, Color? color}) {
+    if (!mounted) return;
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 50,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 300),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
             ),
-        ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: color ?? _success,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icono != null) ...[
+                    Icon(icono, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Flexible(
+                    child: Text(
+                      mensaje,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      body: _buildBody(),
     );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: CupertinoActivityIndicator(radius: 14),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: _modoEdicion || !(_datosActuales?.estanCompletos ?? false)
-          ? _buildFormulario()
-          : _buildVisualizacion(),
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        navigationBar: CupertinoNavigationBar(
+          middle: const Text('Datos Bancarios'),
+          backgroundColor: _cardBg,
+          border: const Border(
+            bottom: BorderSide(color: Color(0x4D000000), width: 0.0),
+          ),
+          trailing: _datosActuales?.estanCompletos == true && !_modoEdicion
+              ? CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  child: const Text('Editar', style: TextStyle(color: _accent)),
+                  onPressed: () => setState(() => _modoEdicion = true),
+                )
+              : null,
+        ),
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CupertinoActivityIndicator())
+              : SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Detalles de tu cuenta para recibir pagos.',
+                          style: TextStyle(color: _textSecondary, fontSize: 14),
+                        ),
+                      ),
+                      _modoEdicion || !(_datosActuales?.estanCompletos ?? false)
+                          ? _buildFormulario()
+                          : _buildVisualizacion(),
+                    ],
+                  ),
+                ),
+        ),
+      ),
     );
   }
 
@@ -172,286 +266,223 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
     return Form(
       key: _formKey,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Información de la cuenta',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: JPColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Banco
-          _buildTextField(
-            controller: _bancoNombreController,
-            label: 'Nombre del banco',
-            hint: 'Ej: Banco Pichincha',
-            icon: Icons.account_balance,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'El nombre del banco es requerido';
-              }
-              if (value.length < 3) {
-                return 'El nombre debe tener al menos 3 caracteres';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Tipo de cuenta
-          _buildTipoCuentaDropdown(),
-          const SizedBox(height: 16),
-
-          // Número de cuenta
-          _buildTextField(
-            controller: _numeroCuentaController,
-            label: 'Número de cuenta',
-            hint: 'Ej: 1234567890',
-            icon: Icons.numbers,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(20),
-            ],
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'El número de cuenta es requerido';
-              }
-              if (value.length < 8) {
-                return 'El número debe tener al menos 8 dígitos';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Titular
-          _buildTextField(
-            controller: _titularController,
-            label: 'Titular de la cuenta',
-            hint: 'Ej: Juan Pérez',
-            icon: Icons.person,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'El nombre del titular es requerido';
-              }
-              if (value.length < 3) {
-                return 'El nombre debe tener al menos 3 caracteres';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Cédula del titular
-          _buildTextField(
-            controller: _cedulaTitularController,
-            label: 'Cédula del titular',
-            hint: 'Ej: 1234567890',
-            icon: Icons.badge,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(10),
-            ],
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'La cédula es requerida';
-              }
-              if (value.length != 10) {
-                return 'La cédula debe tener 10 dígitos';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 32),
-
-          // Botones
-          Row(
+          CupertinoFormSection.insetGrouped(
+            header: const Text('INFORMACIÓN BANCARIA'),
             children: [
-              if (_modoEdicion && _datosActuales?.estanCompletos == true)
-                Expanded(
-                  child: OutlinedButton(
+              CupertinoTextFormFieldRow(
+                controller: _bancoNombreController,
+                prefix: const Icon(
+                  CupertinoIcons.building_2_fill,
+                  color: CupertinoColors.systemGrey,
+                ),
+                placeholder: 'Nombre del banco',
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Requerido';
+                  if (value.length < 3) return 'Mín. 3 caracteres';
+                  return null;
+                },
+              ),
+              GestureDetector(
+                onTap: _mostrarSelectorTipoCuenta,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        CupertinoIcons.creditcard_fill,
+                        color: CupertinoColors.systemGrey,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _tipoCuentaSeleccionada == null
+                              ? 'Tipo de cuenta'
+                              : _tiposCuenta.firstWhere(
+                                  (e) => e['value'] == _tipoCuentaSeleccionada,
+                                )['label']!,
+                          style: TextStyle(
+                            fontSize: 17,
+                            color: _tipoCuentaSeleccionada == null
+                                ? CupertinoColors.placeholderText
+                                : _textPrimary,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        CupertinoIcons.chevron_up_chevron_down,
+                        size: 16,
+                        color: CupertinoColors.systemGrey2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              CupertinoTextFormFieldRow(
+                controller: _numeroCuentaController,
+                prefix: const Icon(
+                  CupertinoIcons.number,
+                  color: CupertinoColors.systemGrey,
+                ),
+                placeholder: 'Número de cuenta',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(20),
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Requerido';
+                  if (value.length < 8) return 'Mín. 8 dígitos';
+                  return null;
+                },
+              ),
+            ],
+          ),
+          CupertinoFormSection.insetGrouped(
+            header: const Text('TITULAR'),
+            children: [
+              CupertinoTextFormFieldRow(
+                controller: _titularController,
+                prefix: const Icon(
+                  CupertinoIcons.person_solid,
+                  color: CupertinoColors.systemGrey,
+                ),
+                placeholder: 'Nombre del titular',
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Requerido';
+                  if (value.length < 3) return 'Mín. 3 caracteres';
+                  return null;
+                },
+              ),
+              CupertinoTextFormFieldRow(
+                controller: _cedulaTitularController,
+                prefix: const Icon(
+                  CupertinoIcons.person_badge_plus_fill,
+                  color: CupertinoColors.systemGrey,
+                ),
+                placeholder: 'Cédula / Documento',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Requerido';
+                  if (value.length != 10) return 'Debe tener 10 dígitos';
+                  return null;
+                },
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: CupertinoButton.filled(
+                    onPressed: _isSaving ? null : _guardarDatos,
+                    borderRadius: BorderRadius.circular(12),
+                    child: _isSaving
+                        ? const CupertinoActivityIndicator(color: Colors.white)
+                        : Text(_modoEdicion ? 'Actualizar' : 'Guardar'),
+                  ),
+                ),
+                if (_modoEdicion && _datosActuales?.estanCompletos == true) ...[
+                  const SizedBox(height: 12),
+                  CupertinoButton(
                     onPressed: _isSaving
                         ? null
                         : () {
                             setState(() => _modoEdicion = false);
                             _cargarDatos();
                           },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Cancelar'),
-                  ),
-                ),
-              if (_modoEdicion && _datosActuales?.estanCompletos == true)
-                const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _guardarDatos,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: JPColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: _errorColor),
                     ),
                   ),
-                  child: _isSaving
-                      ? const CupertinoActivityIndicator(
-                          radius: 10,
-                          color: Colors.white,
-                        )
-                      : Text(
-                          _modoEdicion ? 'Actualizar' : 'Guardar',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ),
-            ],
+                ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVisualizacion() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+  void _mostrarSelectorTipoCuenta() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (_) => Container(
+        height: 280,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Datos de la cuenta',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: JPColors.textPrimary,
+            SizedBox(
+              height: 200,
+              child: CupertinoPicker(
+                itemExtent: 32,
+                onSelectedItemChanged: (index) {
+                  setState(() {
+                    _tipoCuentaSeleccionada = _tiposCuenta[index]['value'];
+                  });
+                },
+                children: _tiposCuenta.map((e) => Text(e['label']!)).toList(),
               ),
             ),
-            const Divider(height: 24),
-            _buildDatoRow('Banco', _datosActuales!.bancoNombre!),
-            _buildDatoRow('Tipo de cuenta',
-                _datosActuales!.tipoCuentaDisplay ?? _datosActuales!.bancoTipoCuenta!),
-            _buildDatoRow('Número de cuenta', _datosActuales!.bancoNumeroCuenta!),
-            _buildDatoRow('Titular', _datosActuales!.bancoTitular!),
-            _buildDatoRow('Cédula', _datosActuales!.bancoCedulaTitular!),
+            CupertinoButton(
+              child: const Text('Listo'),
+              onPressed: () => Navigator.pop(context),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDatoRow(String label, String value) {
+  Widget _buildVisualizacion() {
+    return Column(
+      children: [
+        CupertinoFormSection.insetGrouped(
+          header: const Text('CUENTA CONFIRMADA'),
+          children: [
+            _buildInfoRow('Banco', _datosActuales!.bancoNombre!),
+            _buildInfoRow(
+              'Tipo',
+              _datosActuales!.tipoCuentaDisplay ??
+                  _datosActuales!.bancoTipoCuenta!,
+            ),
+            _buildInfoRow('Número', _datosActuales!.bancoNumeroCuenta!),
+          ],
+        ),
+        CupertinoFormSection.insetGrouped(
+          header: const Text('TITULAR'),
+          children: [
+            _buildInfoRow('Nombre', _datosActuales!.bancoTitular!),
+            _buildInfoRow('Documento', _datosActuales!.bancoCedulaTitular!),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: JPColors.textSecondary,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: JPColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          Text(label, style: TextStyle(color: _textSecondary)),
+          Text(
+            value,
+            style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w500),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon, size: 20),
-        filled: true,
-        fillColor: Colors.grey[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-      ),
-      validator: validator,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-    );
-  }
-
-  Widget _buildTipoCuentaDropdown() {
-    return DropdownButtonFormField<String>(
-      initialValue: _tipoCuentaSeleccionada,
-      decoration: InputDecoration(
-        labelText: 'Tipo de cuenta',
-        prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-        filled: true,
-        fillColor: Colors.grey[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-      ),
-      items: _tiposCuenta.map((tipo) {
-        return DropdownMenuItem<String>(
-          value: tipo['value'],
-          child: Text(tipo['label']!),
-        );
-      }).toList(),
-      onChanged: (value) {
-        setState(() => _tipoCuentaSeleccionada = value);
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Selecciona un tipo de cuenta';
-        }
-        return null;
-      },
-    );
-  }
-
 }

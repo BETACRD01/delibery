@@ -32,12 +32,14 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7), // iOS Grouped Background
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       appBar: AppBar(
         title: Text('Reseñas de ${widget.productoNombre}'),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
+        backgroundColor: CupertinoColors.systemBackground.resolveFrom(context),
+        surfaceTintColor: CupertinoColors.systemBackground.resolveFrom(context),
       ),
       body: FutureBuilder<List<ResenaPreview>>(
         future: _futureReviews,
@@ -84,7 +86,7 @@ class _ReviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(

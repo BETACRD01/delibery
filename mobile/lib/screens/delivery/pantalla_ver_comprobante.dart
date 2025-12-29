@@ -3,20 +3,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../theme/jp_theme.dart' hide JPSnackbar;
 import '../../apis/helpers/api_exception.dart';
 import '../../services/pago/pago_service.dart';
 import '../../models/pago_model.dart';
-import '../../widgets/jp_snackbar.dart';
 
 /// Pantalla para que el repartidor vea el comprobante de transferencia
 class PantallaVerComprobante extends StatefulWidget {
   final int pagoId;
 
-  const PantallaVerComprobante({
-    super.key,
-    required this.pagoId,
-  });
+  const PantallaVerComprobante({super.key, required this.pagoId});
 
   @override
   State<PantallaVerComprobante> createState() => _PantallaVerComprobanteState();
@@ -30,6 +25,19 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
   bool _marcandoVisto = false;
   String? _error;
   bool _comprobantePendiente = false;
+
+  static const Color _success = Color(0xFF34C759);
+  static const Color _errorColor = Color(0xFFFF3B30);
+  static const Color _warningColor = Color(0xFFFF9500);
+
+  // Dynamic Colors
+  Color get _surface =>
+      CupertinoColors.systemGroupedBackground.resolveFrom(context);
+  Color get _cardBg =>
+      CupertinoColors.secondarySystemGroupedBackground.resolveFrom(context);
+  Color get _textPrimary => CupertinoColors.label.resolveFrom(context);
+  Color get _textSecondary =>
+      CupertinoColors.secondaryLabel.resolveFrom(context);
 
   @override
   void initState() {
@@ -46,11 +54,13 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
 
     try {
       final comprobante = await _pagoService.verComprobante(widget.pagoId);
+      if (!mounted) return;
       setState(() {
         _comprobante = comprobante;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       if (e is ApiException &&
           e.statusCode == 400 &&
           e.getUserFriendlyMessage().contains('aún no está disponible')) {
@@ -62,7 +72,8 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
         return;
       }
       setState(() {
-        _error = 'Error al cargar comprobante: ${e is ApiException ? e.getUserFriendlyMessage() : e}';
+        _error =
+            'Error al cargar comprobante: ${e is ApiException ? e.getUserFriendlyMessage() : e}';
         _isLoading = false;
       });
     }
@@ -74,13 +85,20 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
     try {
       await _pagoService.marcarComprobanteVisto(widget.pagoId);
       if (mounted) {
-        JPSnackbar.success(context, 'Comprobante marcado como visto');
+        _mostrarToast(
+          'Comprobante marcado como visto',
+          icono: CupertinoIcons.checkmark_circle_fill,
+        );
         // Recargar para actualizar la fecha de visualización
         await _cargarComprobante();
       }
     } catch (e) {
       if (mounted) {
-        JPSnackbar.error(context, 'Error al marcar como visto: $e');
+        _mostrarToast(
+          'Error al marcar como visto',
+          color: _errorColor,
+          icono: CupertinoIcons.exclamationmark_circle_fill,
+        );
       }
     } finally {
       if (mounted) {
@@ -89,130 +107,202 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
     }
   }
 
+  void _mostrarToast(String mensaje, {IconData? icono, Color? color}) {
+    if (!mounted) return;
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 50,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 300),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: color ?? _success,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icono != null) ...[
+                    Icon(icono, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Flexible(
+                    child: Text(
+                      mensaje,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
-      appBar: AppBar(
-        title: const Text(
-          'Comprobante',
-          style: TextStyle(fontWeight: FontWeight.w600),
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        navigationBar: CupertinoNavigationBar(
+          middle: const Text('Comprobante'),
+          backgroundColor: _cardBg,
+          border: const Border(
+            bottom: BorderSide(color: Color(0x4D000000), width: 0.0),
+          ),
         ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFFF2F2F7),
-        foregroundColor: Colors.black,
-        elevation: 0,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(child: _buildBody()),
+              _buildBottomBar(),
+            ],
+          ),
+        ),
       ),
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomBar(),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
-        child: CupertinoActivityIndicator(radius: 14),
-      );
+      return const Center(child: CupertinoActivityIndicator(radius: 14));
     }
 
     if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: JPColors.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: const TextStyle(color: JPColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _cargarComprobante,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: JPColors.primary,
-                foregroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                CupertinoIcons.exclamationmark_circle,
+                size: 64,
+                color: _errorColor,
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                style: TextStyle(color: _textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              CupertinoButton.filled(
+                onPressed: _cargarComprobante,
+                borderRadius: BorderRadius.circular(12),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_comprobantePendiente) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.hourglass_empty,
-              size: 64,
-              color: JPColors.warning,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'El comprobante aún no está disponible',
-              style: TextStyle(
-                color: JPColors.textSecondary,
-                fontWeight: FontWeight.w600,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                CupertinoIcons.hourglass,
+                size: 64,
+                color: _warningColor,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'El cliente todavía no ha subido el comprobante.',
-              style: TextStyle(color: JPColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _cargarComprobante,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: JPColors.primary,
-                foregroundColor: Colors.white,
+              const SizedBox(height: 16),
+              Text(
+                'Comprobante no disponible',
+                style: TextStyle(
+                  color: _textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'El cliente todavía no ha subido el comprobante de transferencia.',
+                style: TextStyle(color: _textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              CupertinoButton.filled(
+                onPressed: _cargarComprobante,
+                borderRadius: BorderRadius.circular(12),
+                child: const Text('Actualizar'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_comprobante == null) {
-      return const Center(
+      return Center(
         child: Text(
           'No se encontró el comprobante',
-          style: TextStyle(color: JPColors.textSecondary),
+          style: TextStyle(color: _textSecondary),
         ),
       );
     }
 
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionTitle('Cliente'),
-          // Info del cliente
           _buildInfoCard(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // Imagen del comprobante
           _buildSectionTitle('Comprobante'),
           if (_comprobante!.comprobanteUrl != null) _buildComprobanteImage(),
           if (_comprobante!.comprobanteUrl == null) _buildNoComprobanteCard(),
 
           const SizedBox(height: 20),
 
-          // Estado de visualización
           if (_comprobante!.fechaVisualizacionRepartidor != null)
             _buildVisualizacionCard(),
         ],
@@ -222,14 +312,14 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Text(
         title.toUpperCase(),
         style: const TextStyle(
           fontSize: 12,
-          letterSpacing: 1.2,
+          letterSpacing: 1.0,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF8E8E93),
+          color: CupertinoColors.secondaryLabel,
         ),
       ),
     );
@@ -239,49 +329,46 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF1F4),
+              color: CupertinoColors.systemGroupedBackground,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
-              Icons.person,
-              color: Color(0xFF1C1C1E),
-              size: 22,
+              CupertinoIcons.person_fill,
+              color: CupertinoColors.black,
+              size: 24,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Cliente',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8E8E93),
-                  ),
+                  style: TextStyle(fontSize: 13, color: _textSecondary),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _comprobante!.clienteNombre ?? 'Sin nombre',
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1C1C1E),
+                    color: _textPrimary,
                   ),
                 ),
               ],
@@ -295,12 +382,12 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
   Widget _buildComprobanteImage() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
             offset: const Offset(0, 8),
           ),
         ],
@@ -309,22 +396,26 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
         borderRadius: BorderRadius.circular(16),
         child: GestureDetector(
           onTap: () => _mostrarImagenCompleta(_comprobante!.comprobanteUrl!),
-          child: CachedNetworkImage(
-            imageUrl: _comprobante!.comprobanteUrl!,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            placeholder: (context, url) => Container(
-              height: 320,
-              color: const Color(0xFFEFF1F4),
-              child: const Center(
-                child: CupertinoActivityIndicator(radius: 14),
+          child: AspectRatio(
+            aspectRatio:
+                3 / 4, // Aspect ratio fijo para mejor consistencia visual
+            child: CachedNetworkImage(
+              imageUrl: _comprobante!.comprobanteUrl!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              placeholder: (context, url) => Container(
+                color: CupertinoColors.systemGroupedBackground,
+                child: const Center(child: CupertinoActivityIndicator()),
               ),
-            ),
-            errorWidget: (context, url, error) => Container(
-              height: 320,
-              color: const Color(0xFFEFF1F4),
-              child: const Center(
-                child: Icon(Icons.error, color: JPColors.error, size: 48),
+              errorWidget: (context, url, error) => Container(
+                color: CupertinoColors.systemGroupedBackground,
+                child: const Center(
+                  child: Icon(
+                    CupertinoIcons.exclamationmark_circle,
+                    color: _errorColor,
+                    size: 48,
+                  ),
+                ),
               ),
             ),
           ),
@@ -336,36 +427,33 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
   Widget _buildNoComprobanteCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: CupertinoColors.systemGrey4),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(
-            Icons.receipt_long_outlined,
+            CupertinoIcons.doc_text_search,
             size: 56,
-            color: Color(0xFF8E8E93),
+            color: CupertinoColors.systemGrey,
           ),
-          const SizedBox(height: 12),
-          const Text(
+          const SizedBox(height: 16),
+          Text(
             'Comprobante no disponible',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1C1C1E),
+              color: _textPrimary,
             ),
           ),
-          const SizedBox(height: 6),
-          const Text(
+          const SizedBox(height: 8),
+          Text(
             'El cliente aún no ha subido el comprobante de transferencia',
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF8E8E93),
-            ),
+            style: TextStyle(fontSize: 14, color: _textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
@@ -376,15 +464,19 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
   Widget _buildVisualizacionCard() {
     final fecha = _comprobante!.fechaVisualizacionRepartidor;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE7F7EE),
+        color: _success.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFBFE9CF)),
+        border: Border.all(color: _success.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 20),
+          const Icon(
+            CupertinoIcons.checkmark_seal_fill,
+            color: _success,
+            size: 24,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -393,17 +485,17 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
                 const Text(
                   'Comprobante visto',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2E7D32),
+                    color: _success,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Visto el ${_formatearFecha(fecha!)}',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: const Color(0xFF2E7D32).withValues(alpha: 0.8),
+                    fontSize: 13,
+                    color: _success.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -414,48 +506,28 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
     );
   }
 
-  Widget? _buildBottomBar() {
+  Widget _buildBottomBar() {
     if (_comprobante == null || _comprobante!.comprobanteUrl == null) {
-      return null;
+      return const SizedBox.shrink();
     }
 
     // Si ya fue visto, no mostrar el botón
     if (_comprobante!.fechaVisualizacionRepartidor != null) {
-      return null;
+      return const SizedBox.shrink();
     }
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-        child: ElevatedButton(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      child: SizedBox(
+        width: double.infinity,
+        child: CupertinoButton.filled(
           onPressed: _marcandoVisto ? null : _marcarComoVisto,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF34C759),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
+          borderRadius: BorderRadius.circular(14),
           child: _marcandoVisto
-              ? const CupertinoActivityIndicator(
-                  radius: 10,
-                  color: Colors.white,
-                )
-              : const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
-                      'Marcar como visto',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+              ? const CupertinoActivityIndicator(color: Colors.white)
+              : const Text(
+                  'Marcar como visto',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
         ),
       ),
@@ -463,36 +535,48 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
   }
 
   void _mostrarImagenCompleta(String url) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Stack(
-          children: [
-            Center(
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (BuildContext context, _, _) {
+          return CupertinoPageScaffold(
+            backgroundColor: Colors.black,
+            navigationBar: CupertinoNavigationBar(
+              backgroundColor: Colors.black.withValues(alpha: 0.5),
+              middle: const Text(
+                'Vista previa',
+                style: TextStyle(color: Colors.white),
+              ),
+              leading: CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: const Icon(CupertinoIcons.xmark, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            child: Center(
               child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
                 child: CachedNetworkImage(
                   imageUrl: url,
-                  placeholder: (context, url) => const CupertinoActivityIndicator(radius: 14),
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
+                  placeholder: (context, url) =>
+                      const CupertinoActivityIndicator(
+                        color: Colors.white,
+                        radius: 20,
+                      ),
                   errorWidget: (context, url, error) => const Icon(
-                    Icons.error,
+                    CupertinoIcons.exclamationmark_triangle_fill,
                     color: Colors.white,
-                    size: 48,
+                    size: 64,
                   ),
                 ),
               ),
             ),
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 32),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

@@ -134,7 +134,12 @@ class AuthService {
   Future<void> logout() async {
     try {
       _log('Cerrando sesión...');
-      await _authApi.logout(_client.refreshToken);
+      await _authApi
+          .logout(_client.refreshToken)
+          .timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => {'message': 'Timeout'},
+          );
     } catch (e) {
       _log('Advertencia logout: $e');
     } finally {
@@ -162,6 +167,12 @@ class AuthService {
 
   Future<Map<String, dynamic>> actualizarPerfil(Map<String, dynamic> data) =>
       _authApi.actualizarPerfil(data);
+
+  Future<Map<String, dynamic>> actualizarFotoPerfil(dynamic imagen) {
+    // Acepta File de dart:io
+    // Si usas image_picker, obtienes un XFile, conviértelo a File antes de llamar aquí
+    return _authApi.actualizarFotoPerfil(imagen);
+  }
 
   Future<Map<String, dynamic>> getInfoRol() => _authApi.getInfoRol();
 

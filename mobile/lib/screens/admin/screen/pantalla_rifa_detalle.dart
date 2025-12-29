@@ -3,10 +3,13 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../apis/admin/rifas_admin_api.dart';
 import '../../../config/api_config.dart';
+import '../../../providers/theme_provider.dart';
+import '../../../theme/app_colors_primary.dart';
 import '../dashboard/constants/dashboard_colors.dart';
 
 class PantallaRifaDetalle extends StatefulWidget {
@@ -84,7 +87,10 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
   }
 
   Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
     if (picked != null) {
       setState(() => _nuevaImagen = File(picked.path));
     }
@@ -103,9 +109,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rifa actualizada correctamente'), backgroundColor: DashboardColors.verde),
-        );
+        _mostrarMensajeExito('Rifa actualizada correctamente');
         setState(() {
           _editando = false;
           _nuevaImagen = null;
@@ -114,9 +118,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al actualizar rifa'), backgroundColor: DashboardColors.rojo),
-        );
+        _mostrarError('Error al actualizar rifa');
       }
     }
   }
@@ -124,16 +126,21 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
   Future<void> _eliminarRifa() async {
     if (_rifa == null) return;
 
-    final confirmar = await showDialog<bool>(
+    final confirmar = await showCupertinoDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text('Eliminar rifa'),
-        content: const Text('¿Seguro que deseas eliminar esta rifa? Esta acción no se puede deshacer.'),
+        content: const Text(
+          '¿Seguro que deseas eliminar esta rifa? Esta acción no se puede deshacer.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          ElevatedButton(
+          CupertinoDialogAction(
+            child: const Text('Cancelar'),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: DashboardColors.rojo),
             child: const Text('Eliminar'),
           ),
         ],
@@ -145,37 +152,40 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
     try {
       await _api.eliminarRifa(widget.rifaId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rifa eliminada'), backgroundColor: DashboardColors.verde),
-        );
+        _mostrarMensajeExito('Rifa eliminada');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al eliminar rifa: ${e.toString()}'), backgroundColor: DashboardColors.rojo),
-        );
+        _mostrarError('Error al eliminar rifa: ${e.toString()}');
       }
     }
   }
 
   Future<void> _realizarSorteo() async {
     final requiereAdvertencia = _requiereAdvertenciaSorteo();
-    final confirmar = await showDialog<bool>(
+    final confirmar = await showCupertinoDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(requiereAdvertencia ? 'Sorteo anticipado' : 'Realizar sorteo'),
+      builder: (context) => CupertinoAlertDialog(
+        title: Text(
+          requiereAdvertencia ? 'Sorteo anticipado' : 'Realizar sorteo',
+        ),
         content: Text(
           requiereAdvertencia
               ? 'La rifa aún no termina. Si sorteas ahora, podrías dejar usuarios sin participar.\n\n¿Deseas forzar el sorteo?'
               : '¿Estás seguro de realizar el sorteo ahora? Esta acción no se puede deshacer.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          ElevatedButton(
+          CupertinoDialogAction(
+            child: const Text('Cancelar'),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: DashboardColors.verde),
-            child: Text(requiereAdvertencia ? 'Forzar sorteo' : 'Realizar sorteo'),
+            child: Text(
+              requiereAdvertencia ? 'Forzar sorteo' : 'Realizar sorteo',
+            ),
           ),
         ],
       ),
@@ -191,90 +201,90 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
 
       if (mounted) {
         final premiosGanados = resultado['premios_ganados'] as List<dynamic>?;
-        final ganadores = premiosGanados?.where((p) => p['ganador'] != null).toList() ?? [];
+        final ganadores =
+            premiosGanados?.where((p) => p['ganador'] != null).toList() ?? [];
 
-        await showDialog(
+        await showCupertinoDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Row(
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('¡Sorteo realizado!'),
+            content: Column(
               children: [
-                Icon(Icons.emoji_events, color: Colors.amber, size: 32),
-                SizedBox(width: 8),
-                Text('¡Sorteo realizado!'),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Icon(
+                    Icons.emoji_events,
+                    color: Colors.amber,
+                    size: 40,
+                  ),
+                ),
+                if (ganadores.isEmpty)
+                  const Text('No hubo participantes elegibles')
+                else
+                  ...ganadores.map((premio) {
+                    final ganador = premio['ganador'];
+                    final posicion = premio['posicion'];
+                    final telefono = (ganador['celular'] ?? '').toString();
+                    final email = (ganador['email'] ?? '').toString();
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _getNombrePosicion(posicion),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '${ganador['first_name']} ${ganador['last_name']}',
+                          ),
+                          Text(
+                            email,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          // Simple text buttons or icons for contact
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (telefono.isNotEmpty)
+                                CupertinoButton(
+                                  padding: EdgeInsets.zero,
+                                  child: const Icon(
+                                    CupertinoIcons.chat_bubble_text,
+                                  ),
+                                  onPressed: () => _abrirWhatsApp(telefono),
+                                ),
+                              if (email.isNotEmpty)
+                                CupertinoButton(
+                                  padding: EdgeInsets.zero,
+                                  child: const Icon(CupertinoIcons.mail),
+                                  onPressed: () => _abrirCorreo(email),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
               ],
             ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (ganadores.isEmpty)
-                    const Text('No hubo participantes elegibles')
-                  else
-                    ...ganadores.map((premio) {
-                      final ganador = premio['ganador'];
-                      final posicion = premio['posicion'];
-                      final telefono = (ganador['celular'] ?? '').toString();
-                      final telefonoVisible =
-                          telefono.isEmpty ? 'Sin celular' : telefono;
-                      final email = (ganador['email'] ?? '').toString();
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_getNombrePosicion(posicion), style: const TextStyle(fontWeight: FontWeight.bold)),
-                            Text('${ganador['first_name']} ${ganador['last_name']}'),
-                            Text(email, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    telefonoVisible,
-                                    style: TextStyle(
-                                      color: Colors.grey[700],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: telefono.isEmpty
-                                      ? null
-                                      : () => _abrirWhatsApp(telefono),
-                                  icon: const Icon(Icons.chat),
-                                  tooltip: 'Contactar por WhatsApp',
-                                ),
-                                IconButton(
-                                  onPressed:
-                                      email.isEmpty ? null : () => _abrirCorreo(email),
-                                  icon: const Icon(Icons.email),
-                                  tooltip: 'Enviar correo',
-                                ),
-                                IconButton(
-                                  onPressed: () => _mostrarContactoGanador(ganador),
-                                  icon: const Icon(Icons.info_outline),
-                                  tooltip: 'Ver contacto',
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                ],
+            actions: [
+              CupertinoDialogAction(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
               ),
-            ),
-            actions: [ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar'))],
+            ],
           ),
         );
         await _cargarDetalle();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al realizar sorteo: ${e.toString()}'), backgroundColor: DashboardColors.rojo),
-        );
+        _mostrarError('Error al realizar sorteo: ${e.toString()}');
       }
     }
   }
@@ -295,46 +305,28 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
   Future<void> _abrirWhatsApp(String telefono) async {
     final numero = telefono.replaceAll(RegExp(r'\D'), '');
     if (numero.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Número de celular inválido')),
-        );
-      }
+      _mostrarError('Número de celular inválido');
       return;
     }
 
     final uri = Uri.parse('https://wa.me/$numero');
-    final opened = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir WhatsApp')),
-      );
+      _mostrarError('No se pudo abrir WhatsApp');
     }
   }
 
   Future<void> _abrirCorreo(String email) async {
     final correo = email.trim();
     if (correo.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Correo inválido')),
-        );
-      }
+      _mostrarError('Correo inválido');
       return;
     }
 
     final uri = Uri.parse('mailto:$correo');
-    final opened = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir el correo')),
-      );
+      _mostrarError('No se pudo abrir el correo');
     }
   }
 
@@ -358,7 +350,10 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
             children: [
               Text(
                 nombre.isEmpty ? 'Ganador' : nombre,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 12),
               if (email.isNotEmpty)
@@ -395,8 +390,9 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed:
-                          email.isEmpty ? null : () => _abrirCorreo(email),
+                      onPressed: email.isEmpty
+                          ? null
+                          : () => _abrirCorreo(email),
                       icon: const Icon(Icons.email),
                       label: const Text('Correo'),
                     ),
@@ -407,6 +403,26 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
           ),
         );
       },
+    );
+  }
+
+  void _mostrarMensajeExito(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: AppColorsPrimary.main,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _mostrarError(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -453,101 +469,92 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
     }
   }
 
-  Widget _buildBody(BuildContext context) {
+  String _formatFecha(dynamic fecha) {
+    if (fecha == null) return 'N/A';
+    try {
+      final dt = DateTime.parse(fecha.toString()).toLocal();
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (e) {
+      return fecha.toString();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final bgColor = isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7);
+    final primaryColor = AppColorsPrimary.main;
+
     if (_cargando) {
-      return const Center(child: CupertinoActivityIndicator(radius: 16));
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: const Center(child: CupertinoActivityIndicator()),
+      );
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: DashboardColors.rojo),
-            const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 16),
-            CupertinoButton.filled(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              onPressed: _cargarDetalle,
-              child: const Text('Reintentar'),
-            ),
-          ],
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: DashboardColors.rojo,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 16),
+              CupertinoButton.filled(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                onPressed: _cargarDetalle,
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_rifa == null) {
-      return const Center(child: Text('Rifa no encontrada'));
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: const Center(child: Text('Rifa no encontrada')),
+      );
     }
 
-    final isIOS = Platform.isIOS;
-
-    return CustomScrollView(
-      physics: isIOS ? const BouncingScrollPhysics() : const ClampingScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), child: _buildHeroSection(context)),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              _buildInfoSection(context),
-              const SizedBox(height: 16),
-              _buildPremios(context),
-              const SizedBox(height: 16),
-              _buildEstadisticas(context),
-              const SizedBox(height: 16),
-              _buildParticipantes(context),
-            ]),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeroSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildImagenSection(context),
-        const SizedBox(height: 12),
-        Align(alignment: Alignment.centerLeft, child: _buildEstadoChip()),
-      ],
-    );
-  }
-
-  Widget _buildInfoSection(BuildContext context) {
-    return _editando ? _buildFormularioEdicion(context) : _buildInformacionBasica(context);
-  }
-
-  Widget _buildCardSection(BuildContext context, {required Widget child}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: CupertinoColors.systemGrey5, width: 0.9),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 8))],
-      ),
-      child: child,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('Detalle de rifa'),
+        title: const Text('Detalle de Rifa'),
+        backgroundColor: bgColor,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.black87),
-        backgroundColor: CupertinoColors.systemGroupedBackground,
-        foregroundColor: Colors.black87,
         elevation: 0,
+        titleTextStyle: TextStyle(
+          color: isDark ? Colors.white : Colors.black,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new, color: primaryColor),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         actions: [
           if (_rifa != null && _rifa!['estado'] == 'activa' && !_editando)
             PopupMenuButton<String>(
+              icon: Icon(Icons.more_horiz, color: primaryColor),
               onSelected: (value) {
                 switch (value) {
                   case 'editar':
@@ -562,191 +569,120 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(value: 'editar', child: Text('Editar información básica')),
-                const PopupMenuItem(value: 'sortear', child: Text('Realizar sorteo')),
+                const PopupMenuItem(
+                  value: 'editar',
+                  child: Text('Editar información'),
+                ),
+                const PopupMenuItem(
+                  value: 'sortear',
+                  child: Text('Realizar sorteo'),
+                ),
+                const PopupMenuItem(
+                  value: 'eliminar',
+                  child: Text('Eliminar', style: TextStyle(color: Colors.red)),
+                ),
               ],
             ),
           if (_rifa != null &&
-              (_rifa!['estado'] == 'finalizada' || _rifa!['estado'] == 'cancelada') &&
+              (_rifa!['estado'] == 'finalizada' ||
+                  _rifa!['estado'] == 'cancelada') &&
               !_editando)
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'eliminar') {
-                  _eliminarRifa();
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'eliminar', child: Text('Eliminar rifa')),
-              ],
+            IconButton(
+              onPressed: _eliminarRifa,
+              icon: const Icon(CupertinoIcons.trash, color: Colors.red),
             ),
         ],
       ),
-      body: _buildBody(context),
-    );
-  }
-
-  Widget _buildImagenSection(BuildContext context) {
-    final heroImage = _resolveImageUrl(_rifa!['imagen_url']) ??
-        _resolveImageUrl(_rifa!['imagen']) ??
-        _resolveImageUrl(_rifa!['imagen_principal']) ??
-        _resolveImageUrl(_rifa!['imagen_portada']);
-    Widget imageChild;
-
-    if (_nuevaImagen != null) {
-      imageChild = Image.file(_nuevaImagen!, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
-    } else if (heroImage != null) {
-      imageChild = Image.network(
-        heroImage.startsWith('http') ? heroImage : '${ApiConfig.baseUrl}$heroImage',
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(color: CupertinoColors.systemGrey5);
-        },
-        errorBuilder: (context, error, stackTrace) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.image_not_supported, size: 48, color: CupertinoColors.systemGrey),
-              SizedBox(height: 8),
-              Text('Imagen no disponible', style: TextStyle(color: CupertinoColors.systemGrey)),
-            ],
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: _buildHeroSection(isDark, primaryColor),
+            ),
           ),
-        ),
-      );
-    } else {
-      imageChild = const Center(child: Icon(Icons.image, size: 48, color: CupertinoColors.systemGrey));
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        height: 220,
-        decoration: BoxDecoration(color: CupertinoColors.systemGrey5),
-        clipBehavior: Clip.hardEdge,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned.fill(child: imageChild),
-            Positioned(
-              bottom: 0,
-              height: 120,
-              left: 0,
-              right: 0, 
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.5)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildInfoSection(isDark),
+                const SizedBox(height: 16),
+                _buildPremios(context),
+                const SizedBox(height: 16),
+                _buildEstadisticas(context),
+                const SizedBox(height: 16),
+                _buildParticipantes(context),
+              ]),
             ),
-            if (_editando)
-              Positioned(
-                bottom: 16,
-                right: 16,
-                child: CupertinoButton.filled(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  onPressed: _pickImage,
-                  child: const Text('Cambiar imagen'),
-                ),
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEstadoChip() {
-    final estado = _rifa!['estado'] ?? '';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(color: _colorEstado(estado), borderRadius: BorderRadius.circular(20)),
-      child: Text(
-        _nombreEstado(estado),
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      ),
+  Widget _buildHeroSection(bool isDark, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildImagenSection(primaryColor),
+        const SizedBox(height: 12),
+        Align(alignment: Alignment.centerLeft, child: _buildEstadoChip()),
+      ],
     );
   }
 
-  Widget _buildInformacionBasica(BuildContext context) {
+  Widget _buildInfoSection(bool isDark) {
+    return _editando
+        ? _buildFormularioEdicion(isDark)
+        : _buildInformacionBasica(isDark);
+  }
+
+  Widget _buildFormularioEdicion(bool isDark) {
     return _buildCardSection(
-      context,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_rifa!['titulo'] ?? 'Sin título', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Text(
-              _rifa!['descripcion'] ?? 'Sin descripción',
-              style: TextStyle(fontSize: 16, color: CupertinoColors.systemGrey),
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.checklist, 'Pedidos mínimos', '${_rifa!['pedidos_minimos'] ?? 3}'),
-            _buildInfoRow(Icons.calendar_today, 'Fecha inicio', _formatFecha(_rifa!['fecha_inicio'])),
-            _buildInfoRow(Icons.event, 'Fecha fin', _formatFecha(_rifa!['fecha_fin'])),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFormularioEdicion(BuildContext context) {
-    const border = OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-      borderSide: BorderSide(color: CupertinoColors.systemGrey4),
-    );
-
-    return _buildCardSection(
-      context,
+      isDark,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(
+            CupertinoTextField(
               controller: _tituloCtrl,
-              decoration: InputDecoration(
-                labelText: 'Título',
-                border: border,
-                enabledBorder: border,
-                focusedBorder: border,
-                prefixIcon: const Icon(Icons.title),
-                filled: true,
-                fillColor: CupertinoColors.systemGrey6,
+              placeholder: 'Título',
+              prefix: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(
+                  Icons.title,
+                  size: 20,
+                  color: CupertinoColors.systemGrey,
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
+            CupertinoTextField(
               controller: _descripcionCtrl,
+              placeholder: 'Descripción',
               maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Descripción',
-                border: border,
-                enabledBorder: border,
-                focusedBorder: border,
-                prefixIcon: const Icon(Icons.notes),
-                filled: true,
-                fillColor: CupertinoColors.systemGrey6,
+              prefix: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(
+                  Icons.notes,
+                  size: 20,
+                  color: CupertinoColors.systemGrey,
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
+            CupertinoTextField(
               controller: _pedidosMinCtrl,
+              placeholder: 'Pedidos mínimos',
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Pedidos mínimos',
-                border: border,
-                enabledBorder: border,
-                focusedBorder: border,
-                prefixIcon: const Icon(Icons.checklist),
-                filled: true,
-                fillColor: CupertinoColors.systemGrey6,
+              prefix: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(
+                  Icons.checklist,
+                  size: 20,
+                  color: CupertinoColors.systemGrey,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -754,7 +690,7 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
               children: [
                 Expanded(
                   child: CupertinoButton(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 0),
                     color: CupertinoColors.systemGrey5,
                     onPressed: () {
                       setState(() {
@@ -763,13 +699,16 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
                       });
                       _cargarDetalle();
                     },
-                    child: const Text('Cancelar'),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.black),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: CupertinoButton.filled(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 0),
                     onPressed: _guardarCambios,
                     child: const Text('Guardar'),
                   ),
@@ -782,19 +721,166 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildCardSection(bool isDark, {required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildImagenSection(Color primaryColor) {
+    final heroImage =
+        _resolveImageUrl(_rifa!['imagen_url']) ??
+        _resolveImageUrl(_rifa!['imagen']) ??
+        _resolveImageUrl(_rifa!['imagen_principal']) ??
+        _resolveImageUrl(_rifa!['imagen_portada']);
+    Widget imageChild;
+
+    if (_nuevaImagen != null) {
+      imageChild = Image.file(
+        _nuevaImagen!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    } else if (heroImage != null) {
+      imageChild = Image.network(
+        heroImage.startsWith('http')
+            ? heroImage
+            : '${ApiConfig.baseUrl}$heroImage',
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) =>
+            const Center(child: Icon(Icons.broken_image, size: 40)),
+      );
+    } else {
+      imageChild = const Center(
+        child: Icon(Icons.image, size: 48, color: CupertinoColors.systemGrey),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 200,
+        decoration: const BoxDecoration(color: CupertinoColors.systemGrey5),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            imageChild,
+            if (_editando)
+              Container(
+                color: Colors.black.withValues(alpha: 0.3),
+                child: Center(
+                  child: CupertinoButton.filled(
+                    onPressed: _pickImage,
+                    child: const Text('Cambiar Foto'),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _resolveImageUrl(dynamic url) {
+    if (url == null || url.toString().isEmpty) return null;
+    return url.toString();
+  }
+
+  Widget _buildEstadoChip() {
+    final estado = _rifa!['estado'] ?? '';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: _colorEstado(estado),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        _nombreEstado(estado),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInformacionBasica(bool isDark) {
+    final textColor = isDark ? Colors.white : Colors.black;
+    return _buildCardSection(
+      isDark,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _rifa!['titulo'] ?? 'Sin título',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _rifa!['descripcion'] ?? 'Sin descripción',
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildInfoRow(
+              Icons.checklist,
+              'Pedidos mínimos',
+              '${_rifa!['pedidos_minimos'] ?? 3}',
+              isDark,
+            ),
+            _buildInfoRow(
+              Icons.calendar_today,
+              'Fecha inicio',
+              _formatFecha(_rifa!['fecha_inicio']),
+              isDark,
+            ),
+            _buildInfoRow(
+              Icons.event,
+              'Fecha fin',
+              _formatFecha(_rifa!['fecha_fin']),
+              isDark,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: DashboardColors.morado),
+          Icon(icon, size: 18, color: AppColorsPrimary.main),
           const SizedBox(width: 8),
           Text(
             '$label: ',
-            style: TextStyle(fontWeight: FontWeight.bold, color: CupertinoColors.systemGrey),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.grey[400] : Colors.grey[700],
+            ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(color: CupertinoColors.label)),
+            child: Text(
+              value,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            ),
           ),
         ],
       ),
@@ -802,305 +888,225 @@ class _PantallaRifaDetalleState extends State<PantallaRifaDetalle> {
   }
 
   Widget _buildPremios(BuildContext context) {
-    final premios = (_rifa!['premios'] as List<dynamic>?) ?? [];
+    // Note: Assuming API returns 'premios' list in rifa details or we have to use local state if not.
+    // Based on `PantallaCrearRifa`, prizes are part of the raffle data.
+    // If detail API doesn't return prizes formatted as expected, we might need to adjust.
+    // For now, let's assume `_rifa!['premios']` exists.
 
-    return _buildCardSection(
-      context,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Premios', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: DashboardColors.morado.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${premios.length} premio${premios.length != 1 ? 's' : ''}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: DashboardColors.morado),
-                  ),
-                ),
-              ],
+    final premios = _rifa!['premios'] as List<dynamic>? ?? [];
+    if (premios.isEmpty) return const SizedBox.shrink();
+
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'PREMIOS',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
             ),
-            const SizedBox(height: 14),
-            if (premios.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text(
-                    'No hay premios configurados.\nConfigúralos desde el admin de Django.',
-                    style: TextStyle(color: CupertinoColors.systemGrey),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              )
-            else
-              Column(
-                children: premios.map((premio) {
-                  final ganador = premio['ganador'];
-                  final posicion = premio['posicion'];
-                  final descripcion = premio['descripcion'] ?? 'Sin descripción';
-                  final imagen = premio['imagen_url'] ?? premio['imagen'];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.systemGrey6,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: CupertinoColors.systemGrey5, width: 0.9),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildPremioThumbnail(imagen),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Premio ${posicion ?? 'N/A'}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                descripcion,
-                                style: const TextStyle(color: CupertinoColors.systemGrey),
-                              ),
-                              if (ganador != null) ...[
-                                const SizedBox(height: 8),
-                                InkWell(
-                                  onTap: () => _mostrarContactoGanador(
-                                    ganador as Map<String, dynamic>,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(CupertinoIcons.person_alt_circle, size: 16, color: DashboardColors.verde),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          '${ganador['first_name']} ${ganador['last_name']}',
-                                          style: const TextStyle(color: CupertinoColors.label, fontWeight: FontWeight.w600),
-                                        ),
-                                      ),
-                                      const Icon(Icons.info_outline, size: 18, color: CupertinoColors.systemGrey),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        if (ganador != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: DashboardColors.verde.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'Ganador',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: DashboardColors.verde),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+          ),
+        ),
+        ...premios.map((p) => _buildPremioCard(p, isDark)),
+      ],
+    );
+  }
+
+  Widget _buildPremioCard(dynamic premio, bool isDark) {
+    final descripcion = premio['descripcion'] ?? 'Sin descripción';
+    final posicion = premio['posicion'] ?? 0;
+    final imagenUrl = _resolveImageUrl(
+      premio['imagen'] ?? premio['imagen_url'],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColorsPrimary.main.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
+              alignment: Alignment.center,
+              child: Text(
+                '$posicion°',
+                style: TextStyle(
+                  color: AppColorsPrimary.main,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    descripcion,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  if (imagenUrl != null) ...[
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(
+                        imagenUrl.startsWith('http')
+                            ? imagenUrl
+                            : '${ApiConfig.baseUrl}$imagenUrl',
+                        height: 60,
+                        width: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => const SizedBox(),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildPremioThumbnail(dynamic imagen) {
-    final resource = _resolveImageUrl(imagen);
-    final normalizedImageUrl =
-        resource != null ? (resource.startsWith('http') ? resource : '${ApiConfig.baseUrl}$resource') : null;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 64,
-        height: 64,
-        color: CupertinoColors.systemGrey5,
-        child: normalizedImageUrl != null
-            ? Image.network(
-                normalizedImageUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return const Center(child: CupertinoActivityIndicator());
-                },
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  CupertinoIcons.gift,
-                  color: CupertinoColors.systemGrey,
-                ),
-              )
-            : const Icon(
-                CupertinoIcons.gift,
-                color: CupertinoColors.systemGrey,
-              ),
-      ),
-    );
-  }
-
-  String? _resolveImageUrl(dynamic value) {
-    if (value == null) return null;
-    if (value is String && value.trim().isNotEmpty) return value.trim();
-    if (value is Map<String, dynamic>) {
-      for (final key in ['url', 'imagen', 'image', 'foto', 'ruta']) {
-        final candidate = value[key];
-        if (candidate is String && candidate.trim().isNotEmpty) {
-          return candidate.trim();
-        }
-      }
-    }
-    return null;
   }
 
   Widget _buildEstadisticas(BuildContext context) {
-    final totalParticipantes = _rifa!['total_participantes'] ?? 0;
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    // Mock stats or use real values if available in _rifa
+    final totalPedidos = _rifa!['total_pedidos'] ?? 0;
+    // final totalParticipantes = _rifa!['total_participantes'] ?? 0; // If available
 
-    return _buildCardSection(
-      context,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Estadísticas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Row(
+    if (totalPedidos == 0) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'ESTADÍSTICAS',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+        _buildCardSection(
+          isDark,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildEstadistica(Icons.people, 'Participantes', totalParticipantes.toString(), DashboardColors.azul),
-                _buildEstadistica(
-                  Icons.checklist,
-                  'Pedidos mínimos',
-                  (_rifa!['pedidos_minimos'] ?? 0).toString(),
-                  DashboardColors.verde,
-                ),
+                _buildStatItem('Pedidos', totalPedidos.toString(), isDark),
+                // _buildStatItem('Participantes', totalParticipantes.toString(), isDark),
               ],
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildEstadistica(IconData icon, String label, String value, Color color) {
+  Widget _buildStatItem(String label, String value, bool isDark) {
     return Column(
       children: [
-        Icon(icon, size: 32, color: color),
-        const SizedBox(height: 4),
         Text(
           value,
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColorsPrimary.main,
+          ),
         ),
-        Text(label, style: TextStyle(color: CupertinoColors.systemGrey)),
+        Text(
+          label,
+          style: TextStyle(
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+            fontSize: 13,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildParticipantes(BuildContext context) {
-    return _buildCardSection(
-      context,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Participantes (${_participantes.length})',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    if (_participantes.isEmpty) return const SizedBox.shrink();
+
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'PARTICIPANTES',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
             ),
-            const SizedBox(height: 12),
-            if (_participantes.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: Text('No hay participantes aún', style: TextStyle(color: CupertinoColors.systemGrey)),
-              )
-            else
-              Column(
-                children: List.generate(_participantes.length, (index) {
-                  final participante = _participantes[index];
-                  final usuario = (participante['usuario'] as Map<String, dynamic>?) ?? {};
-                  final pedidos = participante['pedidos_completados'] ?? 0;
-                  final firstName = usuario['first_name'] as String? ?? '';
-                  final lastName = usuario['last_name'] as String? ?? '';
-                  final initials =
-                      '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'
-                          .toUpperCase();
-
-                  return Column(
-                    children: [
-                      InkWell(
-                        onTap: () => _mostrarContactoGanador(usuario),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: DashboardColors.azul,
-                              child: Text(initials, style: const TextStyle(color: Colors.white)),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '$firstName $lastName'.trim().isEmpty
-                                        ? 'Participante sin nombre'
-                                        : '$firstName $lastName',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  Text(
-                                    usuario['email'] as String? ?? '',
-                                    style: const TextStyle(color: CupertinoColors.systemGrey),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: DashboardColors.verde.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '$pedidos pedidos',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: DashboardColors.verde),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (index != _participantes.length - 1)
-                        const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 0.5)),
-                    ],
-                  );
-                }),
-              ),
-          ],
+          ),
         ),
-      ),
+        _buildCardSection(
+          isDark,
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(0),
+            itemCount: _participantes.length > 5
+                ? 5
+                : _participantes.length, // Show max 5
+            separatorBuilder: (c, i) => Divider(
+              height: 1,
+              indent: 16,
+              color: isDark ? Colors.grey[800] : Colors.grey[200],
+            ),
+            itemBuilder: (context, index) {
+              final p = _participantes[index];
+              final user = p['usuario'] ?? {};
+              return ListTile(
+                title: Text('${user['first_name']} ${user['last_name']}'),
+                subtitle: Text('Pedidos: ${p['cantidad_pedidos'] ?? 1}'),
+                trailing: Text(
+                  _formatFecha(p['fecha_registro']),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                onTap: () => _mostrarContactoGanador(p['usuario'] ?? {}),
+              );
+            },
+          ),
+        ),
+        if (_participantes.length > 5)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Center(
+              child: Text(
+                '+ ${_participantes.length - 5} más',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+      ],
     );
-  }
-
-  String _formatFecha(String? fecha) {
-    if (fecha == null) return 'N/A';
-    try {
-      final date = DateTime.parse(fecha);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return fecha;
-    }
   }
 }

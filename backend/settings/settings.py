@@ -1,6 +1,7 @@
 """
 Django settings for deliber project.
-Optimized for Production & Ngrok Tunneling.
+Optimizado para Producción con Ngrok.
+Solo cambia NGROK_URL en .env y todo se ajusta automáticamente.
 """
 
 import os
@@ -15,7 +16,6 @@ from django.template import context as django_template_context
 # 1. INICIALIZACIÓN Y ENTORNO
 # ==========================================
 
-# Carga el archivo .env
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,31 +32,66 @@ except Exception:
     pass
 
 # ==========================================
-# 2. CONFIGURACIÓN CORE (NGROK READY)
+# 2. CONFIGURACIÓN CORE (AUTO-DETECCIÓN)
 # ==========================================
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-key-dev-mode")
-
-# DEBUG: Mantenlo en True mientras pruebas con la App Móvil para ver errores
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
-# IMPORTANTE: El '*' permite que Ngrok funcione sin configurar dominios manuales
-ALLOWED_HOSTS = ["*"]
+# Auto-detectar modo según variables configuradas
+PRODUCTION_DOMAIN = os.getenv("PRODUCTION_DOMAIN", "")
+NGROK_URL = os.getenv("NGROK_URL", "")
+PRODUCTION_FRONTEND = os.getenv("PRODUCTION_FRONTEND", "")
+
+# Prioridad: PRODUCTION_DOMAIN > NGROK_URL
+if PRODUCTION_DOMAIN:
+    # MODO PRODUCCIÓN
+    BASE_URL = PRODUCTION_DOMAIN
+    FRONTEND_URL = PRODUCTION_FRONTEND if PRODUCTION_FRONTEND else PRODUCTION_DOMAIN
+    print("Modo: PRODUCCIÓN")
+elif NGROK_URL:
+    # MODO NGROK
+    BASE_URL = NGROK_URL
+    FRONTEND_URL = NGROK_URL
+    print("Modo: NGROK")
+else:
+    # MODO DESARROLLO LOCAL
+    BASE_URL = ""
+    FRONTEND_URL = ""
+    print("Modo: DESARROLLO LOCAL")
+
+# ALLOWED_HOSTS dinámico
+if BASE_URL:
+    domain = BASE_URL.replace("https://", "").replace("http://", "")
+    ALLOWED_HOSTS = [domain, "localhost", "127.0.0.1", "0.0.0.0", ".ngrok-free.app"]
+    if FRONTEND_URL and FRONTEND_URL != BASE_URL:
+        frontend_domain = FRONTEND_URL.replace("https://", "").replace("http://", "")
+        ALLOWED_HOSTS.append(frontend_domain)
+else:
+    ALLOWED_HOSTS = ["*", ".ngrok-free.app"]
 
 # ==========================================
-# 3. CORS & CSRF (CRÍTICO PARA MÓVIL)
+# 3. CORS & CSRF (Configuración dinámica)
 # ==========================================
 
-# Permite que la App Flutter haga peticiones desde cualquier origen
-CORS_ALLOW_ALL_ORIGINS = True 
-CORS_ALLOW_CREDENTIALS = True
-
-# Permite peticiones POST/PUT desde Ngrok y Localhost
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "https://*.ngrok-free.app", 
-]
+if BASE_URL:
+    # Configuración con dominio específico
+    origins = [BASE_URL]
+    if FRONTEND_URL and FRONTEND_URL != BASE_URL:
+        origins.append(FRONTEND_URL)
+    
+    CORS_ALLOWED_ORIGINS = origins
+    CORS_ALLOW_CREDENTIALS = True
+    CSRF_TRUSTED_ORIGINS = origins
+else:
+    # Modo desarrollo: Permitir todo
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://*.ngrok-free.app",
+    ]
 
 # ==========================================
 # 4. APLICACIONES INSTALADAS
@@ -87,7 +122,7 @@ INSTALLED_APPS = [
     "django_filters",
     "drf_yasg",
 
-    # Local Apps (Tu Lógica de Negocio)
+    # Local Apps
     "authentication.apps.AuthenticationConfig",
     "usuarios.apps.UsuariosConfig",
     "proveedores.apps.ProveedoresConfig",
@@ -113,7 +148,7 @@ SITE_ID = 1
 # ==========================================
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",             
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -122,8 +157,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    "middleware.api_key_auth.ApiKeyAuthenticationMiddleware", 
-    "middleware.log_api_requests.LogAPIRequestsMiddleware", 
+    "middleware.api_key_auth.ApiKeyAuthenticationMiddleware",
+    "middleware.log_api_requests.LogAPIRequestsMiddleware",
 ]
 
 ROOT_URLCONF = "settings.urls"
@@ -148,7 +183,7 @@ DATABASES = {
 # 7. CACHÉ & REDIS
 # ==========================================
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 CACHES = {
     "default": {
@@ -183,14 +218,11 @@ AUTH_USER_MODEL = "authentication.User"
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    # Comentado para facilitar pruebas con passwords sencillos (123456)
-    # {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    # {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# AllAuth Config (Updated for django-allauth 0.63+)
-ACCOUNT_LOGIN_METHODS = {'email'}  # Replaces ACCOUNT_AUTHENTICATION_METHOD
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']  # Replaces EMAIL_REQUIRED and USERNAME_REQUIRED
+# AllAuth Config
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 
@@ -208,13 +240,16 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
-    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1), 
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -230,7 +265,10 @@ SIMPLE_JWT = {
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = []  # Django collectstatic works correctly with this empty
 
+# MEDIA configuración - siempre usar ruta relativa para que Django sirva archivos
+# El frontend construye la URL completa con la base URL
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -250,7 +288,7 @@ TEMPLATES = [
 ]
 
 # ==========================================
-# 12. SERVICIOS EXTERNOS & LOCALES
+# 12. SERVICIOS EXTERNOS
 # ==========================================
 
 # Email
@@ -265,7 +303,10 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # Google Maps
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
-# Configuración Regional
+# ==========================================
+# 13. CONFIGURACIÓN REGIONAL
+# ==========================================
+
 LANGUAGE_CODE = "es"
 TIME_ZONE = "America/Guayaquil"
 USE_I18N = True
@@ -274,8 +315,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 IVA_ECUADOR = 0.15
 
 # ==========================================
-# 13. SEGURIDAD ADICIONAL
+# 14. SEGURIDAD
 # ==========================================
 
-# Desactivamos redirección SSL interna porque Ngrok ya maneja HTTPS por fuera
-SECURE_SSL_REDIRECT = False
+SECURE_SSL_REDIRECT = False  # Ngrok maneja HTTPS externamente

@@ -91,9 +91,9 @@ urlpatterns = [
 # ==========================================
 # CONFIGURACIÓN DEBUG/MEDIA
 # ==========================================
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# Servir archivos estáticos en desarrollo (incluso con DEBUG=False por ngrok)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # Intentar cargar admin personalizado de repartidores si existe
 try:

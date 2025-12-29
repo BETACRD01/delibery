@@ -423,10 +423,16 @@ class SolicitudCambioRol(models.Model):
     # --- Campos Específicos (Proveedor) ---
     ruc = models.CharField(max_length=13, blank=True, null=True, db_index=True)
     nombre_comercial = models.CharField(max_length=200, blank=True)
-    tipo_negocio = models.CharField(max_length=50, blank=True) # Choices simplificados
+    tipo_negocio = models.CharField(max_length=50, blank=True)
     descripcion_negocio = models.TextField(blank=True)
     horario_apertura = models.TimeField(blank=True, null=True)
     horario_cierre = models.TimeField(blank=True, null=True)
+    
+    # --- Campos de Ubicación (Proveedor) ---
+    direccion = models.TextField(blank=True, verbose_name="Dirección del negocio")
+    latitud = models.DecimalField(max_digits=12, decimal_places=7, blank=True, null=True)
+    longitud = models.DecimalField(max_digits=12, decimal_places=7, blank=True, null=True)
+    ciudad = models.CharField(max_length=100, blank=True)
 
     # --- Campos Específicos (Repartidor) ---
     cedula_identidad = models.CharField(max_length=20, blank=True)

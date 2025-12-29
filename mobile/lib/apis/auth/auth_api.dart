@@ -1,6 +1,7 @@
 // lib/apis/auth/auth_api.dart
 
 import 'dart:developer' as developer;
+import 'dart:io';
 import '../subapis/http_client.dart';
 import '../../config/api_config.dart';
 
@@ -117,6 +118,18 @@ class AuthApi {
     }
   }
 
+  /// Actualiza la foto de perfil
+  Future<Map<String, dynamic>> actualizarFotoPerfil(File imagen) async {
+    try {
+      return await _client.multipart('PATCH', ApiConfig.actualizarPerfil, {}, {
+        'foto_perfil': imagen,
+      });
+    } catch (e, stack) {
+      _log('Error actualizando foto perfil', error: e, stack: stack);
+      rethrow;
+    }
+  }
+
   /// Obtiene información del rol activo
   Future<Map<String, dynamic>> getInfoRol() async {
     try {
@@ -139,5 +152,18 @@ class AuthApi {
       _log('Error verificando token', error: e, stack: stack);
       rethrow;
     }
+  }
+  // ---------------------------------------------------------------------------
+  // PREFERENCIAS
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> getPreferencias() async {
+    return await _client.get(ApiConfig.actualizarPreferencias);
+  }
+
+  Future<Map<String, dynamic>> updatePreferencias(
+    Map<String, dynamic> data,
+  ) async {
+    return await _client.patch(ApiConfig.actualizarPreferencias, data);
   }
 }

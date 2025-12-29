@@ -1,6 +1,6 @@
 // lib/screens/delivery/widgets/lista_vacia_widget.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 /// 📭 Widget reutilizable para mostrar estados vacíos
 /// Muestra ícono, mensaje y opcionalmente un botón de acción
@@ -26,29 +26,33 @@ class ListaVaciaWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icono,
-              size: tamanoIcono ?? 80,
-              color: colorIcono ?? Colors.grey[300],
+              size: tamanoIcono ?? 64,
+              color: colorIcono ?? CupertinoColors.systemGrey3,
             ),
             const SizedBox(height: 16),
             Text(
               mensaje,
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.label.resolveFrom(context),
+                letterSpacing: -0.5,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               submensaje,
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              style: TextStyle(
+                fontSize: 15,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              ),
               textAlign: TextAlign.center,
             ),
             if (accionBoton != null) ...[

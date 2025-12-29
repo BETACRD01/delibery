@@ -37,6 +37,13 @@ urlpatterns = [
     path('desactivar-cuenta/', views.desactivar_cuenta, name='desactivar_cuenta'),
     
     # ==========================================
+    # DISPOSITIVOS
+    # ==========================================
+    path('dispositivos/', views.listar_dispositivos, name='listar_dispositivos'),
+    path('dispositivos/<int:dispositivo_id>/logout/', views.cerrar_sesion_dispositivo, name='cerrar_sesion_dispositivo'),
+
+    
+    # ==========================================
     # UNSUBSCRIBE (DARSE DE BAJA)
     # ==========================================
     path('unsubscribe/<int:user_id>/<str:token>/', views.unsubscribe_emails, name='unsubscribe_emails'),

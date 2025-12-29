@@ -397,8 +397,10 @@ class UbicacionUsuarioSerializer(serializers.ModelSerializer):
 
 class SolicitudCambioRolListSerializer(serializers.ModelSerializer):
     rol_solicitado_display = serializers.CharField(source="get_rol_solicitado_display", read_only=True)
+    rol_solicitado_display = serializers.CharField(source="get_rol_solicitado_display", read_only=True)
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     dias_pendiente = serializers.IntegerField(read_only=True)
+    motivo_respuesta = serializers.CharField(read_only=True) # Exponer motivo en lista
 
     class Meta:
         model = SolicitudCambioRol
@@ -415,8 +417,10 @@ class SolicitudCambioRolListSerializer(serializers.ModelSerializer):
             "ruc",              
             "tipo_negocio",      
             "descripcion_negocio",
+            "descripcion_negocio",
             "horario_apertura",
-            "horario_cierre"
+            "horario_cierre",
+            "motivo_respuesta"
             
         ]
         read_only_fields = fields
@@ -466,6 +470,11 @@ class CrearSolicitudProveedorSerializer(BaseSolicitudRolSerializer):
     descripcion_negocio = serializers.CharField(min_length=10, max_length=500)
     horario_apertura = serializers.TimeField(required=False, allow_null=True)
     horario_cierre = serializers.TimeField(required=False, allow_null=True)
+    # Campos de ubicación
+    direccion = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    latitud = serializers.DecimalField(required=False, allow_null=True, max_digits=12, decimal_places=7)
+    longitud = serializers.DecimalField(required=False, allow_null=True, max_digits=12, decimal_places=7)
+    ciudad = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
     def get_rol_objetivo(self):
         return "PROVEEDOR"

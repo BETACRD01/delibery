@@ -31,7 +31,7 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Categoria
-        fields = ['id', 'nombre', 'ui_data', 'activo', 'total_productos']
+        fields = ['id', 'nombre', 'ui_data', 'activo', 'total_productos', 'imagen', 'imagen_url']
 
     def get_ui_data(self, obj):
         request = self.context.get('request')

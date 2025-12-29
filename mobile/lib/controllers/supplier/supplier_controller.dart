@@ -418,8 +418,17 @@ class SupplierController extends ChangeNotifier {
     debugPrint('Status: ${e.statusCode}');
 
     if (e.statusCode == 404) {
-      _rolIncorrecto = true;
-      _error = 'No tienes proveedor vinculado';
+      if (e.errors['action'] == 'ROLE_RESET' ||
+          e.details?['action'] == 'ROLE_RESET') {
+        _rolIncorrecto = true;
+        _error =
+            'Tu perfil de proveedor ha sido desactivado. Se ha restablecido tu cuenta a Cliente.';
+        // Intentar actualizar el rol en caché local implícitamente o sugerir relogin
+        // Idealmente aquí podríamos forzar navegación, pero solo actualizamos estado
+      } else {
+        _rolIncorrecto = true;
+        _error = 'No tienes proveedor vinculado';
+      }
     } else if (e.statusCode == 401) {
       //  CORREGIDO: Mensaje claro sobre sesión expirada
       _error = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente';

@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-
 import '../../../services/usuarios/usuarios_service.dart';
 
 /// ⚙️ Pantalla de Configuración del Repartidor con lenguaje visual iOS.
@@ -16,12 +15,16 @@ class PantallaConfiguracionRepartidor extends StatefulWidget {
 
 class _PantallaConfiguracionRepartidorState
     extends State<PantallaConfiguracionRepartidor> {
-  static const Color _background = Color(0xFFF2F4F8);
-  static const Color _cardSurface = Colors.white;
-  static const Color _accent = Color(0xFF0A84FF);
+  static const Color _accent = Color(0xFF0CB7F2); // Celeste corporativo
   static const Color _success = Color(0xFF34C759);
-  static const Color _danger = Color(0xFFEA3E3E);
-  static const double _cardRadius = 18;
+  static const Color _danger = Color(0xFFFF3B30);
+
+  // Dynamic Colors
+  Color get _background =>
+      CupertinoColors.systemGroupedBackground.resolveFrom(context);
+  Color get _cardSurface =>
+      CupertinoColors.secondarySystemGroupedBackground.resolveFrom(context);
+  Color get _textPrimary => CupertinoColors.label.resolveFrom(context);
 
   final UsuarioService _usuarioService = UsuarioService();
   bool _loading = true;
@@ -69,258 +72,379 @@ class _PantallaConfiguracionRepartidorState
       _error = null;
     });
     try {
-      final resp = await _usuarioService
-          .actualizarPreferenciasNotificaciones({clave: valor});
+      final resp = await _usuarioService.actualizarPreferenciasNotificaciones({
+        clave: valor,
+      });
       if (!mounted) return;
       setState(() {
         notificacionesPush = resp['notificaciones_push'] ?? notificacionesPush;
-        notificacionesEmail = resp['notificaciones_email'] ?? notificacionesEmail;
+        notificacionesEmail =
+            resp['notificaciones_email'] ?? notificacionesEmail;
         notificacionesMarketing =
             resp['notificaciones_marketing'] ?? notificacionesMarketing;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preferencias guardadas'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      _mostrarToast(
+        'Preferencias guardadas',
+        icono: CupertinoIcons.checkmark_circle_fill,
       );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = 'Error guardando preferencias: $e';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudieron guardar: $e'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      _mostrarToast(
+        'No se pudieron guardar',
+        color: _danger,
+        icono: CupertinoIcons.exclamationmark_circle_fill,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  void _mostrarToast(String mensaje, {IconData? icono, Color? color}) {
+    if (!mounted) return;
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 50,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 300),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: color ?? _success,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icono != null) ...[
+                    Icon(icono, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Flexible(
+                    child: Text(
+                      mensaje,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Configuración',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _background,
+        navigationBar: CupertinoNavigationBar(
+          middle: const Text('Configuración'),
+          backgroundColor: _cardSurface,
+          border: const Border(
+            bottom: BorderSide(color: Color(0x4D000000), width: 0.0),
+          ), // Sin borde visible o muy sutil
         ),
-        iconTheme: const IconThemeData(color: Colors.black87),
-      ),
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CupertinoActivityIndicator(radius: 14))
-            : CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        const Text(
-                          'Preferencias del repartidor',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Controla tus alertas, tono y hábitos desde un entorno limpio.',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 18),
-                        if (_error != null) _buildErrorBanner(),
-                        _buildSectionCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Alertas y avisos',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16),
+        child: SafeArea(
+          child: _loading
+              ? const Center(child: CupertinoActivityIndicator(radius: 14))
+              : CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Preferencias',
+                              style: TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.5,
+                                color: _textPrimary,
                               ),
-                              const Divider(height: 24),
-                              _buildSwitchTile(
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Personaliza tu experiencia de entrega.',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: CupertinoColors.systemGrey.resolveFrom(
+                                  context,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            if (_error != null) _buildErrorBanner(),
+
+                            _buildSectionHeader('ALERTAS Y AVISOS'),
+                            _buildSectionGroup([
+                              _buildSwitchRow(
                                 title: 'Notificaciones push',
-                                subtitle: 'Alertas de nuevos pedidos',
+                                icon: CupertinoIcons.bell_fill,
+                                color: _accent,
                                 value: notificacionesPush,
-                                enabled: !_busy,
-                                onChanged: (v) =>
-                                    _actualizarPreferencia('notificaciones_push', v),
-                              ),
-                              _buildSwitchTile(
-                                title: 'Email',
-                                subtitle: 'Novedades y reportes',
-                                value: notificacionesEmail,
-                                enabled: !_busy,
-                                onChanged: (v) =>
-                                    _actualizarPreferencia('notificaciones_email', v),
-                              ),
-                              _buildSwitchTile(
-                                title: 'Promociones',
-                                subtitle: 'Ofertas y recordatorios',
-                                value: notificacionesMarketing,
-                                enabled: !_busy,
                                 onChanged: (v) => _actualizarPreferencia(
-                                    'notificaciones_marketing', v),
+                                  'notificaciones_push',
+                                  v,
+                                ),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSectionCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Preferencias de la app',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16),
+                              _buildDivider(),
+                              _buildSwitchRow(
+                                title: 'Email',
+                                icon: CupertinoIcons.mail_solid,
+                                color: CupertinoColors.systemIndigo,
+                                value: notificacionesEmail,
+                                onChanged: (v) => _actualizarPreferencia(
+                                  'notificaciones_email',
+                                  v,
+                                ),
                               ),
-                              const Divider(height: 24),
-                              _buildSwitchTile(
+                              _buildDivider(),
+                              _buildSwitchRow(
+                                title: 'Promociones',
+                                icon: CupertinoIcons.tag_fill,
+                                color: CupertinoColors.systemOrange,
+                                value: notificacionesMarketing,
+                                onChanged: (v) => _actualizarPreferencia(
+                                  'notificaciones_marketing',
+                                  v,
+                                ),
+                              ),
+                            ]),
+
+                            const SizedBox(height: 24),
+                            _buildSectionHeader('APP'),
+                            _buildSectionGroup([
+                              _buildSwitchRow(
                                 title: 'Modo oscuro',
-                                subtitle: 'Encender el tema oscuro',
+                                icon: CupertinoIcons.moon_fill,
+                                color: CupertinoColors.black,
                                 value: modoOscuro,
-                                thumbColor: _accent,
-                                onChanged: (v) => setState(() => modoOscuro = v),
+                                onChanged: (v) =>
+                                    setState(() => modoOscuro = v),
                               ),
-                              _buildSwitchTile(
+                              _buildDivider(),
+                              _buildSwitchRow(
                                 title: 'Ubicación en vivo',
-                                subtitle: 'Actualizar posición automáticamente',
+                                icon: CupertinoIcons.location_solid,
+                                color: _success,
                                 value: ubicacionEnTiempoReal,
-                                thumbColor: _accent,
                                 onChanged: (v) =>
                                     setState(() => ubicacionEnTiempoReal = v),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSectionCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Soporte y privacidad',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                              const Divider(height: 24),
-                              _buildListTile(
-                                icon: Icons.privacy_tip,
+                            ]),
+
+                            const SizedBox(height: 24),
+                            _buildSectionHeader('LEGAL'),
+                            _buildSectionGroup([
+                              _buildNavigationRow(
                                 title: 'Política de privacidad',
+                                icon: CupertinoIcons.hand_raised_fill,
+                                color: CupertinoColors.systemBlue,
                                 onTap: () => _mostrarDialogoBasico(
                                   context,
                                   'Política de Privacidad',
                                   'Tu información siempre está cifrada y solo se usa para mejorar el servicio.',
                                 ),
                               ),
-                              _buildListTile(
-                                icon: Icons.description,
+                              _buildDivider(),
+                              _buildNavigationRow(
                                 title: 'Términos del servicio',
+                                icon: CupertinoIcons.doc_text_fill,
+                                color: CupertinoColors.systemGrey,
                                 onTap: () => _mostrarDialogoBasico(
                                   context,
                                   'Términos del Servicio',
                                   'Usar la aplicación implica aceptar las reglas establecidas para repartidores.',
                                 ),
                               ),
-                            ],
-                          ),
+                            ]),
+
+                            const SizedBox(height: 40),
+                            _buildResetButton(),
+                            const SizedBox(height: 40),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-                        _buildResetButton(),
-                        const SizedBox(height: 32),
-                      ]),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
     );
   }
 
-  Widget _buildSectionCard({required Widget child}) {
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: CupertinoColors.secondaryLabel.resolveFrom(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionGroup(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
         color: _cardSurface,
-        borderRadius: BorderRadius.circular(_cardRadius),
-        border: Border.all(color: const Color(0xFFDDE4F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 16,
-            offset: Offset(0, 8),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildDivider() {
+    return const Divider(
+      height: 1,
+      thickness: 0.5,
+      indent: 54, // Alineado con el texto, dejando espacio para el icono
+      color: CupertinoColors.separator,
+    );
+  }
+
+  Widget _buildSwitchRow({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 8,
+      ), // Más alto para iOS feel
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 17,
+                color: CupertinoColors.label,
+              ),
+            ),
+          ),
+          CupertinoSwitch(
+            value: value,
+            activeTrackColor: _accent,
+            onChanged: _busy ? null : onChanged,
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
-      child: child,
     );
   }
 
-  Widget _buildSwitchTile({
+  Widget _buildNavigationRow({
     required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    bool enabled = true,
-    Color? thumbColor,
-  }) {
-    return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(title),
-      subtitle: Text(subtitle),
-      value: value,
-      onChanged: enabled ? onChanged : null,
-      activeThumbColor: thumbColor ?? _success,
-      activeTrackColor: (thumbColor ?? _success).withValues(alpha: 0.45),
-      inactiveTrackColor: Colors.grey[300],
-    );
-  }
-
-  Widget _buildListTile({
     required IconData icon,
-    required String title,
+    required Color color,
     required VoidCallback onTap,
-    String? subtitle,
   }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
+    return GestureDetector(
       onTap: onTap,
-      leading: CircleAvatar(
-        radius: 20,
-        backgroundColor: _accent.withValues(alpha: 0.12),
-        child: Icon(icon, color: _accent, size: 20),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  color: CupertinoColors.label,
+                ),
+              ),
+            ),
+            const Icon(
+              CupertinoIcons.chevron_forward,
+              color: CupertinoColors.systemGrey3,
+              size: 20,
+            ),
+          ],
+        ),
       ),
-      title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
     );
   }
 
   Widget _buildResetButton() {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton.icon(
-        icon: const Icon(Icons.restart_alt),
-        label: const Text('Restablecer configuración'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _danger,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
+      child: CupertinoButton(
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
         ),
+        disabledColor: CupertinoColors.quaternarySystemFill,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        borderRadius: BorderRadius.circular(12),
         onPressed: () {
           setState(() {
             notificacionesPush = true;
@@ -329,39 +453,46 @@ class _PantallaConfiguracionRepartidorState
             modoOscuro = false;
             ubicacionEnTiempoReal = true;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Configuración restablecida'),
-              behavior: SnackBarBehavior.floating,
-            ),
+          _mostrarToast(
+            'Configuración restablecida',
+            icono: CupertinoIcons.refresh_bold,
           );
         },
+        child: const Text(
+          'Restablecer configuración',
+          style: TextStyle(
+            color: _danger,
+            fontWeight: FontWeight.w600,
+            fontSize: 17,
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildErrorBanner() {
     return Container(
+      margin: const EdgeInsets.only(bottom: 20),
       width: double.infinity,
       decoration: BoxDecoration(
         color: _danger.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(_cardRadius),
+        borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: Colors.red),
+          const Icon(
+            CupertinoIcons.exclamationmark_triangle_fill,
+            color: _danger,
+          ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              _error!,
-              style: const TextStyle(color: Colors.red),
-            ),
+            child: Text(_error!, style: const TextStyle(color: _danger)),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            color: _danger,
+          CupertinoButton(
             onPressed: _cargarPreferencias,
+            padding: EdgeInsets.zero,
+            child: const Icon(CupertinoIcons.refresh, color: _danger),
           ),
         ],
       ),
@@ -373,15 +504,20 @@ class _PantallaConfiguracionRepartidorState
     String titulo,
     String contenido,
   ) {
-    showDialog(
+    showCupertinoDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      barrierDismissible: true,
+      builder: (_) => CupertinoAlertDialog(
         title: Text(titulo),
-        content: Text(contenido),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Text(contenido),
+        ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
+            isDefaultAction: true,
+            child: const Text('Cerrar', style: TextStyle(color: _accent)),
           ),
         ],
       ),

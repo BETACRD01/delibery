@@ -138,6 +138,111 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+
+      colorScheme:
+          ColorScheme.fromSeed(
+            seedColor: AppColorsPrimary.main,
+            brightness: Brightness.dark,
+            primary: AppColorsPrimary.main,
+            secondary: AppColorsSecondary.main,
+            surface: const Color(0xFF1E293B), // Slate 800
+            error: Colors.redAccent,
+          ).copyWith(
+            surface: const Color(0xFF1E293B),
+            surfaceContainerLowest: const Color(0xFF0F172A), // Slate 900
+          ),
+
+      scaffoldBackgroundColor: const Color(0xFF0F172A), // Slate 900
+      // Transiciones suaves estilo iOS
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
+
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E293B),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: Colors.white),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+        scrolledUnderElevation: 0,
+      ),
+
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1E293B),
+        elevation: 0,
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+      ),
+
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColorsPrimary.main,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          textStyle: AppTextStyles.button,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF334155), // Slate 700
+        contentPadding: const EdgeInsets.all(16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: AppColorsPrimary.main),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+        labelStyle: const TextStyle(color: Colors.white70),
+        hintStyle: const TextStyle(color: Colors.white30),
+      ),
+
+      textTheme: const TextTheme(
+        bodyMedium: TextStyle(color: Colors.white),
+        bodyLarge: TextStyle(color: Colors.white),
+        titleMedium: TextStyle(color: Colors.white),
+        titleLarge: TextStyle(color: Colors.white),
+      ),
+
+      iconTheme: const IconThemeData(color: Colors.white70),
+
+      listTileTheme: const ListTileThemeData(
+        textColor: Colors.white,
+        iconColor: Colors.white70,
+      ),
+    );
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

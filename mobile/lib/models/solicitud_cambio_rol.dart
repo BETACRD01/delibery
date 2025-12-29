@@ -116,8 +116,8 @@ class SolicitudCambioRol {
 
   factory SolicitudCambioRol.fromJson(Map<String, dynamic> json) {
     return SolicitudCambioRol(
-      id: json['id'].toString(), 
-      usuarioEmail: json['usuario_email'] as String? ?? '', 
+      id: json['id'].toString(),
+      usuarioEmail: json['usuario_email'] as String? ?? '',
       usuarioNombre: json['usuario_nombre'] as String?,
       rolSolicitado: json['rol_solicitado'] as String,
       motivo: json['motivo'] as String,
@@ -182,23 +182,23 @@ class SolicitudCambioRol {
   // ════════════════════════════════════════════════════════════════════════
 
   /// ✅ Si la solicitud está PENDIENTE
-  bool get estaPendiente => estado == 'PENDIENTE';
+  bool get estaPendiente => estado.toUpperCase() == 'PENDIENTE';
 
   /// ✅ Si la solicitud fue ACEPTADA
-  bool get fueAceptada => estado == 'ACEPTADA';
+  bool get fueAceptada => estado.toUpperCase() == 'ACEPTADA';
 
   /// ✅ Si la solicitud fue RECHAZADA
-  bool get fueRechazada => estado == 'RECHAZADA';
+  bool get fueRechazada => estado.toUpperCase() == 'RECHAZADA';
 
   /// ✅ Si es solicitud de PROVEEDOR
-  bool get esProveedor => rolSolicitado == 'PROVEEDOR';
+  bool get esProveedor => rolSolicitado.toUpperCase() == 'PROVEEDOR';
 
   /// ✅ Si es solicitud de REPARTIDOR
-  bool get esRepartidor => rolSolicitado == 'REPARTIDOR';
+  bool get esRepartidor => rolSolicitado.toUpperCase() == 'REPARTIDOR';
 
   /// 🎨 Color del badge según estado
   Color get colorEstado {
-    switch (estado) {
+    switch (estado.toUpperCase()) {
       case 'PENDIENTE':
         return Colors.orange;
       case 'ACEPTADA':
@@ -212,7 +212,7 @@ class SolicitudCambioRol {
 
   /// 🎨 Icono del badge según estado
   IconData get iconoEstado {
-    switch (estado) {
+    switch (estado.toUpperCase()) {
       case 'PENDIENTE':
         return Icons.hourglass_empty;
       case 'ACEPTADA':
@@ -226,7 +226,7 @@ class SolicitudCambioRol {
 
   /// 🎨 Texto legible del estado
   String get estadoTexto {
-    switch (estado) {
+    switch (estado.toUpperCase()) {
       case 'PENDIENTE':
         return 'Pendiente de Revisión';
       case 'ACEPTADA':
@@ -240,7 +240,7 @@ class SolicitudCambioRol {
 
   /// 🎨 Icono según el rol solicitado
   IconData get iconoRol {
-    switch (rolSolicitado) {
+    switch (rolSolicitado.toUpperCase()) {
       case 'PROVEEDOR':
         return Icons.store;
       case 'REPARTIDOR':

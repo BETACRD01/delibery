@@ -1,6 +1,7 @@
 // lib/screens/user/perfil/solicitudes_rol/widgets/formulario_repartidor.dart
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Material;
 import 'package:flutter/services.dart';
 import '../../../../../services/solicitudes/solicitudes_service.dart';
 import '../../../../../services/auth/auth_service.dart';
@@ -110,12 +111,7 @@ class _FormularioRepartidorState extends State<FormularioRepartidor> {
                       _buildGroupedCard([
                         _buildTipoVehiculoField(),
                         _buildDivider(),
-                        _buildIOSTextField(
-                          controller: _zonaCoberturaController,
-                          placeholder: 'Zona de Cobertura',
-                          prefix: CupertinoIcons.map_pin_ellipse,
-                          textCapitalization: TextCapitalization.words,
-                        ),
+                        _buildZonaCoberturaField(),
                       ]),
 
                       const SizedBox(height: 24),
@@ -371,6 +367,179 @@ class _FormularioRepartidorState extends State<FormularioRepartidor> {
     );
   }
 
+  Widget _buildZonaCoberturaField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            CupertinoIcons.map_pin_ellipse,
+            size: 22,
+            color: CupertinoColors.systemGrey.resolveFrom(context),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: CupertinoTextField(
+              controller: _zonaCoberturaController,
+              placeholder: 'Zona de Cobertura',
+              textCapitalization: TextCapitalization.words,
+              decoration: null,
+              style: const TextStyle(fontSize: 17, letterSpacing: -0.4),
+              placeholderStyle: TextStyle(
+                color: CupertinoColors.placeholderText.resolveFrom(context),
+                fontSize: 17,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(32, 32),
+            onPressed: _mostrarAyudaZonaCobertura,
+            child: Icon(
+              CupertinoIcons.question_circle,
+              size: 22,
+              color: CupertinoColors.systemCyan,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarAyudaZonaCobertura() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Material(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey4,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Icono
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemCyan.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.map_pin_ellipse,
+                    color: CupertinoColors.systemCyan,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Título
+                const Text(
+                  '¿Qué es la Zona de Cobertura?',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    color: CupertinoColors.label,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+
+                // Descripción
+                Text(
+                  'Son las áreas o sectores de la ciudad donde puedes hacer entregas. Sepáralas con comas.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+
+                // Ejemplos
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey6.resolveFrom(context),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ejemplos:',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: CupertinoColors.secondaryLabel.resolveFrom(
+                            context,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '• Centro, Malecón, El Salado',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: CupertinoColors.label,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '• Runtún, Lligua, Ulba',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: CupertinoColors.label,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '• Río Verde, El Pailón, Machay',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: CupertinoColors.label,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Botón cerrar
+                SizedBox(
+                  width: double.infinity,
+                  child: CupertinoButton(
+                    color: CupertinoColors.systemCyan,
+                    borderRadius: BorderRadius.circular(12),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Entendido',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBotones() {
     return Column(
       children: [
@@ -428,61 +597,66 @@ class _FormularioRepartidorState extends State<FormularioRepartidor> {
   void _mostrarSelectorVehiculo() {
     showCupertinoModalPopup(
       context: context,
-      builder: (context) => Container(
-        height: 250,
+      builder: (context) => Material(
         color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: Column(
-          children: [
-            Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: CupertinoColors.separator.resolveFrom(context),
-                    width: 0.5,
+        child: SizedBox(
+          height: 250,
+          child: Column(
+            children: [
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: CupertinoColors.separator.resolveFrom(context),
+                      width: 0.5,
+                    ),
                   ),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const Text(
-                    'Tipo de Vehículo',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
-                  ),
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Listo'),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: CupertinoPicker(
-                itemExtent: 40,
-                onSelectedItemChanged: (index) {
-                  setState(
-                    () => _tipoVehiculo = TipoVehiculo.values[index].value,
-                  );
-                },
-                children: TipoVehiculo.values.map((tipo) {
-                  return Center(
-                    child: Text(
-                      tipo.label,
-                      style: const TextStyle(fontSize: 17),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancelar'),
                     ),
-                  );
-                }).toList(),
+                    const Text(
+                      'Tipo de Vehículo',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 17,
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Listo'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 40,
+                  onSelectedItemChanged: (index) {
+                    setState(
+                      () => _tipoVehiculo = TipoVehiculo.values[index].value,
+                    );
+                  },
+                  children: TipoVehiculo.values.map((tipo) {
+                    return Center(
+                      child: Text(
+                        tipo.label,
+                        style: const TextStyle(fontSize: 17),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

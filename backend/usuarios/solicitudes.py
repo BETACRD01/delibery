@@ -375,19 +375,42 @@ class GestorSolicitudCambioRol:
                 return False, f"Error: El RUC {ruc} ya está registrado por el proveedor '{duplicado.nombre}'."
 
             if not hasattr(usuario, 'proveedor'):
+                # Crear nuevo proveedor con TODOS los campos de la solicitud
                 Proveedor.objects.create(
                     user=usuario,
                     nombre=solicitud.nombre_comercial or usuario.get_full_name(),
                     ruc=ruc,
                     tipo_proveedor=solicitud.tipo_negocio or "otro",
+                    descripcion=solicitud.descripcion_negocio or "",
+                    horario_apertura=solicitud.horario_apertura,
+                    horario_cierre=solicitud.horario_cierre,
+                    direccion=getattr(solicitud, 'direccion', '') or '',
+                    latitud=getattr(solicitud, 'latitud', None),
+                    longitud=getattr(solicitud, 'longitud', None),
+                    ciudad=getattr(solicitud, 'ciudad', '') or '',
                     activo=True,
                     verificado=debe_verificar
                 )
                 return True, None
             else:
-                # Reactivación
+                # Reactivación - actualizar con datos de la solicitud
                 proveedor = usuario.proveedor
                 proveedor.ruc = ruc
+                proveedor.nombre = solicitud.nombre_comercial or proveedor.nombre
+                proveedor.tipo_proveedor = solicitud.tipo_negocio or proveedor.tipo_proveedor
+                proveedor.descripcion = solicitud.descripcion_negocio or proveedor.descripcion
+                if solicitud.horario_apertura:
+                    proveedor.horario_apertura = solicitud.horario_apertura
+                if solicitud.horario_cierre:
+                    proveedor.horario_cierre = solicitud.horario_cierre
+                if getattr(solicitud, 'direccion', None):
+                    proveedor.direccion = solicitud.direccion
+                if getattr(solicitud, 'latitud', None):
+                    proveedor.latitud = solicitud.latitud
+                if getattr(solicitud, 'longitud', None):
+                    proveedor.longitud = solicitud.longitud
+                if getattr(solicitud, 'ciudad', None):
+                    proveedor.ciudad = solicitud.ciudad
                 proveedor.verificado = debe_verificar
                 proveedor.activo = True
                 proveedor.save()
@@ -427,7 +450,7 @@ class GestorSolicitudCambioRol:
                 return True, None
             
             # Determinar vehiculo (obligatorio)
-            vehiculo = datos_adicionales.get('tipo_vehiculo') or usuario.tipo_vehiculo
+            vehiculo = getattr(solicitud, 'tipo_vehiculo', None) or getattr(usuario, 'tipo_vehiculo', None)
             if not vehiculo:
                 return False, "Debes especificar el vehículo del repartidor."
 

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../models/solicitud_cambio_rol.dart';
 import '../constants/dashboard_colors.dart';
 
+import 'package:provider/provider.dart';
+import '../../../../providers/theme_provider.dart';
+
 class TarjetaSolicitud extends StatelessWidget {
   final SolicitudCambioRol solicitud;
   final VoidCallback onTap;
@@ -15,104 +18,80 @@ class TarjetaSolicitud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final backgroundColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
+        // No shadow to mimic iOS grouped list items, or very subtle one
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // Avatar con icono según el rol
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: solicitud.esProveedor
-                    ? DashboardColors.verde
-                    : DashboardColors.azul,
-                child: Icon(
-                  solicitud.iconoRol,
-                  color: Colors.white,
-                  size: 24,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                // Avatar con icono según el rol
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        (solicitud.esProveedor
+                                ? DashboardColors.verde
+                                : DashboardColors.azul)
+                            .withValues(alpha: 0.15),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      solicitud.iconoRol,
+                      color: solicitud.esProveedor
+                          ? DashboardColors.verde
+                          : DashboardColors.azul,
+                      size: 22,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-              // Información
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      solicitud.usuarioNombre ?? solicitud.usuarioEmail,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                // Información
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        solicitud.usuarioNombre ?? solicitud.usuarioEmail,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          solicitud.iconoRol,
-                          size: 14,
-                          color: DashboardColors.gris,
+                      const SizedBox(height: 4),
+                      Text(
+                        solicitud.esProveedor
+                            ? 'Solicita ser Proveedor'
+                            : 'Solicita ser Repartidor',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          solicitud.rolTexto,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: DashboardColors.gris,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.access_time,
-                          size: 14,
-                          color: DashboardColors.gris,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          solicitud.diasPendienteTexto ?? 'Hoy',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: DashboardColors.gris,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              // Badge de estado
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: solicitud.colorEstado.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: solicitud.colorEstado,
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  solicitud.estadoTexto,
-                  style: TextStyle(
-                    color: solicitud.colorEstado,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+                const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              ],
+            ),
           ),
         ),
       ),

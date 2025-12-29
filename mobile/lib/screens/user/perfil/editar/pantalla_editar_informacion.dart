@@ -238,7 +238,9 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
       body: FadeTransition(
@@ -291,7 +293,9 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
+              color: CupertinoColors.systemBackground
+                  .resolveFrom(context)
+                  .withValues(alpha: 0.95),
               border: Border(
                 bottom: BorderSide(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -335,7 +339,9 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
                   height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
+                    color: CupertinoColors.systemBackground.resolveFrom(
+                      context,
+                    ),
                     border: Border.all(
                       color: const Color(0xFFE5E5EA),
                       width: 3,
@@ -407,7 +413,9 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
   Widget _buildPersonalSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -624,7 +632,10 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColorsPrimary.main, width: 2),
+              borderSide: const BorderSide(
+                color: AppColorsPrimary.main,
+                width: 2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -683,7 +694,10 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColorsPrimary.main, width: 2),
+              borderSide: const BorderSide(
+                color: AppColorsPrimary.main,
+                width: 2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

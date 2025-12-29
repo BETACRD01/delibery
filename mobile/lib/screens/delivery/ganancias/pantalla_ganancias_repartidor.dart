@@ -17,11 +17,18 @@ class PantallaGananciasRepartidor extends StatefulWidget {
 
 class _PantallaGananciasRepartidorState
     extends State<PantallaGananciasRepartidor> {
-  static const Color _surface = Color(0xFFF2F4F7);
-  static const Color _accent = Color(0xFF0A84FF);
+  static const Color _accent = Color(0xFF0CB7F2); // Celeste corporativo
   static const Color _success = Color(0xFF34C759);
-  static const Color _cardBorder = Color(0xFFE1E4EB);
-  static const Color _shadowColor = Color(0x1A000000);
+
+  // Dynamic Colors
+  Color get _surface =>
+      CupertinoColors.systemGroupedBackground.resolveFrom(context);
+  Color get _cardBg =>
+      CupertinoColors.secondarySystemGroupedBackground.resolveFrom(context);
+  Color get _cardBorder => CupertinoColors.separator.resolveFrom(context);
+  Color get _textPrimary => CupertinoColors.label.resolveFrom(context);
+  Color get _textSecondary =>
+      CupertinoColors.secondaryLabel.resolveFrom(context);
 
   final RepartidorService _service = RepartidorService();
   final DateFormat _fechaFormat = DateFormat('dd/MM/yyyy HH:mm');
@@ -37,24 +44,30 @@ class _PantallaGananciasRepartidorState
 
   Future<void> _cargarGanancias() async {
     setState(() {
-      _loading = true;
+      if (_entregas.isEmpty) {
+        _loading = true; // Solo mostrar loading inicial si no hay data
+      }
       _error = null;
     });
 
     try {
       final response = await _service.obtenerHistorialEntregas();
       final parsed = HistorialEntregasResponse.fromJson(response);
+      if (!mounted) return;
       setState(() {
         _entregas = parsed.entregas.reversed.toList();
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
       });
     } finally {
-      setState(() {
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -95,25 +108,52 @@ class _PantallaGananciasRepartidorState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _surface,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        title: const Text(
-          'Mis ganancias',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          children: [
-            _buildResumen(),
-            const SizedBox(height: 16),
-            Expanded(child: _buildListado()),
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            CupertinoSliverNavigationBar(
+              largeTitle: const Text('Mis ganancias'),
+              backgroundColor: _surface,
+              border: null,
+            ),
+            CupertinoSliverRefreshControl(onRefresh: _cargarGanancias),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  if (_loading && _entregas.isEmpty)
+                    const SizedBox(
+                      height: 200,
+                      child: Center(child: CupertinoActivityIndicator()),
+                    )
+                  else if (_error != null)
+                    _buildErrorState()
+                  else ...[
+                    _buildResumen(),
+                    const SizedBox(height: 24),
+                    Text(
+                      'HISTORIAL RECIENTE',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_entregas.isEmpty)
+                      _buildEmptyState()
+                    else
+                      _buildListadoEntregas(),
+                  ],
+                ]),
+              ),
+            ),
           ],
         ),
       ),
@@ -123,45 +163,48 @@ class _PantallaGananciasRepartidorState
   Widget _buildResumen() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _cardBorder),
-        boxShadow: const [
-          BoxShadow(color: _shadowColor, blurRadius: 14, offset: Offset(0, 8)),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Resumen de ganancias',
+          Text(
+            'Ganancia Total',
             style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              height: 1.3,
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+              color: _textSecondary,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             '\$${_gananciaTotal.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 32,
+            style: TextStyle(
+              fontSize: 34,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: _textPrimary,
+              letterSpacing: -1,
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Total acumulado',
-            style: TextStyle(color: Colors.grey, fontSize: 13),
-          ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
+          Container(height: 1, color: _cardBorder),
+          const SizedBox(height: 20),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildIndicador('Hoy', _gananciaHoy, _accent),
-              _buildIndicador('Últimos 7 días', _gananciaSemana, _success),
+              Expanded(child: _buildIndicador('Hoy', _gananciaHoy, _accent)),
+              Container(width: 1, height: 40, color: _cardBorder),
+              Expanded(
+                child: _buildIndicador('Semana', _gananciaSemana, _success),
+              ),
             ],
           ),
         ],
@@ -171,121 +214,188 @@ class _PantallaGananciasRepartidorState
 
   Widget _buildIndicador(String label, double monto, Color color) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: _textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 6),
         Text(
           '\$${monto.toStringAsFixed(2)}',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: color,
-            fontSize: 16,
+            fontSize: 20,
+            letterSpacing: -0.5,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildListado() {
-    if (_loading) {
-      return const Center(child: CupertinoActivityIndicator(radius: 14));
-    }
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.redAccent, size: 56),
-            const SizedBox(height: 12),
-            const Text(
-              'Error cargando las ganancias',
-              style: TextStyle(color: Colors.black87),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _cargarGanancias,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _accent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_entregas.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(28),
-          child: Text(
-            'Las ganancias aparecerán aquí en cuanto completes tu primera entrega.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      color: _accent,
-      onRefresh: _cargarGanancias,
-      child: ListView.separated(
-        padding: const EdgeInsets.only(bottom: 12),
-        itemBuilder: (_, index) => _buildEntregaCard(_entregas[index]),
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemCount: _entregas.length,
+  Widget _buildListadoEntregas() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: List.generate(_entregas.length, (index) {
+          final entrega = _entregas[index];
+          final isLast = index == _entregas.length - 1;
+          return Column(
+            children: [
+              _buildEntregaItem(entrega),
+              if (!isLast) Divider(height: 1, indent: 60, color: _cardBorder),
+            ],
+          );
+        }),
       ),
     );
   }
 
-  Widget _buildEntregaCard(EntregaHistorial entrega) {
+  Widget _buildEntregaItem(EntregaHistorial entrega) {
     final fecha = _fechaFormat.format(_parseFecha(entrega.fechaEntregado));
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _cardBorder),
-        boxShadow: const [
-          BoxShadow(color: _shadowColor, blurRadius: 12, offset: Offset(0, 6)),
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              entrega.tieneComprobante
+                  ? CupertinoIcons.check_mark_circled_solid
+                  : CupertinoIcons.cube_box_fill,
+              color: _accent,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entrega.clienteNombre.isEmpty
+                      ? 'Cliente'
+                      : entrega.clienteNombre,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: _textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$fecha · ${entrega.metodoPago}',
+                  style: TextStyle(fontSize: 13, color: _textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: _textPrimary,
+                ),
+              ),
+              if (entrega.tieneComprobante)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: Icon(
+                    CupertinoIcons.doc_text,
+                    size: 14,
+                    color: _textSecondary,
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: _accent.withValues(alpha: 0.1),
-          child: Icon(
-            entrega.tieneComprobante ? Icons.check_circle : Icons.info_outline,
-            color: entrega.tieneComprobante ? _success : Colors.grey[600],
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            CupertinoIcons.exclamationmark_circle,
+            color: _accent,
+            size: 48,
           ),
-        ),
-        title: Text(
-          'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          '${entrega.clienteNombre} · $fecha\nMétodo: ${entrega.metodoPago}',
-          style: const TextStyle(fontSize: 13),
-        ),
-        isThreeLine: true,
-        trailing: entrega.tieneComprobante
-            ? const Icon(Icons.receipt_long, color: _success)
-            : const SizedBox.shrink(),
+          const SizedBox(height: 16),
+          const Text(
+            'Error al cargar ganancias',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _textSecondary),
+          ),
+          const SizedBox(height: 24),
+          CupertinoButton(
+            color: _accent,
+            borderRadius: BorderRadius.circular(30),
+            onPressed: _cargarGanancias,
+            child: const Text('Reintentar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            CupertinoIcons.money_dollar_circle,
+            size: 48,
+            color: CupertinoColors.systemGrey3.resolveFrom(context),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Aún no hay ganancias',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 17,
+              color: _textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tus ganancias aparecerán aquí en cuanto completes tu primer pedido.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _textSecondary, fontSize: 15),
+          ),
+        ],
       ),
     );
   }

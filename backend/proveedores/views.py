@@ -142,12 +142,16 @@ class ProveedorViewSet(viewsets.ReadOnlyModelViewSet):
         except Proveedor.DoesNotExist:
             logger.warning(
                 f"Usuario {user.email} con rol proveedor no tiene "
-                f"Proveedor vinculado en la base de datos"
+                f"Proveedor vinculado en la base de datos. Restableciendo a Cliente."
             )
+            # Auto-corregir inconsistencia
+            user.rol_activo = 'cliente'
+            user.save(update_fields=['rol_activo'])
+
             return Response(
                 {
-                    'error': 'No tienes un proveedor vinculado a tu cuenta',
-                    'mensaje': 'Contacta al administrador para vincular tu cuenta'
+                    'error': 'No se encontró tu perfil de proveedor. Se ha restablecido tu cuenta a modo Cliente.',
+                    'action': 'ROLE_RESET'
                 },
                 status=status.HTTP_404_NOT_FOUND
             )

@@ -1,7 +1,9 @@
-// lib/screens/admin/dashboard/widgets/dashboard_drawer.dart
 import 'package:flutter/material.dart';
-import '../constants/dashboard_colors.dart';
+import 'package:provider/provider.dart';
+import '../../../../providers/theme_provider.dart';
+import '../../../../theme/app_colors_primary.dart';
 import '../../../../config/rutas.dart';
+import '../../../../config/api_config.dart';
 
 class DashboardDrawer extends StatelessWidget {
   final Map<String, dynamic>? usuario;
@@ -9,6 +11,7 @@ class DashboardDrawer extends StatelessWidget {
   final Function(String) onSeccionNoDisponible;
   final VoidCallback onCerrarSesion;
   final VoidCallback onSolicitudesTap;
+  final Function()? onActualizarFoto;
 
   const DashboardDrawer({
     super.key,
@@ -17,123 +20,199 @@ class DashboardDrawer extends StatelessWidget {
     required this.onSeccionNoDisponible,
     required this.onCerrarSesion,
     required this.onSolicitudesTap,
+    this.onActualizarFoto,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final backgroundColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
+      backgroundColor: backgroundColor,
+      child: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(context, isDark),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  _buildSectionTitle('PRINCIPAL', isDark),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.dashboard_outlined,
+                    title: 'Dashboard',
+                    isActive:
+                        true, // Assuming current route logic or state if needed
+                    onTap: () => Navigator.pop(context),
+                    isDark: isDark,
+                  ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.people_outline,
+                    title: 'Usuarios',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Rutas.irA(context, Rutas.adminUsuariosGestion);
+                    },
+                    isDark: isDark,
+                  ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.store_outlined,
+                    title: 'Proveedores',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Rutas.irA(context, Rutas.adminProveedoresGestion);
+                    },
+                    isDark: isDark,
+                  ),
+                  _buildSolicitudesMenuItem(context, isDark),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.delivery_dining_outlined,
+                    title: 'Repartidores',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Rutas.irA(context, Rutas.adminRepartidoresGestion);
+                    },
+                    isDark: isDark,
+                  ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.card_giftcard_outlined,
+                    title: 'Rifas',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Rutas.irA(context, Rutas.adminRifasGestion);
+                    },
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: _buildLogoutButton(context, isDark),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, bool isDark) {
+    final rawUrl = usuario?['foto_perfil'] as String?;
+    final fotoUrl = (rawUrl != null && rawUrl.isNotEmpty)
+        ? ApiConfig.getMediaUrl(rawUrl)
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
         children: [
-          _buildHeader(),
-          const Divider(),
-          _buildMenuItem(
-            context,
-            icon: Icons.dashboard,
-            title: 'Dashboard',
-            color: DashboardColors.morado,
-            selected: true,
-            onTap: () => Navigator.pop(context),
+          Stack(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColorsPrimary.main.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  image: fotoUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(fotoUrl),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: fotoUrl == null
+                    ? Center(
+                        child: Text(
+                          (usuario?['nombre'] ?? 'A')
+                              .substring(0, 1)
+                              .toUpperCase(),
+                          style: TextStyle(
+                            color: AppColorsPrimary.main,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+              if (onActualizarFoto != null)
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: InkWell(
+                    onTap: onActualizarFoto,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColorsPrimary.main,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF1C1C1E)
+                              : Colors.white,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          _buildMenuItem(
-            context,
-            icon: Icons.people,
-            title: 'Gestión de Usuarios',
-            color: DashboardColors.azul,
-            onTap: () {
-              Navigator.pop(context);
-              Rutas.irA(context, Rutas.adminUsuariosGestion);
-            },
-          ),
-          _buildMenuItem(
-            context,
-            icon: Icons.store,
-            title: 'Proveedores',
-            color: DashboardColors.verde,
-            onTap: () {
-              Navigator.pop(context);
-              Rutas.irA(context, Rutas.adminProveedoresGestion);
-            },
-          ),
-          _buildSolicitudesMenuItem(context),
-          _buildMenuItem(
-            context,
-            icon: Icons.delivery_dining,
-            title: 'Repartidores',
-            color: DashboardColors.naranja,
-            onTap: () {
-              Navigator.pop(context);
-              Rutas.irA(context, Rutas.adminRepartidoresGestion);
-            },
-          ),
-          _buildMenuItem(
-            context,
-            icon: Icons.card_giftcard,
-            title: 'Gestión de Rifas',
-            color: Colors.purple,
-            onTap: () {
-              Navigator.pop(context);
-              Rutas.irA(context, Rutas.adminRifasGestion);
-            },
-          ),
-          const Divider(),
-          _buildMenuItem(
-            context,
-            icon: Icons.settings,
-            title: 'Configuración',
-            color: DashboardColors.gris,
-            onTap: () {
-              Navigator.pop(context);
-              Rutas.irA(context, Rutas.adminAjustes);
-            },
-          ),
-          const Divider(),
-          _buildMenuItem(
-            context,
-            icon: Icons.logout,
-            title: 'Cerrar Sesión',
-            color: DashboardColors.rojo,
-            onTap: onCerrarSesion,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${usuario?['nombre'] ?? 'Admin'}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                Text(
+                  usuario?['email'] ?? 'admin@deliber.com',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return UserAccountsDrawerHeader(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [DashboardColors.morado, DashboardColors.moradoOscuro],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildSectionTitle(String title, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: isDark ? Colors.grey[500] : Colors.grey[600],
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
         ),
-      ),
-      currentAccountPicture: const CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Icon(Icons.admin_panel_settings, size: 40, color: DashboardColors.morado),
-      ),
-      accountName: Text(
-        '${usuario?['nombre'] ?? ''} ${usuario?['apellido'] ?? ''}',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      accountEmail: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(usuario?['email'] ?? ''),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              'ADMINISTRADOR',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -142,43 +221,104 @@ class DashboardDrawer extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required String title,
-    required Color color,
     required VoidCallback onTap,
-    bool selected = false,
+    bool isActive = false,
+    required bool isDark,
+    Widget? trailing,
   }) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title),
-      selected: selected,
-      onTap: onTap,
+    final activeBg = AppColorsPrimary.main.withValues(alpha: 0.1);
+    final activeColor = AppColorsPrimary.main;
+    final inactiveColor = isDark ? Colors.white : Colors.black87;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: isActive ? activeBg : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isActive
+              ? activeColor
+              : (isDark ? Colors.grey[400] : Colors.grey[600]),
+          size: 22,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isActive ? activeColor : inactiveColor,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 15,
+          ),
+        ),
+        trailing: trailing,
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        dense: true,
+      ),
     );
   }
 
-  Widget _buildSolicitudesMenuItem(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.assignment, color: DashboardColors.naranja),
-      title: const Text('Solicitudes de Rol'),
+  Widget _buildSolicitudesMenuItem(BuildContext context, bool isDark) {
+    return _buildMenuItem(
+      context,
+      icon: Icons.notifications_none,
+      title: 'Solicitudes',
+      onTap: () {
+        Navigator.pop(context);
+        onSolicitudesTap();
+      },
+      isDark: isDark,
       trailing: solicitudesPendientesCount > 0
           ? Container(
-              padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                color: DashboardColors.rojo,
-                shape: BoxShape.circle,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '$solicitudesPendientesCount',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             )
           : null,
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context, bool isDark) {
+    return InkWell(
       onTap: () {
         Navigator.pop(context);
-        onSolicitudesTap();
+        onCerrarSesion();
       },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF2C2C2E) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.logout, color: Colors.red[400], size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Cerrar Sesión',
+              style: TextStyle(
+                color: Colors.red[400],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

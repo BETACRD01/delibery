@@ -1,6 +1,7 @@
 // lib/screens/supplier/screens/pantalla_estadisticas_proveedor.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 
 import '../../../controllers/supplier/supplier_controller.dart';
@@ -18,7 +19,9 @@ class PantallaEstadisticasProveedor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       appBar: AppBar(
         title: const Text(
           'Estadísticas',

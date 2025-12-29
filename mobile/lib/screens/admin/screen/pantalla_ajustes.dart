@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../dashboard/constants/dashboard_colors.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
+import '../../../../providers/theme_provider.dart';
+import '../../../../providers/preferencias_provider.dart';
+import '../../../../theme/app_colors_primary.dart';
 import '../../../config/rutas.dart';
 
 class PantallaAjustesAdmin extends StatefulWidget {
@@ -11,244 +15,292 @@ class PantallaAjustesAdmin extends StatefulWidget {
 }
 
 class _PantallaAjustesAdminState extends State<PantallaAjustesAdmin> {
-  bool _notificacionesEmail = true;
-  bool _notificacionesPush = true;
-  bool _modoSilencio = false;
-  bool _temaOscuro = false;
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final bgColor = isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7);
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('Ajustes del Administrador'),
+        title: const Text('Ajustes'),
+        backgroundColor: bgColor,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [DashboardColors.morado, DashboardColors.moradoOscuro],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        titleTextStyle: TextStyle(
+          color: isDark ? Colors.white : Colors.black,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
         ),
+        iconTheme: IconThemeData(color: AppColorsPrimary.main),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        physics: const BouncingScrollPhysics(),
         children: [
-          _buildHeader(),
-          const SizedBox(height: 16),
-          _buildSection(
-            titulo: 'Notificaciones',
+          const SizedBox(height: 32),
+          _buildSectionHeader('GENERAL'),
+          _buildSettingsGroup(
+            isDark: isDark,
             children: [
-              _buildSwitchTile(
-                title: 'Email',
-                subtitle: 'Recibir alertas y reportes por correo',
-                value: _notificacionesEmail,
-                onChanged: (v) => setState(() => _notificacionesEmail = v),
-              ),
-              _buildSwitchTile(
-                title: 'Push',
-                subtitle: 'Avisos en tiempo real sobre operaciones',
-                value: _notificacionesPush,
-                onChanged: (v) => setState(() => _notificacionesPush = v),
-              ),
-              _buildSwitchTile(
-                title: 'Modo silencio',
-                subtitle: 'Desactiva sonidos en horarios nocturnos',
-                value: _modoSilencio,
-                onChanged: (v) => setState(() => _modoSilencio = v),
+              Consumer<PreferenciasProvider>(
+                builder: (context, prefs, _) {
+                  if (prefs.cargando) {
+                    return const Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Center(child: CupertinoActivityIndicator()),
+                    );
+                  }
+                  return Column(
+                    children: [
+                      _buildSwitchTile(
+                        icon: Icons.dark_mode,
+                        iconColor: Colors.indigo,
+                        title: 'Modo Oscuro',
+                        value: Provider.of<ThemeProvider>(context).isDarkMode,
+                        onChanged: (v) => Provider.of<ThemeProvider>(
+                          context,
+                          listen: false,
+                        ).toggleTheme(v),
+                        isFirst: true,
+                      ),
+                      _buildDivider(isDark),
+                      _buildSwitchTile(
+                        icon: Icons.notifications,
+                        iconColor: Colors.redAccent,
+                        title: 'Notificaciones Push',
+                        value: prefs.notificacionesPush,
+                        onChanged: (v) => prefs.updatePush(v),
+                      ),
+                      _buildDivider(isDark),
+                      _buildSwitchTile(
+                        icon: Icons.email,
+                        iconColor: Colors.blue,
+                        title: 'Notificaciones Email',
+                        value: prefs.notificacionesEmail,
+                        onChanged: (v) => prefs.updateEmail(v),
+                      ),
+                      _buildDivider(isDark),
+                      _buildSwitchTile(
+                        icon: Icons.do_not_disturb_on,
+                        iconColor: Colors.purple,
+                        title: 'Modo Silencio',
+                        value: prefs.modoSilencio,
+                        onChanged: (v) => prefs.updateModoSilencio(v),
+                        isLast: true,
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            titulo: 'Preferencias de la app',
+          const SizedBox(height: 24),
+          _buildSectionHeader('ADMINISTRACIÓN'),
+          _buildSettingsGroup(
+            isDark: isDark,
             children: [
-              _buildSwitchTile(
-                title: 'Tema oscuro',
-                subtitle: 'Usar paleta oscura en el dashboard',
-                value: _temaOscuro,
-                onChanged: (v) => setState(() => _temaOscuro = v),
-              ),
               _buildActionTile(
-                icon: Icons.language,
-                title: 'Idioma',
-                subtitle: 'Español',
-                onTap: _mostrarPendiente,
+                icon: Icons.category,
+                iconColor: Colors.orange,
+                title: 'Categorías',
+                onTap: () => Rutas.irA(context, Rutas.adminGestionCategorias),
+                isFirst: true,
               ),
-              _buildActionTile(
-                icon: Icons.dashboard_customize,
-                title: 'Personalizar cards',
-                subtitle: 'Ordenar o ocultar widgets del dashboard',
-                onTap: _mostrarPendiente,
-              ),
+              _buildDivider(isDark),
               _buildActionTile(
                 icon: Icons.local_shipping,
-                title: 'Configuración de envíos',
-                subtitle: 'Tarifas por zona, hubs y recargo nocturno (solo admin)',
+                iconColor: Colors.teal,
+                title: 'Configuración Envíos',
                 onTap: () => Rutas.irA(context, Rutas.adminEnviosConfig),
               ),
+              _buildDivider(isDark),
+              _buildActionTile(
+                icon: Icons.devices,
+                iconColor: Colors.blueGrey,
+                title: 'Dispositivos',
+                onTap: () => Rutas.irA(context, Rutas.adminDispositivos),
+                isLast: true,
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            titulo: 'Seguridad',
+          const SizedBox(height: 24),
+          _buildSectionHeader('SEGURIDAD'),
+          _buildSettingsGroup(
+            isDark: isDark,
             children: [
-          _buildActionTile(
-            icon: Icons.lock,
-            title: 'Cambiar contraseña',
-            subtitle: 'Actualiza tu clave de administrador',
-            onTap: () => Rutas.irA(context, Rutas.adminCambiarPassword),
-          ),
-          _buildActionTile(
-            icon: Icons.lock_reset,
-            title: 'Resetear contraseña de usuario',
-            subtitle: 'Clientes, proveedores o repartidores',
-            onTap: () => Rutas.irA(context, Rutas.adminResetPasswordUsuario),
-          ),
               _buildActionTile(
-                icon: Icons.security,
-                title: 'Actividad reciente',
-                subtitle: 'Revisa ingresos y acciones de tu cuenta',
-                onTap: _mostrarPendiente,
+                icon: Icons.lock,
+                iconColor: Colors.grey,
+                title: 'Cambiar Contraseña',
+                onTap: () => Rutas.irA(context, Rutas.adminCambiarPassword),
+                isFirst: true,
               ),
+              _buildDivider(isDark),
               _buildActionTile(
-                icon: Icons.phonelink_lock,
-                title: 'Dispositivos conectados',
-                subtitle: 'Gestiona sesiones activas',
-                onTap: _mostrarPendiente,
+                icon: Icons.lock_reset,
+                iconColor: Colors.grey,
+                title: 'Reset Password Usuario',
+                onTap: () =>
+                    Rutas.irA(context, Rutas.adminResetPasswordUsuario),
+                isLast: true,
               ),
             ],
           ),
+          const SizedBox(height: 40),
+          Center(
+            child: Text(
+              'Versión 1.0.0',
+              style: TextStyle(
+                color: isDark ? Colors.grey[600] : Colors.grey[400],
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: DashboardColors.morado,
-            ),
-            child: const Icon(Icons.admin_panel_settings, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child:  Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children:  [
-                Text(
-                  'Panel del administrador',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Configura notificaciones, seguridad y apariencia.',
-                  style: TextStyle(color: DashboardColors.gris),
-                ),
-              ],
-            ),
-          ),
-        ],
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 32, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey[500],
+        ),
       ),
     );
   }
 
-  Widget _buildSection({
-    required String titulo,
+  Widget _buildSettingsGroup({
+    required bool isDark,
     required List<Widget> children,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            titulo,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ...children,
-        ],
-      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildDivider(bool isDark) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 56,
+      color: isDark ? Colors.grey[800] : Colors.grey[200],
     );
   }
 
   Widget _buildSwitchTile({
+    required IconData icon,
+    required Color iconColor,
     required String title,
-    required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
+    bool isFirst = false,
+    bool isLast = false,
   }) {
-    return SwitchListTile.adaptive(
-      contentPadding: EdgeInsets.zero,
-      activeThumbColor: DashboardColors.morado,
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle),
-      value: value,
-      onChanged: onChanged,
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(isFirst ? 10 : 0),
+        topRight: Radius.circular(isFirst ? 10 : 0),
+        bottomLeft: Radius.circular(isLast ? 10 : 0),
+        bottomRight: Radius.circular(isLast ? 10 : 0),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              _buildIcon(icon, iconColor),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+              CupertinoSwitch(
+                value: value,
+                activeTrackColor: AppColorsPrimary.main,
+                onChanged: onChanged,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildActionTile({
     required IconData icon,
+    required Color iconColor,
     required String title,
-    required String subtitle,
     required VoidCallback onTap,
+    bool isFirst = false,
+    bool isLast = false,
   }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: DashboardColors.grisClaro.withValues(alpha: 0.6),
-        child: Icon(icon, color: DashboardColors.morado),
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(isFirst ? 10 : 0),
+        topRight: Radius.circular(isFirst ? 10 : 0),
+        bottomLeft: Radius.circular(isLast ? 10 : 0),
+        bottomRight: Radius.circular(isLast ? 10 : 0),
       ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                _buildIcon(icon, iconColor),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Icon(
+                  CupertinoIcons.chevron_forward,
+                  size: 20,
+                  color: Colors.grey[400],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  void _mostrarPendiente() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Esta opción estará disponible pronto'),
-        behavior: SnackBarBehavior.floating,
+  Widget _buildIcon(IconData icon, Color color) {
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
       ),
+      child: Icon(icon, color: Colors.white, size: 18),
     );
   }
 }

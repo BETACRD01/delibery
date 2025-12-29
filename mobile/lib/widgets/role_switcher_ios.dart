@@ -450,48 +450,104 @@ class _RoleSwitcherIOSState extends State<RoleSwitcherIOS>
   }
 
   Widget _buildSimpleSwitch() {
-    // Widget estático para cuando solo hay un rol
+    // Widget interactivo para cuando solo hay un rol
     final entry = widget.opciones.entries.first;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: CupertinoColors.systemBlue.resolveFrom(context),
-          width: 2,
+    final isDisabled = widget.rolesDeshabilitados.contains(entry.key);
+
+    return GestureDetector(
+      onTap: () {
+        if (_isChangingRole) return;
+
+        if (isDisabled) {
+          HapticFeedback.heavyImpact();
+          _mostrarMensajeRolBloqueado();
+          return;
+        }
+
+        HapticFeedback.lightImpact();
+        setState(() => _isChangingRole = true);
+
+        // Llamar al callback para navegar al rol
+        widget.onChanged(entry.key);
+
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) {
+            setState(() => _isChangingRole = false);
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDisabled
+                ? CupertinoColors.systemGrey.resolveFrom(context)
+                : CupertinoColors.systemBlue.resolveFrom(context),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color:
+                  (isDisabled
+                          ? CupertinoColors.systemGrey
+                          : CupertinoColors.systemBlue)
+                      .resolveFrom(context)
+                      .withValues(alpha: 0.1),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: CupertinoColors.systemBlue
-                .resolveFrom(context)
-                .withValues(alpha: 0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: CupertinoColors.systemBlue.resolveFrom(context),
-              shape: BoxShape.circle,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDisabled
+                    ? CupertinoColors.systemGrey.resolveFrom(context)
+                    : CupertinoColors.systemBlue.resolveFrom(context),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _iconForRole(entry.key),
+                size: 20,
+                color: Colors.white,
+              ),
             ),
-            child: Icon(_iconForRole(entry.key), size: 20, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            entry.value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: CupertinoColors.systemBlue.resolveFrom(context),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                'Ir a ${entry.value}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDisabled
+                      ? CupertinoColors.systemGrey.resolveFrom(context)
+                      : CupertinoColors.systemBlue.resolveFrom(context),
+                ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Icon(
+              CupertinoIcons.chevron_right,
+              size: 18,
+              color: isDisabled
+                  ? CupertinoColors.systemGrey.resolveFrom(context)
+                  : CupertinoColors.systemBlue.resolveFrom(context),
+            ),
+            if (isDisabled) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                CupertinoIcons.lock_fill,
+                size: 14,
+                color: CupertinoColors.systemGrey,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

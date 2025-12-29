@@ -222,6 +222,12 @@ class User(AbstractUser):
         help_text='Notificaciones push en la aplicación móvil'
     )
 
+    modo_silencio = models.BooleanField(
+        default=False,
+        verbose_name='Modo silencio',
+        help_text='Si está activado, la app no emitirá sonidos'
+    )
+
     # ==========================================
     # RECUPERACIÓN DE CONTRASEÑA (SEGURA)
     # ==========================================

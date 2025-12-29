@@ -6,7 +6,6 @@ import 'package:flutter/gestures.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../apis/helpers/api_exception.dart';
-import '../../pantalla_router.dart';
 import '../../../widgets/legal/pantalla_documento_legal.dart';
 import '../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
@@ -63,73 +62,79 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
     await showCupertinoModalPopup<void>(
       context: context,
       builder: (BuildContext context) {
-        return Container(
-          height: 300,
-          color: JPCupertinoColors.surface(context),
-          child: Column(
-            children: [
-              // Header con botón Listo
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: JPCupertinoColors.separator(context),
-                      width: 0.5,
+        return Material(
+          type: MaterialType.transparency,
+          child: Container(
+            height: 300,
+            color: JPCupertinoColors.surface(context),
+            child: Column(
+              children: [
+                // Header con botón Listo
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: JPCupertinoColors.separator(context),
+                        width: 0.5,
+                      ),
                     ),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'Cancelar',
-                        style: TextStyle(
-                          color: JPCupertinoColors.secondaryLabel(context),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'Cancelar',
+                          style: TextStyle(
+                            color: JPCupertinoColors.secondaryLabel(context),
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Fecha de Nacimiento',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                          color: JPCupertinoColors.label(context),
+                      Expanded(
+                        child: Text(
+                          'Fecha de Nacimiento',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: JPCupertinoColors.label(context),
+                          ),
                         ),
                       ),
-                    ),
-                    CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'Listo',
-                        style: TextStyle(
-                          color: AppColorsPrimary.main,
-                          fontWeight: FontWeight.w600,
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'Listo',
+                          style: TextStyle(
+                            color: AppColorsPrimary.main,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              // Date picker
-              Expanded(
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.date,
-                  initialDateTime: _fechaNacimiento ?? DateTime(2000),
-                  minimumDate: DateTime(1920),
-                  maximumDate: DateTime.now(),
-                  onDateTimeChanged: (DateTime newDate) {
-                    setState(() => _fechaNacimiento = newDate);
-                  },
+                // Date picker
+                Expanded(
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.date,
+                    initialDateTime: _fechaNacimiento ?? DateTime(2000),
+                    minimumDate: DateTime(1920),
+                    maximumDate: DateTime.now(),
+                    onDateTimeChanged: (DateTime newDate) {
+                      setState(() => _fechaNacimiento = newDate);
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -270,11 +275,36 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
       await _api.register(data);
 
       if (mounted) {
-        await Navigator.pushAndRemoveUntil(
-          context,
-          CupertinoPageRoute(builder: (_) => const PantallaRouter()),
-          (route) => false,
+        // Mostrar mensaje de éxito
+        await showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: Icon(
+              CupertinoIcons.checkmark_circle_fill,
+              color: AppColorsPrimary.main,
+              size: 48,
+            ),
+            content: const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Text(
+                '¡Registro exitoso!\n\nAhora puedes iniciar sesión con tu cuenta.',
+                style: TextStyle(fontSize: 15),
+              ),
+            ),
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                child: const Text('Iniciar Sesión'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
         );
+
+        // Volver al login
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -289,9 +319,8 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
   void _mostrarTerminos() {
     Navigator.of(context).push(
       CupertinoPageRoute(
-        builder: (context) => const PantallaDocumentoLegal(
-          tipo: TipoDocumento.terminos,
-        ),
+        builder: (context) =>
+            const PantallaDocumentoLegal(tipo: TipoDocumento.terminos),
       ),
     );
   }
@@ -300,9 +329,8 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
   void _mostrarPrivacidad() {
     Navigator.of(context).push(
       CupertinoPageRoute(
-        builder: (context) => const PantallaDocumentoLegal(
-          tipo: TipoDocumento.privacidad,
-        ),
+        builder: (context) =>
+            const PantallaDocumentoLegal(tipo: TipoDocumento.privacidad),
       ),
     );
   }
@@ -313,11 +341,7 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          Icon(
-            CupertinoIcons.phone,
-            color: AppColorsPrimary.main,
-            size: 24,
-          ),
+          Icon(CupertinoIcons.phone, color: AppColorsPrimary.main, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Material(
@@ -447,18 +471,14 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
           // Sección de contacto
           _buildSectionHeader('CONTACTO'),
           const SizedBox(height: 8),
-          _buildGroupedSection([
-            _buildCampoCelularInternacional(),
-          ]),
+          _buildGroupedSection([_buildCampoCelularInternacional()]),
 
           const SizedBox(height: 24),
 
           // Sección de fecha de nacimiento
           _buildSectionHeader('FECHA DE NACIMIENTO'),
           const SizedBox(height: 8),
-          _buildGroupedSection([
-            _buildCampoFecha(),
-          ]),
+          _buildGroupedSection([_buildCampoFecha()]),
 
           const SizedBox(height: 24),
 
@@ -471,7 +491,8 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
               placeholder: 'Contraseña',
               obscure: _obscurePassword,
               error: _passwordError,
-              onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
+              onToggle: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
               onChanged: (_) => setState(() => _passwordError = null),
             ),
             _buildDivider(),
@@ -480,7 +501,8 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
               placeholder: 'Confirmar contraseña',
               obscure: _obscureConfirmar,
               error: _confirmarPasswordError,
-              onToggle: () => setState(() => _obscureConfirmar = !_obscureConfirmar),
+              onToggle: () =>
+                  setState(() => _obscureConfirmar = !_obscureConfirmar),
               onChanged: (_) => setState(() => _confirmarPasswordError = null),
             ),
           ]),
@@ -525,9 +547,7 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
         color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        children: children,
-      ),
+      child: Column(children: children),
     );
   }
 
@@ -555,11 +575,7 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: AppColorsPrimary.main,
-            size: 24,
-          ),
+          Icon(icon, color: AppColorsPrimary.main, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -612,11 +628,7 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Icon(
-            CupertinoIcons.lock,
-            color: AppColorsPrimary.main,
-            size: 24,
-          ),
+          Icon(CupertinoIcons.lock, color: AppColorsPrimary.main, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -696,8 +708,12 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _calcularEdad() >= 18
-                      ? JPCupertinoColors.systemGreen(context).withValues(alpha: 0.15)
-                      : JPCupertinoColors.systemRed(context).withValues(alpha: 0.15),
+                      ? JPCupertinoColors.systemGreen(
+                          context,
+                        ).withValues(alpha: 0.15)
+                      : JPCupertinoColors.systemRed(
+                          context,
+                        ).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -745,7 +761,9 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
             child: CupertinoSwitch(
               value: _aceptaTerminos,
               activeTrackColor: AppColorsPrimary.main,
-              onChanged: _loading ? null : (v) => setState(() => _aceptaTerminos = v),
+              onChanged: _loading
+                  ? null
+                  : (v) => setState(() => _aceptaTerminos = v),
             ),
           ),
           const SizedBox(width: 14),
@@ -771,9 +789,12 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
                         color: AppColorsPrimary.main,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
-                        decorationColor: AppColorsPrimary.main.withValues(alpha: 0.4),
+                        decorationColor: AppColorsPrimary.main.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
-                      recognizer: TapGestureRecognizer()..onTap = _mostrarTerminos,
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = _mostrarTerminos,
                     ),
                     const TextSpan(
                       text: ' y la ',
@@ -785,9 +806,12 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
                         color: AppColorsPrimary.main,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
-                        decorationColor: AppColorsPrimary.main.withValues(alpha: 0.4),
+                        decorationColor: AppColorsPrimary.main.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
-                      recognizer: TapGestureRecognizer()..onTap = _mostrarPrivacidad,
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = _mostrarPrivacidad,
                     ),
                     const TextSpan(
                       text: '.',
@@ -867,7 +891,9 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
       ),
       child: CupertinoButton(
         onPressed: _loading ? null : _registrar,
-        color: _loading ? JPCupertinoColors.quaternaryLabel(context) : Colors.transparent,
+        color: _loading
+            ? JPCupertinoColors.quaternaryLabel(context)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         padding: EdgeInsets.zero,
         child: _loading

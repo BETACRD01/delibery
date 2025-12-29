@@ -593,10 +593,17 @@ def mis_solicitudes_cambio_rol(request):
         }, status=status.HTTP_201_CREATED)
 
 
-@api_view(["GET"])
+@api_view(["GET", "DELETE"])
 @permission_classes([IsAuthenticated])
 def detalle_solicitud_cambio_rol(request, solicitud_id):
     solicitud = get_object_or_404(SolicitudCambioRol, id=solicitud_id, user=request.user)
+
+    if request.method == "DELETE":
+        # Permitir eliminar historial (hard delete de la solicitud)
+        # Esto no afecta roles ya asignados, solo limpia el registro visual del usuario.
+        solicitud.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     return Response(SolicitudCambioRolDetalleSerializer(solicitud).data)
 
 
@@ -761,7 +768,8 @@ def mis_roles(request):
     })
 
     # 2. ROL PROVEEDOR (Verificar perfil real)
-    if hasattr(user, 'proveedor') and user.proveedor.activo:
+    # Corrección robusta: Verificar que no esté soft-deleted
+    if hasattr(user, 'proveedor') and user.proveedor.activo and user.proveedor.deleted_at is None:
         # Verificar si está verificado
         if hasattr(user.proveedor, 'verificado'):
             if user.proveedor.verificado:
@@ -786,17 +794,20 @@ def mis_roles(request):
                 "razon_rechazo": None
             })
     else:
-        # Si no tiene perfil, buscar si tiene solicitud pendiente/rechazada
+        # Si no tiene perfil (o está eliminado/inactivo), buscar si tiene solicitud pendiente/rechazada
         solicitud = SolicitudCambioRol.objects.filter(
             user=user, rol_solicitado="PROVEEDOR"
         ).order_by("-creado_en").first()
 
-        if solicitud:
+        if solicitud and solicitud.estado == 'PENDIENTE':
+            # Solo mostramos solicitudes PENDIENTES.
+            # - ACEPTADA huérfana: Ignorada (perfil borrado).
+            # - RECHAZADA: Ignorada (para no ensuciar el switcher de roles).
             roles_data.append({
                 "nombre": "PROVEEDOR",
                 "estado": solicitud.estado,
                 "activo": False,
-                "razon_rechazo": solicitud.razon_rechazo if solicitud.estado == "RECHAZADO" else None
+                "razon_rechazo": None
             })
 
     # 3. ROL REPARTIDOR (Verificar perfil real)
@@ -813,13 +824,22 @@ def mis_roles(request):
             user=user, rol_solicitado="REPARTIDOR"
         ).order_by("-creado_en").first()
 
-        if solicitud:
+        if solicitud and solicitud.estado == 'PENDIENTE':
             roles_data.append({
                 "nombre": "REPARTIDOR",
                 "estado": solicitud.estado,
                 "activo": False,
-                "razon_rechazo": solicitud.razon_rechazo if solicitud.estado == "RECHAZADO" else None
+                "razon_rechazo": None
             })
+
+    # 4. ROL ADMINISTRADOR (Para staff/superusers)
+    if user.is_staff or user.is_superuser:
+        roles_data.append({
+            "nombre": "ADMINISTRADOR",
+            "estado": "ACEPTADO",
+            "activo": True,
+            "razon_rechazo": None
+        })
 
     # Determinar rol activo
     rol_token = None
@@ -832,11 +852,18 @@ def mis_roles(request):
     except Exception:
         rol_token = None
 
-    rol_activo_db = (
-        getattr(user, "rol_activo", None)
-        or getattr(user, "tipo_usuario", None)
-        or getattr(user, "rol", "cliente")
-    )
+    # Prioridad Admin: Si es Staff/Superuser y (no tiene rol activo O es cliente), default a ADMINISTRADOR
+    user_rol = getattr(user, "rol_activo", None)
+    
+    # FIX: Forzar admin incluso si está pegado como 'cliente'
+    if (user.is_staff or user.is_superuser) and (not user_rol or user_rol == 'cliente'):
+        rol_activo_db = "ADMINISTRADOR"
+    else:
+        rol_activo_db = (
+            user_rol
+            or getattr(user, "tipo_usuario", None)
+            or getattr(user, "rol", "cliente")
+        )
 
     rol_activo = rol_token or rol_activo_db or "cliente"
     rol_activo = rol_activo.upper() if isinstance(rol_activo, str) else "CLIENTE"

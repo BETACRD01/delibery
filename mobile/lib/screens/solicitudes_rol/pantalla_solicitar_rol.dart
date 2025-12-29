@@ -404,8 +404,111 @@ class _PantallaSolicitarRolState extends State<PantallaSolicitarRol> {
     );
   }
 
-  void _handleSubmitSuccess() {
-    Navigator.pop(context, true);
+  void _handleSubmitSuccess() async {
+    // Mostrar pantalla de éxito estilo iOS
+    await showCupertinoModalPopup(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Material(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: SafeArea(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icono grande con animación
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColorsPrimary.main.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    CupertinoIcons.checkmark_circle_fill,
+                    color: AppColorsPrimary.main,
+                    size: 64,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Título
+                const Text(
+                  '¡Solicitud Enviada!',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.8,
+                    color: CupertinoColors.label,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+
+                // Descripción
+                Text(
+                  'Tu solicitud para ser ${_rolSeleccionado == 'PROVEEDOR' ? 'Proveedor' : 'Repartidor'} ha sido enviada exitosamente.',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w400,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                    letterSpacing: -0.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Revisaremos tu información y te notificaremos pronto.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: CupertinoColors.tertiaryLabel.resolveFrom(context),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+
+                // Botón estilo iOS
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorsPrimary.main,
+                          CupertinoColors.systemTeal,
+                        ],
+                      ),
+                    ),
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        'Entendido',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: CupertinoColors.white,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Volver a la pantalla anterior
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
   }
 
   void _irAMisSolicitudes() {

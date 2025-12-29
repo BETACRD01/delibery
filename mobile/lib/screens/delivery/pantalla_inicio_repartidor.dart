@@ -38,15 +38,23 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   // ============================================
   // COLORES iOS STYLE
   // ============================================
-  static const Color _accent = Color(0xFF0A84FF);
+  static const Color _accent = Color(0xFF0CB7F2); // Celeste corporativo
   static const Color _success = Color(0xFF34C759);
   static const Color _rojo = Color(0xFFFF3B30);
-  static const Color _surface = CupertinoColors.systemGroupedBackground;
-  static const Color _cardBg = CupertinoColors.white;
-  static const Color _cardBorder = Color(0xFFE5E5EA);
-  static const Color _shadowColor = Color(0x1A000000);
-  static const Color _textPrimary = CupertinoColors.label;
-  static const Color _textSecondary = CupertinoColors.secondaryLabel;
+
+  // Dynamic Colors
+  Color get _surface =>
+      CupertinoColors.systemGroupedBackground.resolveFrom(context);
+  Color get _cardBg =>
+      CupertinoColors.secondarySystemGroupedBackground.resolveFrom(context);
+  Color get _cardBorder => CupertinoColors.separator.resolveFrom(context);
+  Color get _textPrimary => CupertinoColors.label.resolveFrom(context);
+  Color get _textSecondary =>
+      CupertinoColors.secondaryLabel.resolveFrom(context);
+  Color get _shadowColor =>
+      CupertinoTheme.brightnessOf(context) == Brightness.dark
+      ? Colors.transparent
+      : const Color(0x1A000000);
 
   // ============================================
   // CICLO DE VIDA
@@ -212,7 +220,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     await showCupertinoDialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (dialogContext) => CupertinoAlertDialog(
         title: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -244,7 +252,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                 ),
               ],
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 '¿Quieres aceptar este pedido?',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
@@ -256,13 +264,13 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         ),
         actions: [
           CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             isDestructiveAction: true,
             child: const Text('Ignorar'),
           ),
           CupertinoDialogAction(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               await _aceptarPedido(pedidoId);
             },
             isDefaultAction: true,
@@ -316,12 +324,15 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     showCupertinoDialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (dialogContext) => CupertinoAlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(CupertinoIcons.check_mark_circled_solid,
-                color: _success, size: 22),
+            const Icon(
+              CupertinoIcons.check_mark_circled_solid,
+              color: _success,
+              size: 22,
+            ),
             const SizedBox(width: 8),
             Text(titulo),
           ],
@@ -329,7 +340,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         content: Text(mensaje),
         actions: [
           CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             isDefaultAction: true,
             child: const Text('OK'),
           ),
@@ -342,7 +353,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     showCupertinoDialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (dialogContext) => CupertinoAlertDialog(
         title: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -354,7 +365,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         content: Text(mensaje),
         actions: [
           CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             isDefaultAction: true,
             child: const Text('OK'),
           ),
@@ -449,11 +460,12 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         : EstadoRepartidor.disponible;
 
     // Mostrar indicador de carga
-    showCupertinoDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CupertinoActivityIndicator(radius: 20),
+    unawaited(
+      showCupertinoDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) =>
+            const Center(child: CupertinoActivityIndicator(radius: 16)),
       ),
     );
 
@@ -463,55 +475,95 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     Navigator.pop(context); // Cerrar indicador
 
     if (exito) {
-      // Notificación iOS de éxito
-      showCupertinoDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (_) => CupertinoAlertDialog(
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _controller.estaDisponible
-                    ? CupertinoIcons.checkmark_circle_fill
-                    : CupertinoIcons.pause_circle_fill,
-                color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey,
-                size: 22,
-              ),
-              const SizedBox(width: 8),
-              const Text('Estado Actualizado'),
-            ],
-          ),
-          content: Text(
-            _controller.estaDisponible
-                ? 'Ahora estás disponible para recibir pedidos'
-                : 'Te has pausado. No recibirás nuevos pedidos',
-          ),
-          actions: [
-            CupertinoDialogAction(
-              onPressed: () => Navigator.pop(context),
-              isDefaultAction: true,
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+      // Mostrar toast overlay (funciona en Cupertino)
+      _mostrarToast(
+        _controller.estaDisponible
+            ? 'Ahora estás disponible'
+            : 'Te has pausado',
+        icono: _controller.estaDisponible
+            ? CupertinoIcons.checkmark_circle_fill
+            : CupertinoIcons.pause_circle_fill,
+        color: _controller.estaDisponible ? _success : _textSecondary,
       );
-
-      // Auto-cerrar después de 2 segundos
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop();
-        }
-      });
     } else {
       _mostrarNotificacionError(_controller.error ?? 'Error al cambiar estado');
     }
   }
 
+  void _mostrarToast(String mensaje, {IconData? icono, Color? color}) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 100,
+        left: 40,
+        right: 40,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 300),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: color ?? _success,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icono != null) ...[
+                    Icon(icono, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Flexible(
+                    child: Text(
+                      mensaje,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
   Future<void> _cerrarSesion() async {
     final confirmar = await showCupertinoDialog<bool>(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
+      builder: (dialogContext) => CupertinoAlertDialog(
         title: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -523,11 +575,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         content: const Text('¿Estás seguro que deseas cerrar sesión?'),
         actions: [
           CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancelar'),
           ),
           CupertinoDialogAction(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             isDestructiveAction: true,
             child: const Text('Cerrar Sesión'),
           ),
@@ -539,14 +591,16 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
       if (!mounted) return;
 
       // Mostrar indicador de carga
-      showCupertinoDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(
-          child: CupertinoActivityIndicator(radius: 20),
+      unawaited(
+        showCupertinoDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) =>
+              const Center(child: CupertinoActivityIndicator(radius: 20)),
         ),
       );
 
+      if (!mounted) return;
       await SessionCleanup.clearProviders(context);
       await _controller.cerrarSesion();
 
@@ -782,47 +836,55 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   // ============================================
 
   Widget _buildTabPendientes() {
-    return CupertinoPageScaffold(
-      backgroundColor: _surface,
-      navigationBar: _buildNavBar('Pedidos Disponibles'),
-      child: SafeArea(
-        child: _controller.loading
-            ? _buildCargando()
-            : _buildPedidosPendientes(),
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        navigationBar: _buildNavBar('Pedidos Disponibles'),
+        child: SafeArea(
+          child: _controller.loading
+              ? _buildCargando()
+              : _buildPedidosPendientes(),
+        ),
       ),
     );
   }
 
   Widget _buildTabEnCurso() {
-    return CupertinoPageScaffold(
-      backgroundColor: _surface,
-      navigationBar: _buildNavBar('En Curso'),
-      child: SafeArea(
-        child: _controller.loading
-            ? _buildCargando()
-            : _buildPedidosEnCurso(),
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        navigationBar: _buildNavBar('En Curso'),
+        child: SafeArea(
+          child: _controller.loading
+              ? _buildCargando()
+              : _buildPedidosEnCurso(),
+        ),
       ),
     );
   }
 
   Widget _buildTabHistorial() {
-    return CupertinoPageScaffold(
-      backgroundColor: _surface,
-      navigationBar: _buildNavBar('Historial'),
-      child: SafeArea(
-        child: _controller.loading
-            ? _buildCargando()
-            : _buildHistorial(),
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        navigationBar: _buildNavBar('Historial'),
+        child: SafeArea(
+          child: _controller.loading ? _buildCargando() : _buildHistorial(),
+        ),
       ),
     );
   }
 
   Widget _buildTabPerfil() {
-    return CupertinoPageScaffold(
-      backgroundColor: _surface,
-      navigationBar: _buildNavBar('Mi Perfil'),
-      child: SafeArea(
-        child: _buildPerfilContent(),
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        navigationBar: _buildNavBar('Mi Perfil'),
+        child: SafeArea(child: _buildPerfilContent()),
       ),
     );
   }
@@ -833,14 +895,9 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
 
   CupertinoNavigationBar _buildNavBar(String title) {
     return CupertinoNavigationBar(
-      backgroundColor: CupertinoColors.systemBackground.withOpacity(0.9),
+      backgroundColor: CupertinoColors.systemBackground.withValues(alpha: 0.9),
       border: null,
-      middle: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      middle: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -865,7 +922,9 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             : CupertinoColors.systemGrey5,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey3,
+          color: _controller.estaDisponible
+              ? _success
+              : CupertinoColors.systemGrey3,
           width: 1.5,
         ),
       ),
@@ -876,7 +935,9 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             _controller.estaDisponible
                 ? CupertinoIcons.checkmark_circle_fill
                 : CupertinoIcons.pause_circle_fill,
-            color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey,
+            color: _controller.estaDisponible
+                ? _success
+                : CupertinoColors.systemGrey,
             size: 14,
           ),
           const SizedBox(width: 4),
@@ -885,7 +946,9 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey,
+              color: _controller.estaDisponible
+                  ? _success
+                  : CupertinoColors.systemGrey,
             ),
           ),
         ],
@@ -899,9 +962,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
 
   Widget _buildPerfilContent() {
     if (_controller.perfil == null) {
-      return const Center(
-        child: Text('Cargando perfil...'),
-      );
+      return const Center(child: Text('Cargando perfil...'));
     }
 
     final perfil = _controller.perfil!;
@@ -921,16 +982,18 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                   color: _accent.withValues(alpha: 0.1),
                   border: Border.all(color: _accent, width: 3),
                 ),
-                child: perfil.fotoPerfil != null && perfil.fotoPerfil!.isNotEmpty
+                child:
+                    perfil.fotoPerfil != null && perfil.fotoPerfil!.isNotEmpty
                     ? ClipOval(
                         child: Image.network(
                           perfil.fotoPerfil!,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
-                            CupertinoIcons.person_fill,
-                            size: 50,
-                            color: _accent,
-                          ),
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                CupertinoIcons.person_fill,
+                                size: 50,
+                                color: _accent,
+                              ),
                         ),
                       )
                     : const Icon(
@@ -950,10 +1013,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
               const SizedBox(height: 4),
               Text(
                 perfil.email,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: _textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: _textSecondary),
               ),
               const SizedBox(height: 24),
               // Botón de disponibilidad
@@ -970,13 +1030,16 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
 
   Widget _buildBotonDisponibilidad() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 40),
       child: CupertinoButton(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        color: _controller.estaDisponible ? _success : CupertinoColors.systemGrey,
-        borderRadius: BorderRadius.circular(14),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+        color: _controller.estaDisponible
+            ? _success
+            : CupertinoColors.systemGrey,
+        borderRadius: BorderRadius.circular(12),
         onPressed: _cambiarDisponibilidad,
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
@@ -984,15 +1047,15 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                   ? CupertinoIcons.checkmark_circle_fill
                   : CupertinoIcons.pause_circle_fill,
               color: CupertinoColors.white,
+              size: 18,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Text(
-              _controller.estaDisponible
-                  ? 'Disponible - Toca para pausar'
-                  : 'Fuera de servicio - Toca para activar',
+              _controller.estaDisponible ? 'Disponible' : 'Pausado',
               style: const TextStyle(
                 color: CupertinoColors.white,
                 fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
             ),
           ],
@@ -1012,22 +1075,24 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         _buildMenuTile(
           icon: CupertinoIcons.money_dollar_circle,
           title: 'Ganancias',
-          onTap: () => Navigator.pushNamed(context, '/delivery/ganancias'),
+          onTap: () => Navigator.pushNamed(context, Rutas.repartidorGanancias),
         ),
         _buildMenuTile(
           icon: CupertinoIcons.person_circle,
           title: 'Mi Perfil',
-          onTap: () => Navigator.pushNamed(context, '/delivery/perfil'),
+          onTap: () =>
+              Navigator.pushNamed(context, Rutas.repartidorPerfilEditar),
         ),
         _buildMenuTile(
           icon: CupertinoIcons.settings,
           title: 'Configuración',
-          onTap: () => Navigator.pushNamed(context, '/delivery/configuracion'),
+          onTap: () =>
+              Navigator.pushNamed(context, Rutas.repartidorConfiguracion),
         ),
         _buildMenuTile(
           icon: CupertinoIcons.question_circle,
           title: 'Ayuda y Soporte',
-          onTap: () => Navigator.pushNamed(context, '/delivery/ayuda'),
+          onTap: () => Navigator.pushNamed(context, Rutas.repartidorAyuda),
         ),
         const SizedBox(height: 20),
         _buildMenuTile(
@@ -1058,11 +1123,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         onPressed: onTap,
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: isDestructive ? _rojo : _accent,
-              size: 24,
-            ),
+            Icon(icon, color: isDestructive ? _rojo : _accent, size: 24),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -1101,43 +1162,6 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     );
   }
 
-  Widget _buildError() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: _rojo.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _controller.error!,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _inicializar,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _accent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildSurfaceCard({
     required Widget child,
     EdgeInsetsGeometry margin = const EdgeInsets.only(bottom: 16),
@@ -1148,7 +1172,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(color: _shadowColor, blurRadius: 12, offset: Offset(0, 6)),
         ],
       ),
@@ -1169,7 +1193,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
 
     if (pendientes.isEmpty && banner == null) {
       return const ListaVaciaWidget(
-        icono: Icons.inbox,
+        icono: CupertinoIcons.tray,
         mensaje: 'No hay pedidos pendientes',
         submensaje: 'Los nuevos pedidos aparecerán aquí',
         accionBoton: null,
@@ -1198,7 +1222,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
           children: [
             Row(
               children: [
-                const Icon(Icons.new_releases, color: _accent),
+                const Icon(CupertinoIcons.sparkles, color: _accent),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -1283,7 +1307,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.delivery_dining, color: _accent, size: 20),
+                const Icon(
+                  CupertinoIcons.cube_box_fill,
+                  color: _accent,
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -1303,7 +1331,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                const Icon(
+                  CupertinoIcons.location_solid,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -1316,14 +1348,18 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.timer, size: 16, color: Colors.grey),
+                const Icon(CupertinoIcons.time, size: 16, color: Colors.grey),
                 const SizedBox(width: 6),
                 Text(
                   '${pedido.tiempoEstimadoMin} min est.',
                   style: const TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(width: 16),
-                const Icon(Icons.attach_money, size: 16, color: Colors.grey),
+                const Icon(
+                  CupertinoIcons.money_dollar,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   '\$${pedido.total.toStringAsFixed(2)}',
@@ -1337,7 +1373,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.payment, size: 16, color: Colors.grey),
+                const Icon(
+                  CupertinoIcons.creditcard,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'Pago: ${pedido.metodoPago}',
@@ -1345,10 +1385,14 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                 ),
                 if (pedido.comisionRepartidor != null) ...[
                   const Spacer(),
-                  const Icon(Icons.monetization_on, size: 16, color: _success),
+                  const Icon(
+                    CupertinoIcons.money_dollar_circle_fill,
+                    size: 16,
+                    color: _success,
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    'Comisión \$${pedido.comisionRepartidor!.toStringAsFixed(2)}',
+                    'Ganancia \$${pedido.comisionRepartidor!.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: _success,
                       fontWeight: FontWeight.w600,
@@ -1405,7 +1449,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
 
     if (pedidosActivos.isEmpty) {
       return const ListaVaciaWidget(
-        icono: Icons.delivery_dining,
+        icono: CupertinoIcons.cube_box,
         mensaje: 'No tienes entregas en curso',
         submensaje: 'Acepta un pedido para comenzar',
         accionBoton: null,
@@ -1448,7 +1492,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.delivery_dining,
+                        CupertinoIcons.cube_box_fill,
                         size: 18,
                         color: _success,
                       ),
@@ -1469,7 +1513,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             ),
             const SizedBox(height: 12),
             _buildSeccion(
-              icono: Icons.person,
+              icono: CupertinoIcons.person_fill,
               titulo: 'Cliente',
               contenido: pedido.cliente.nombre,
             ),
@@ -1477,7 +1521,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  const Icon(Icons.phone, color: Colors.grey, size: 20),
+                  const Icon(
+                    CupertinoIcons.phone_fill,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1486,7 +1534,11 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.call, color: _success, size: 22),
+                    icon: const Icon(
+                      CupertinoIcons.phone_circle_fill,
+                      color: _success,
+                      size: 22,
+                    ),
                     onPressed: () => _llamarCliente(pedido.cliente.telefono),
                     tooltip: 'Llamar al cliente',
                   ),
@@ -1504,7 +1556,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             ],
             const SizedBox(height: 12),
             _buildSeccion(
-              icono: Icons.location_on,
+              icono: CupertinoIcons.location_solid,
               titulo: 'Dirección de entrega',
               contenido: pedido.direccionEntrega,
             ),
@@ -1558,18 +1610,18 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                             style: TextStyle(
                               color:
                                   (pedido.transferenciaComprobanteUrl ?? '')
-                                          .isNotEmpty
-                                      ? Colors.green[800]
-                                      : Colors.orange[700],
+                                      .isNotEmpty
+                                  ? Colors.green[800]
+                                  : Colors.orange[700],
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
                           ),
                           backgroundColor:
                               (pedido.transferenciaComprobanteUrl ?? '')
-                                      .isNotEmpty
-                                  ? Colors.green.withValues(alpha: 0.14)
-                                  : Colors.orange.withValues(alpha: 0.14),
+                                  .isNotEmpty
+                              ? Colors.green.withValues(alpha: 0.14)
+                              : Colors.orange.withValues(alpha: 0.14),
                           materialTapTargetSize:
                               MaterialTapTargetSize.shrinkWrap,
                           padding: const EdgeInsets.symmetric(
@@ -1675,7 +1727,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Tu comisión:',
+                          'Tu ganancia (envío):',
                           style: TextStyle(color: _success),
                         ),
                         Text(
@@ -1880,7 +1932,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
       if (!mounted) return;
 
       // Mostrar indicador de carga
-      showCupertinoDialog(
+      await showCupertinoDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) =>
@@ -2020,9 +2072,10 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                                       Navigator.push(
                                         dialogContext,
                                         MaterialPageRoute(
-                                          builder: (_) => PantallaVerComprobante(
-                                            pagoId: pedido.pagoId!,
-                                          ),
+                                          builder: (_) =>
+                                              PantallaVerComprobante(
+                                                pagoId: pedido.pagoId!,
+                                              ),
                                         ),
                                       );
                                     },
@@ -2037,8 +2090,9 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             ),
             actions: [
               TextButton(
-                onPressed:
-                    isSubmitting ? null : () => Navigator.pop(dialogContext),
+                onPressed: isSubmitting
+                    ? null
+                    : () => Navigator.pop(dialogContext),
                 child: const Text('Cancelar'),
               ),
               ElevatedButton(
@@ -2602,18 +2656,12 @@ class _NotificacionBannerState extends State<_NotificacionBanner>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -1.5),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _controller.forward();
   }
@@ -2650,17 +2698,10 @@ class _NotificacionBannerState extends State<_NotificacionBanner>
               }
             },
             child: Container(
-              margin: const EdgeInsets.only(
-                left: 12,
-                right: 12,
-                top: 50,
-              ),
+              margin: const EdgeInsets.only(left: 12, right: 12, top: 50),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF0A84FF),
-                    Color(0xFF0066CC),
-                  ],
+                  colors: [Color(0xFF0A84FF), Color(0xFF0066CC)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

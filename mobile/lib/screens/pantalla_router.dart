@@ -5,9 +5,7 @@ import 'package:flutter/cupertino.dart';
 import '../services/auth/auth_service.dart';
 import '../services/roles/roles_service.dart';
 import '../apis/subapis/http_client.dart';
-import './user/pantalla_inicio.dart'; 
-import './supplier/pantalla_inicio_proveedor.dart';
-import './delivery/pantalla_inicio_repartidor.dart';
+import './user/pantalla_inicio.dart';
 import './admin/pantalla_dashboard.dart';
 
 /// Router inteligente que redirige según el rol del usuario
@@ -72,8 +70,8 @@ class _PantallaRouterState extends State<PantallaRouter> {
       try {
         final rolesService = RolesService();
         final rolesResponse = await rolesService.obtenerRolesDisponibles();
-        final rolActivoApi =
-            (rolesResponse['rol_activo'] as String?)?.toUpperCase();
+        final rolActivoApi = (rolesResponse['rol_activo'] as String?)
+            ?.toUpperCase();
         if (rolActivoApi != null && rolActivoApi.isNotEmpty) {
           await ApiClient().cacheUserRole(rolActivoApi);
           debugPrint(
@@ -103,7 +101,8 @@ class _PantallaRouterState extends State<PantallaRouter> {
 
       if (mounted) {
         setState(() {
-          _error = 'No se pudo iniciar sesión correctamente.\nVerifica tu conexión.';
+          _error =
+              'No se pudo iniciar sesión correctamente.\nVerifica tu conexión.';
         });
       }
     }
@@ -117,21 +116,31 @@ class _PantallaRouterState extends State<PantallaRouter> {
 
     switch (rol) {
       case 'USUARIO':
-        debugPrint('Rol identificado: USUARIO -> PantallaInicio (CON NAVEGACIÓN)');
+        debugPrint(
+          'Rol identificado: USUARIO -> PantallaInicio (CON NAVEGACIÓN)',
+        );
         destino = const PantallaInicio();
         nombreRuta = 'PantallaInicio';
         break;
 
       case 'REPARTIDOR':
-        debugPrint('Rol identificado: REPARTIDOR -> PantallaInicioRepartidor');
-        destino = const PantallaInicioRepartidor();
-        nombreRuta = 'PantallaInicioRepartidor';
+        debugPrint(
+          'Rol identificado: REPARTIDOR -> Forzando PantallaInicio (User Home)',
+        );
+        // ANTES: destino = const PantallaInicioRepartidor();
+        // AHORA: Iniciar siempre como usuario normal
+        destino = const PantallaInicio();
+        nombreRuta = 'PantallaInicio';
         break;
 
       case 'PROVEEDOR':
-        debugPrint('Rol identificado: PROVEEDOR -> PantallaInicioProveedor');
-        destino = const PantallaInicioProveedor();
-        nombreRuta = 'PantallaInicioProveedor';
+        debugPrint(
+          'Rol identificado: PROVEEDOR -> Forzando PantallaInicio (User Home)',
+        );
+        // ANTES: destino = const PantallaInicioProveedor();
+        // AHORA: Iniciar siempre como usuario normal
+        destino = const PantallaInicio();
+        nombreRuta = 'PantallaInicio';
         break;
 
       case 'ADMINISTRADOR':
@@ -159,10 +168,7 @@ class _PantallaRouterState extends State<PantallaRouter> {
           // Fade suave y rápido
           return FadeTransition(
             opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOut,
-              ),
+              CurvedAnimation(parent: animation, curve: Curves.easeOut),
             ),
             child: child,
           );
@@ -199,17 +205,21 @@ class _PantallaRouterState extends State<PantallaRouter> {
                     setState(() => _error = null);
                     // Reintentamos usando el callback de frame por consistencia
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                       _rutearSegunRol();
+                      _rutearSegunRol();
                     });
                   },
                   icon: const Icon(Icons.refresh),
                   label: const Text('Reintentar'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                  onPressed: () =>
+                      Navigator.pushReplacementNamed(context, '/login'),
                   child: const Text('Volver al inicio de sesión'),
                 ),
               ],

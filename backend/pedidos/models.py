@@ -26,7 +26,7 @@ class ConfiguracionComisiones:
     Permite cambiar las tasas de comisión en un solo lugar.
     """
     TASA_PROVEEDOR = Decimal('0.15')       # 15%
-    COMISION_REPARTIDOR_FIJA = Decimal('2.50') # Ajustado a un valor más realista para latam
+    # Repartidor gana solo el costo de envío del pedido
     COMISION_APP_MINIMA = Decimal('0.50')
 
     @classmethod
@@ -34,8 +34,9 @@ class ConfiguracionComisiones:
         return round(total * cls.TASA_PROVEEDOR, 2) if total > 0 else Decimal('0.00')
     
     @classmethod
-    def calcular_comision_repartidor(cls):
-        return cls.COMISION_REPARTIDOR_FIJA
+    def calcular_comision_repartidor(cls, costo_envio: Decimal = Decimal('0.00')) -> Decimal:
+        """El repartidor gana solo el costo de envío del pedido."""
+        return costo_envio
     
     @classmethod
     def calcular_ganancia_app(cls, total, comision_proveedor, comision_repartidor):
@@ -276,12 +277,12 @@ class Pedido(models.Model):
                 # Pedido de un solo proveedor (lógica original)
                 self.comision_proveedor = ConfiguracionComisiones.calcular_comision_proveedor(self.total - costo_envio)
 
-            # El repartidor gana el costo del envío + tarifa base de la app
-            self.comision_repartidor = costo_envio + ConfiguracionComisiones.calcular_comision_repartidor()
+            # El repartidor gana solo el costo del envío
+            self.comision_repartidor = costo_envio
         else:
-            # Encargo: Repartidor gana casi todo
+            # Encargo directo: Repartidor también gana solo el costo de envío
             self.comision_proveedor = Decimal('0.00')
-            self.comision_repartidor = costo_envio + ConfiguracionComisiones.calcular_comision_repartidor()
+            self.comision_repartidor = costo_envio
 
         # Tarifa de servicio al usuario (solo multi-proveedor)
         self.tarifa_servicio = Decimal('0.00')

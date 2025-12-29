@@ -1,4 +1,4 @@
-// lib/screens/delivery/perfil/pantalla_editar_perfil_repartidor.dart
+// lib/screens/delivery/perfil/pantalla_perfil_repartidor.dart
 
 import 'dart:developer' as developer;
 import 'dart:io';
@@ -15,8 +15,7 @@ import '../../../services/repartidor/repartidor_datos_bancarios_service.dart';
 import '../../../services/repartidor/repartidor_service.dart';
 import '../pantalla_datos_bancarios.dart';
 
-/// Pantalla de Edición de Perfil del Repartidor
-/// Permite editar teléfono, foto, email, nombre y apellido
+/// Pantalla de Edición de Perfil del Repartidor (Estilo iOS)
 class PantallaEditarPerfilRepartidor extends StatefulWidget {
   const PantallaEditarPerfilRepartidor({super.key});
 
@@ -26,8 +25,7 @@ class PantallaEditarPerfilRepartidor extends StatefulWidget {
 }
 
 class _PantallaEditarPerfilRepartidorState
-    extends State<PantallaEditarPerfilRepartidor>
-    with SingleTickerProviderStateMixin {
+    extends State<PantallaEditarPerfilRepartidor> {
   // ============================================
   // SERVICE
   // ============================================
@@ -42,11 +40,8 @@ class _PantallaEditarPerfilRepartidorState
   DatosBancarios? _datosBancarios;
   EstadisticasRepartidorModel? _estadisticas;
   bool _loading = true;
-  bool _loadingBancarios = true;
   bool _guardando = false;
-  // Esta variable ahora se usará en _guardarCambios para controlar el spinner del avatar
   bool _subiendoFoto = false;
-  String? _error;
   String? _vehiculoSeleccionado;
 
   // ============================================
@@ -54,7 +49,6 @@ class _PantallaEditarPerfilRepartidorState
   // ============================================
   late TextEditingController _telefonoController;
   String? _telefonoCompleto;
-  String? _fotoUrlCaido;
 
   // Datos del User
   late TextEditingController _emailController;
@@ -65,21 +59,17 @@ class _PantallaEditarPerfilRepartidorState
   File? _fotoSeleccionada;
 
   // ============================================
-  // ANIMATION
-  // ============================================
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-
-  // ============================================
   // COLORES
   // ============================================
-  static const Color _naranja = Color(0xFFFF7B00); // corporativo
-  static const Color _naranjaOscuro = Color(0xFFE56F00);
-  static const Color _verde = Color(0xFF4CAF50);
-  static const Color _azul = Color(0xFF0CB7F2); // secundario corporativo
-  static const Color _surfaceBg = Color(0xFFF4F6FA);
-  static const Color _cardBorderColor = Color(0xFFE3E7EF);
-  static const Color _rojo = Color(0xFFF44336);
+  static const Color _primary = Color(0xFF0CB7F2); // Celeste corporativo
+
+  // Dynamic Colors
+  Color get _surface =>
+      CupertinoColors.systemGroupedBackground.resolveFrom(context);
+  Color get _cardBg =>
+      CupertinoColors.secondarySystemGroupedBackground.resolveFrom(context);
+  Color get _errorColor => CupertinoColors.destructiveRed.resolveFrom(context);
+  Color get _successColor => CupertinoColors.activeGreen.resolveFrom(context);
 
   // ============================================
   // CICLO DE VIDA
@@ -89,16 +79,7 @@ class _PantallaEditarPerfilRepartidorState
   void initState() {
     super.initState();
 
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
-    // Inicializar controllers vacíos
+    // Inicializar controllers
     _telefonoController = TextEditingController();
     _emailController = TextEditingController();
     _nombreController = TextEditingController();
@@ -109,7 +90,6 @@ class _PantallaEditarPerfilRepartidorState
 
   @override
   void dispose() {
-    _animationController.dispose();
     _telefonoController.dispose();
     _emailController.dispose();
     _nombreController.dispose();
@@ -124,60 +104,38 @@ class _PantallaEditarPerfilRepartidorState
   Future<void> _cargarPerfil() async {
     setState(() {
       _loading = true;
-      _loadingBancarios = true;
-      _error = null;
     });
 
     try {
-      developer.log('Cargando perfil...', name: 'EditarPerfilRepartidor');
-
       _perfil = await _service.obtenerMiRepartidor(forzarRecarga: true);
 
-      // Llenar controllers con datos actuales
+      // Llenar controllers
       _telefonoController.text = _formatearTelefonoParaMostrar(
         _perfil?.telefono,
       );
       _telefonoCompleto = _perfil?.telefono;
-      _fotoUrlCaido = null;
       _emailController.text = _perfil?.email ?? '';
       _nombreController.text = _perfil?.firstName ?? '';
       _apellidoController.text = _perfil?.lastName ?? '';
-      _vehiculoSeleccionado = _perfil?.vehiculo;
+      _vehiculoSeleccionado = _normalizarVehiculo(_perfil?.vehiculo);
 
-      developer.log('Perfil cargado', name: 'EditarPerfilRepartidor');
       try {
         _estadisticas = await _service.obtenerEstadisticas(forzarRecarga: true);
-      } catch (e, stackTrace) {
-        developer.log(
-          'Error obteniendo estadísticas',
-          name: 'EditarPerfilRepartidor',
-          error: e,
-          stackTrace: stackTrace,
-        );
-        _estadisticas = null;
+      } catch (e) {
+        developer.log('Error stats: $e');
       }
 
       await _cargarDatosBancarios();
 
-      setState(() => _loading = false);
-      await _animationController.forward();
-    } on ApiException catch (e) {
-      developer.log('Error API: ${e.message}', name: 'EditarPerfilRepartidor');
-      setState(() {
-        _error = e.getUserFriendlyMessage();
-        _loading = false;
-      });
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error inesperado',
-        name: 'EditarPerfilRepartidor',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      setState(() {
-        _error = 'Error al cargar perfil';
-        _loading = false;
-      });
+      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      if (mounted) {
+        _mostrarToast(
+          'Error al cargar perfil',
+          color: _errorColor,
+          icono: CupertinoIcons.exclamationmark_circle_fill,
+        );
+      }
     }
   }
 
@@ -187,19 +145,10 @@ class _PantallaEditarPerfilRepartidorState
       if (mounted) {
         setState(() {
           _datosBancarios = datos;
-          _loadingBancarios = false;
         });
       }
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error cargando datos bancarios',
-        name: 'EditarPerfilRepartidor',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      if (mounted) {
-        setState(() => _loadingBancarios = false);
-      }
+    } catch (e) {
+      // Ignorar
     }
   }
 
@@ -210,64 +159,39 @@ class _PantallaEditarPerfilRepartidorState
   Future<void> _seleccionarFoto() async {
     final ImagePicker picker = ImagePicker();
 
-    final opcion = await showModalBottomSheet<String>(
+    final source = await showCupertinoModalPopup<ImageSource>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder: (BuildContext context) => CupertinoActionSheet(
+        title: const Text('Foto de perfil'),
+        actions: <CupertinoActionSheetAction>[
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(context, ImageSource.camera),
+            child: const Text('Tomar foto'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(context, ImageSource.gallery),
+            child: const Text('Elegir de galería'),
+          ),
+          if (_perfil?.fotoPerfil != null || _fotoSeleccionada != null)
+            CupertinoActionSheetAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() => _fotoSeleccionada = null);
+                // Para eliminar realmente necesitaríamos lógica adicional en guardar
+              },
+              child: const Text('Eliminar foto'),
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'Cambiar foto de perfil',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: _naranja),
-              title: const Text('Tomar foto'),
-              onTap: () => Navigator.pop(context, 'camera'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: _azul),
-              title: const Text('Elegir de galería'),
-              onTap: () => Navigator.pop(context, 'gallery'),
-            ),
-            if (_perfil?.fotoPerfil != null || _fotoSeleccionada != null)
-              ListTile(
-                leading: const Icon(Icons.delete, color: _rojo),
-                title: const Text('Eliminar foto'),
-                onTap: () => Navigator.pop(context, 'delete'),
-              ),
-          ],
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
         ),
       ),
     );
 
-    if (opcion == null || !mounted) return;
-
-    if (opcion == 'delete') {
-      setState(() => _fotoSeleccionada = null);
-      // Marcar para eliminar (se procesará al guardar)
-      return;
-    }
-
-    final ImageSource source = opcion == 'camera'
-        ? ImageSource.camera
-        : ImageSource.gallery;
+    if (source == null) return;
 
     try {
       final XFile? image = await picker.pickImage(
@@ -280,93 +204,61 @@ class _PantallaEditarPerfilRepartidorState
       if (image == null) return;
 
       final File imageFile = File(image.path);
-      final fileSizeInBytes = await imageFile.length();
-      final fileSizeInMB = fileSizeInBytes / (1024 * 1024);
-
-      if (fileSizeInMB > 5) {
-        if (!mounted) return;
-        _mostrarError('La imagen es muy grande (máx 5MB)');
-        return;
-      }
+      // Validar tamaño > 5MB opcionalmente
 
       setState(() => _fotoSeleccionada = imageFile);
     } catch (e) {
-      _mostrarError('Error al seleccionar imagen: $e');
+      _mostrarToast('Error al seleccionar imagen', color: _errorColor);
     }
   }
 
   // ============================================
-  // VALIDACIÓN
+  // VALIDACIÓN Y GUARDADO
   // ============================================
 
   bool _validarFormulario() {
-    // Validar email
+    // Validar email básico
     final email = _emailController.text.trim();
-    if (email.isNotEmpty) {
-      final emailRegex = RegExp(
-        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-      );
-      if (!emailRegex.hasMatch(email)) {
-        _mostrarError('El email no es válido');
-        return false;
-      }
-    }
-
-    // Validar nombre
-    final nombre = _nombreController.text.trim();
-    if (nombre.isNotEmpty && nombre.length < 2) {
-      _mostrarError('El nombre debe tener al menos 2 caracteres');
+    if (email.isNotEmpty && !email.contains('@')) {
+      _mostrarToast('Email inválido', color: _errorColor);
       return false;
     }
 
-    // Validar apellido
-    final apellido = _apellidoController.text.trim();
-    if (apellido.isNotEmpty && apellido.length < 2) {
-      _mostrarError('El apellido debe tener al menos 2 caracteres');
+    if (_nombreController.text.trim().isEmpty) {
+      _mostrarToast('Nombre requerido', color: _errorColor);
       return false;
     }
 
     if ((_vehiculoSeleccionado ?? '').isEmpty) {
-      _mostrarError('Selecciona un vehículo');
+      _mostrarToast('Selecciona un vehículo', color: _errorColor);
       return false;
     }
 
     return true;
   }
 
-  // ============================================
-  // GUARDAR CAMBIOS
-  // ============================================
-
   Future<void> _guardarCambios() async {
     if (!_validarFormulario()) return;
 
     setState(() {
       _guardando = true;
-      _error = null;
-      // Si hay una foto seleccionada, activamos el flag de "Subiendo Foto"
-      if (_fotoSeleccionada != null) {
-        _subiendoFoto = true;
-      }
+      if (_fotoSeleccionada != null) _subiendoFoto = true;
     });
 
     try {
-      developer.log('Guardando cambios...', name: 'EditarPerfilRepartidor');
-
-      // Detectar cambios en datos del repartidor
+      // 1. Detectar cambios
       final telefonoNuevo = _normalizarTelefono(
         (_telefonoCompleto?.isNotEmpty == true
             ? _telefonoCompleto!
             : _telefonoController.text),
       );
-
       final vehiculoNuevo = _vehiculoSeleccionado ?? '';
+
       final hayCambiosPerfil =
           telefonoNuevo != (_perfil?.telefono ?? '') ||
           vehiculoNuevo != (_perfil?.vehiculo ?? '') ||
           _fotoSeleccionada != null;
 
-      // Detectar cambios en datos del usuario
       final emailNuevo = _emailController.text.trim();
       final nombreNuevo = _nombreController.text.trim();
       final apellidoNuevo = _apellidoController.text.trim();
@@ -377,8 +269,7 @@ class _PantallaEditarPerfilRepartidorState
           apellidoNuevo != (_perfil?.lastName ?? '');
 
       if (!hayCambiosPerfil && !hayCambiosContacto) {
-        _mostrarInfo('No hay cambios para guardar');
-        // Importante: Resetear estados si salimos temprano
+        _mostrarToast('No hay cambios', icono: CupertinoIcons.info);
         setState(() {
           _guardando = false;
           _subiendoFoto = false;
@@ -386,10 +277,8 @@ class _PantallaEditarPerfilRepartidorState
         return;
       }
 
-      //  Actualizar datos del repartidor (si hay cambios)
+      // 2. Actualizar API
       if (hayCambiosPerfil) {
-        developer.log('Actualizando perfil...', name: 'EditarPerfilRepartidor');
-
         _perfil = await _service.actualizarMiPerfil(
           telefono: telefonoNuevo.isNotEmpty ? telefonoNuevo : null,
           vehiculo: vehiculoNuevo.isNotEmpty ? vehiculoNuevo : null,
@@ -397,13 +286,7 @@ class _PantallaEditarPerfilRepartidorState
         );
       }
 
-      //  Actualizar datos del usuario (si hay cambios)
       if (hayCambiosContacto) {
-        developer.log(
-          'Actualizando contacto...',
-          name: 'EditarPerfilRepartidor',
-        );
-
         _perfil = await _service.actualizarMiContacto(
           email: emailNuevo.isNotEmpty ? emailNuevo : null,
           firstName: nombreNuevo.isNotEmpty ? nombreNuevo : null,
@@ -411,344 +294,158 @@ class _PantallaEditarPerfilRepartidorState
         );
       }
 
-      // Limpiar foto seleccionada
+      // 3. Finalizar
       _fotoSeleccionada = null;
-      _telefonoCompleto = telefonoNuevo;
-
-      developer.log('Cambios guardados', name: 'EditarPerfilRepartidor');
-
-      // Reseteamos el estado de subida
       setState(() {
         _guardando = false;
         _subiendoFoto = false;
       });
 
       if (mounted) {
-        _mostrarExito('Perfil actualizado correctamente');
-
-        // Volver a la pantalla anterior después de un delay
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          Navigator.of(context).pop(true); // true = hubo cambios
-        }
+        _mostrarToast(
+          'Perfil actualizado',
+          icono: CupertinoIcons.checkmark_circle_fill,
+        );
+        await Future.delayed(const Duration(milliseconds: 700));
+        if (mounted) Navigator.of(context).pop(true);
       }
     } on ApiException catch (e) {
-      developer.log('Error API: ${e.message}', name: 'EditarPerfilRepartidor');
       setState(() {
-        _error = e.getUserFriendlyMessage();
         _guardando = false;
-        _subiendoFoto = false; // Resetear en caso de error
+        _subiendoFoto = false;
       });
-      _mostrarError(_error!);
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error inesperado',
-        name: 'EditarPerfilRepartidor',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      _mostrarToast(e.getUserFriendlyMessage(), color: _errorColor);
+    } catch (e) {
       setState(() {
-        _error = 'Error al guardar cambios';
         _guardando = false;
-        _subiendoFoto = false; // Resetear en caso de error
+        _subiendoFoto = false;
       });
-      _mostrarError(_error!);
+      _mostrarToast('Error al guardar cambios', color: _errorColor);
     }
   }
 
   // ============================================
-  // MENSAJES
-  // ============================================
-
-  void _mostrarError(String mensaje) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(mensaje)),
-          ],
-        ),
-        backgroundColor: _rojo,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  void _mostrarExito(String mensaje) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(mensaje)),
-          ],
-        ),
-        backgroundColor: _verde,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  void _mostrarInfo(String mensaje) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(mensaje)),
-          ],
-        ),
-        backgroundColor: _azul,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Widget _buildAvatarPlaceholder() {
-    return Container(
-      width: 140,
-      height: 140,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-      ),
-      child: const Icon(Icons.person, size: 60, color: _naranja),
-    );
-  }
-
-  String _formatearTelefonoParaMostrar(String? telefono) {
-    if (telefono == null || telefono.isEmpty) return '';
-    if (telefono.startsWith('+593')) {
-      final resto = telefono.substring(4);
-      return '0$resto';
-    }
-    return telefono;
-  }
-
-  String _obtenerCodigoPaisInicial(String numero) {
-    final valor = numero.trim();
-    if (valor.startsWith('+593')) return 'EC';
-    if (valor.startsWith('+1')) return 'US';
-    if (valor.startsWith('+52')) return 'MX';
-    if (valor.startsWith('+57')) return 'CO';
-    return 'EC';
-  }
-
-  // ============================================
-  // BUILD
+  // UI BUILD
   // ============================================
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _surfaceBg,
-      appBar: _buildAppBar(),
-      body: _loading ? _buildCargando() : _buildContenido(),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      foregroundColor: Colors.black,
-      centerTitle: true,
-      elevation: 0,
-      title: const Text(
-        'Editar Perfil',
-        style: TextStyle(fontWeight: FontWeight.w600),
-      ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(6),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 96, vertical: 8),
-          height: 4,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: const LinearGradient(colors: [_naranja, _naranjaOscuro]),
+    return Material(
+      // Necesario para IntlPhoneField y otros widgets que usen Theme.of(context)
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        navigationBar: CupertinoNavigationBar(
+          middle: const Text('Editar Perfil'),
+          backgroundColor: _cardBg,
+          border: const Border(
+            bottom: BorderSide(color: Color(0x4D000000), width: 0.0),
+          ),
+          trailing: CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: _guardando ? null : _guardarCambios,
+            child: _guardando
+                ? const CupertinoActivityIndicator(radius: 8)
+                : const Text(
+                    'Guardar',
+                    style: TextStyle(
+                      color: _primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
         ),
+        child: _loading ? _buildLoading() : _buildContent(),
       ),
     );
   }
 
-  Widget _buildCargando() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildLoading() {
+    return const Center(child: CupertinoActivityIndicator());
+  }
+
+  Widget _buildContent() {
+    return SafeArea(
+      child: ListView(
+        physics: const BouncingScrollPhysics(),
         children: [
-          const CupertinoActivityIndicator(radius: 14),
-          const SizedBox(height: 16),
-          Text('Cargando perfil...', style: TextStyle(color: Colors.grey[600])),
+          const SizedBox(height: 20),
+          _buildFotoPerfil(),
+          const SizedBox(height: 20),
+          if (_estadisticas != null) _buildResumenCalificaciones(),
+
+          _buildSeccionDatosRepartidor(),
+          const SizedBox(height: 20),
+          _buildSeccionDatosContacto(),
+          const SizedBox(height: 20),
+          _buildSeccionDatosBancarios(),
+
+          const SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  Widget _buildContenido() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 48),
-        child: Column(
-          children: [
-            _buildFotoPerfil(),
-            const SizedBox(height: 20),
-            if (_estadisticas != null) ...[
-              _buildResumenCalificaciones(),
-              const SizedBox(height: 20),
-            ],
-            _buildSeccionDatosRepartidor(),
-            const SizedBox(height: 18),
-            _buildSeccionDatosContacto(),
-            const SizedBox(height: 18),
-            _buildSeccionDatosBancarios(),
-            const SizedBox(height: 24),
-            _buildBotones(),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ============================================
-  // FOTO DE PERFIL
-  // ============================================
+  // --- Widgets ---
 
   Widget _buildFotoPerfil() {
-    Widget avatarContent;
+    ImageProvider? imageProvider;
     if (_fotoSeleccionada != null) {
-      avatarContent = ClipOval(
-        child: Image.file(
-          _fotoSeleccionada!,
-          width: 140,
-          height: 140,
-          fit: BoxFit.cover,
-        ),
-      );
-    } else if (_perfil?.fotoPerfil != null &&
-        _fotoUrlCaido != _perfil!.fotoPerfil) {
-      avatarContent = ClipOval(
-        child: Image.network(
-          _perfil!.fotoPerfil!,
-          width: 140,
-          height: 140,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              width: 140,
-              height: 140,
-              color: Colors.white,
-              child: const Center(
-                child: CupertinoActivityIndicator(radius: 14),
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            if (!mounted) return _buildAvatarPlaceholder();
-            // Diferir setState para evitar llamarlo durante build
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _fotoUrlCaido != _perfil!.fotoPerfil) {
-                setState(() => _fotoUrlCaido = _perfil!.fotoPerfil);
-              }
-            });
-            return _buildAvatarPlaceholder();
-          },
-        ),
-      );
-    } else {
-      avatarContent = _buildAvatarPlaceholder();
+      imageProvider = FileImage(_fotoSeleccionada!);
+    } else if (_perfil?.fotoPerfil != null) {
+      imageProvider = NetworkImage(_perfil!.fotoPerfil!);
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+    return Center(
       child: GestureDetector(
         onTap: _subiendoFoto ? null : _seleccionarFoto,
         child: Stack(
-          alignment: Alignment.center,
           children: [
             Container(
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: _cardBg,
+                border: Border.all(
+                  color: CupertinoColors.systemGrey5,
+                  width: 4,
+                ),
+                image: imageProvider != null
+                    ? DecorationImage(image: imageProvider, fit: BoxFit.cover)
+                    : null,
                 boxShadow: [
                   BoxShadow(
-                    color: _naranja.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: CircleAvatar(
-                radius: 70,
-                backgroundColor: Colors.white,
-                child: avatarContent,
-              ),
+              child: imageProvider == null
+                  ? const Icon(
+                      CupertinoIcons.person_fill,
+                      size: 60,
+                      color: CupertinoColors.systemGrey3,
+                    )
+                  : null,
             ),
             Positioned(
               bottom: 0,
               right: 0,
               child: Container(
-                decoration: BoxDecoration(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: _primary,
                   shape: BoxShape.circle,
-                  color: _naranja,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                    ),
-                  ],
                 ),
-                padding: const EdgeInsets.all(12),
-                child: _subiendoFoto
-                    ? const CupertinoActivityIndicator(
-                        radius: 10,
-                        color: Colors.white,
-                      )
-                    : const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                child: const Icon(
+                  CupertinoIcons.camera_fill,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
             ),
-            if (_fotoSeleccionada != null)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _verde,
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child: const Icon(Icons.check, color: Colors.white, size: 16),
-                ),
-              ),
           ],
         ),
       ),
@@ -756,466 +453,284 @@ class _PantallaEditarPerfilRepartidorState
   }
 
   Widget _buildResumenCalificaciones() {
-    if (_estadisticas == null) return const SizedBox.shrink();
     final stats = _estadisticas!;
-    final total = stats.totalCalificaciones;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _cardBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header con título
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _naranja.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.star_rounded,
-                  color: _naranja,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Mis Calificaciones',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Rating grande centrado
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Número grande
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    Text(
-                      stats.calificacionPromedio.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Estrellas visuales
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        final rating = stats.calificacionPromedio;
-                        IconData iconData;
-                        Color color;
-
-                        if (index < rating.floor()) {
-                          iconData = Icons.star_rounded;
-                          color = const Color(0xFFFFB800);
-                        } else if (index < rating) {
-                          iconData = Icons.star_half_rounded;
-                          color = const Color(0xFFFFB800);
-                        } else {
-                          iconData = Icons.star_outline_rounded;
-                          color = Colors.grey.shade300;
-                        }
-
-                        return Icon(iconData, color: color, size: 18);
-                      }),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${stats.totalCalificaciones} reseñas',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 20),
-
-              // Barras de progreso
-              Expanded(
-                flex: 3,
-                child: Column(
-                  children: [
-                    _buildRatingBar(
-                      5,
-                      stats.calificaciones5Estrellas,
-                      total,
-                      const Color(0xFF4CAF50),
-                    ),
-                    const SizedBox(height: 6),
-                    _buildRatingBar(
-                      4,
-                      stats.calificaciones4Estrellas,
-                      total,
-                      const Color(0xFF8BC34A),
-                    ),
-                    const SizedBox(height: 6),
-                    _buildRatingBar(
-                      3,
-                      stats.calificaciones3Estrellas,
-                      total,
-                      const Color(0xFFFFB800),
-                    ),
-                    const SizedBox(height: 6),
-                    _buildRatingBar(
-                      2,
-                      stats.calificaciones2Estrellas,
-                      total,
-                      const Color(0xFFFF9800),
-                    ),
-                    const SizedBox(height: 6),
-                    _buildRatingBar(
-                      1,
-                      stats.calificaciones1Estrella,
-                      total,
-                      const Color(0xFFF44336),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          // Mensaje de porcentaje 5 estrellas
-          if (stats.porcentaje5Estrellas > 0) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: _verde.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.thumb_up_rounded, color: _verde, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${stats.porcentaje5Estrellas.toStringAsFixed(0)}% de clientes muy satisfechos',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: _verde,
-                    ),
-                  ),
-                ],
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _cardBg,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRatingBar(int stars, int count, int total, Color color) {
-    // Calcular porcentaje
-    double percentage = total > 0 ? count / total : 0.0;
-
-    // Si hay al menos 1 calificación en esta categoría, mostrar un mínimo visible
-    if (count > 0 && percentage < 0.05) {
-      percentage = 0.05; // Mínimo 5% para que se vea algo
-    }
-
-    return Row(
-      children: [
-        // Número de estrellas
-        SizedBox(
-          width: 16,
-          child: Text(
-            '$stars',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
         ),
-        const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 14),
-        const SizedBox(width: 8),
-        // Barra de progreso
-        Expanded(
-          child: Container(
-            height: 10,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8E8E8),
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final barWidth = constraints.maxWidth * percentage;
-                return Stack(
-                  children: [
-                    // Barra de fondo ya está en el Container padre
-                    // Barra de progreso coloreada
-                    if (count > 0)
-                      Container(
-                        width: barWidth,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: color.withValues(alpha: 0.4),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        // Cantidad
-        SizedBox(
-          width: 28,
-          child: Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: count > 0 ? Colors.black87 : Colors.grey.shade400,
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ============================================
-  // SECCIÓN: DATOS DEL REPARTIDOR
-  // ============================================
-
-  Widget _buildSeccionDatosRepartidor() {
-    return _buildSectionCard(
-      icon: Icons.badge,
-      title: 'Datos del repartidor',
-      iconColor: _naranja,
-      children: [
-        IntlPhoneField(
-          controller: _telefonoController,
-          initialCountryCode: _obtenerCodigoPaisInicial(
-            _telefonoCompleto ?? _telefonoController.text,
-          ),
-          decoration: InputDecoration(
-            labelText: 'Teléfono',
-            hintText: '0987654321',
-            prefixIcon: const Icon(Icons.phone, color: _naranja),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            counterText: '',
-          ),
-          onChanged: (phone) => _telefonoCompleto = phone.completeNumber,
-          autovalidateMode: AutovalidateMode.disabled,
-        ),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          initialValue: _vehiculoSeleccionado,
-          decoration: InputDecoration(
-            labelText: 'Vehículo',
-            prefixIcon: const Icon(Icons.directions_bike, color: _naranja),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          items: const [
-            DropdownMenuItem(value: 'motocicleta', child: Text('Motocicleta')),
-            DropdownMenuItem(value: 'bicicleta', child: Text('Bicicleta')),
-            DropdownMenuItem(value: 'automovil', child: Text('Automóvil')),
-            DropdownMenuItem(value: 'camioneta', child: Text('Camioneta')),
-            DropdownMenuItem(value: 'otro', child: Text('Otro')),
-          ],
-          onChanged: (val) => setState(() => _vehiculoSeleccionado = val),
-        ),
-      ],
-    );
-  }
-
-  // ============================================
-  // SECCIÓN: DATOS DE CONTACTO (USER)
-  // ============================================
-
-  Widget _buildSeccionDatosContacto() {
-    return _buildSectionCard(
-      icon: Icons.person,
-      title: 'Datos de Contacto',
-      iconColor: _azul,
-      children: [
-        TextField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            labelText: 'Email',
-            hintText: 'correo@ejemplo.com',
-            prefixIcon: const Icon(Icons.email, color: _azul),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _nombreController,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(
-            labelText: 'Nombre',
-            hintText: 'Juan',
-            prefixIcon: const Icon(Icons.person_outline, color: _azul),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _apellidoController,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(
-            labelText: 'Apellido',
-            hintText: 'Pérez',
-            prefixIcon: const Icon(Icons.person_outline, color: _azul),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ============================================
-  // SECCIÓN: DATOS BANCARIOS
-  // ============================================
-
-  Widget _buildSeccionDatosBancarios() {
-    final tieneDatos = _datosBancarios?.estanCompletos ?? false;
-    final numeroCuenta = _mascarNumeroCuenta(
-      _datosBancarios?.bancoNumeroCuenta,
-    );
-
-    return _buildSectionCard(
-      icon: Icons.account_balance,
-      title: 'Cuenta bancaria',
-      iconColor: _azul,
-      children: [
-        if (_loadingBancarios)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: CupertinoActivityIndicator(radius: 9),
-          ),
-        Text(
-          tieneDatos
-              ? '${_datosBancarios?.bancoNombre ?? ''} · ${_datosBancarios?.tipoCuentaDisplay ?? _datosBancarios?.bancoTipoCuenta ?? ''}\nCuenta $numeroCuenta'
-              : 'Agrega tus datos bancarios para recibir pagos por transferencia.',
-          style: TextStyle(color: Colors.grey[700]),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _abrirPantallaBancaria,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _azul,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            icon: const Icon(Icons.edit),
-            label: Text(
-              tieneDatos ? 'Editar cuenta bancaria' : 'Agregar cuenta bancaria',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionCard({
-    required IconData icon,
-    required String title,
-    required List<Widget> children,
-    Color iconColor = _azul,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _cardBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: _cardBorderColor.withValues(alpha: 0.4),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-            child: Row(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Column(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: iconColor),
-                ),
-                const SizedBox(width: 12),
                 Text(
-                  title.toUpperCase(),
+                  stats.calificacionPromedio.toStringAsFixed(1),
                   style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: List.generate(5, (index) {
+                    if (index < stats.calificacionPromedio.round()) {
+                      return const Icon(
+                        CupertinoIcons.star_fill,
+                        color: CupertinoColors.systemYellow,
+                        size: 16,
+                      );
+                    }
+                    return const Icon(
+                      CupertinoIcons.star,
+                      color: CupertinoColors.systemGrey4,
+                      size: 16,
+                    );
+                  }),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${stats.totalCalificaciones} reseñas',
+                  style: const TextStyle(
+                    color: CupertinoColors.secondaryLabel,
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
                   ),
                 ),
               ],
             ),
+            const SizedBox(width: 24),
+            if (stats.porcentaje5Estrellas > 0)
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${stats.porcentaje5Estrellas.round()}%',
+                      style: TextStyle(
+                        color: _successColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      'Clientes muy satisfechos',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeccionDatosRepartidor() {
+    return CupertinoFormSection.insetGrouped(
+      header: const Text('DATOS DEL REPARTIDOR'),
+      children: [
+        // Phone Field Custom Wrapper
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: IntlPhoneField(
+            controller: _telefonoController,
+            initialCountryCode: _obtenerCodigoPaisInicial(
+              _telefonoCompleto ?? _telefonoController.text,
+            ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Teléfono',
+              contentPadding: EdgeInsets.zero,
+              counterText: '',
+            ),
+            style: const TextStyle(fontSize: 16),
+            dropdownIcon: const Icon(CupertinoIcons.chevron_down, size: 16),
+            onChanged: (phone) => _telefonoCompleto = phone.completeNumber,
+            flagsButtonMargin: const EdgeInsets.only(right: 8),
           ),
-          const Divider(height: 1, color: _cardBorderColor),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: children,
+        ),
+        // Vehicle Picker
+        GestureDetector(
+          onTap: () => _mostrarPickerVehiculo(),
+          child: CupertinoFormRow(
+            prefix: const Text('Vehículo'),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  _vehiculoSeleccionado != null
+                      ? _formatearVehiculo(_vehiculoSeleccionado!)
+                      : 'Seleccionar',
+                  style: TextStyle(
+                    color: _vehiculoSeleccionado != null
+                        ? CupertinoColors.label
+                        : CupertinoColors.placeholderText,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  CupertinoIcons.chevron_right,
+                  size: 16,
+                  color: CupertinoColors.systemGrey3,
+                ),
+              ],
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSeccionDatosContacto() {
+    const labelStyle = TextStyle(color: _primary, fontWeight: FontWeight.w500);
+
+    return CupertinoFormSection.insetGrouped(
+      header: const Text('CONTACTO'),
+      children: [
+        CupertinoTextFormFieldRow(
+          controller: _emailController,
+          placeholder: 'Email',
+          prefix: const Text('Email', style: labelStyle),
+          keyboardType: TextInputType.emailAddress,
+        ),
+        CupertinoTextFormFieldRow(
+          controller: _nombreController,
+          placeholder: 'Nombre',
+          prefix: const Text('Nombre', style: labelStyle),
+          textCapitalization: TextCapitalization.words,
+        ),
+        CupertinoTextFormFieldRow(
+          controller: _apellidoController,
+          placeholder: 'Apellido',
+          prefix: const Text('Apellido', style: labelStyle),
+          textCapitalization: TextCapitalization.words,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSeccionDatosBancarios() {
+    String bankDetailsText = 'Configurar';
+    final bankInfo = _datosBancarios;
+
+    // Safely extract bank details if available
+    if (bankInfo != null && bankInfo.estanCompletos) {
+      final bankName = bankInfo.bancoNombre ?? '';
+      final accountNumber = bankInfo.bancoNumeroCuenta ?? '';
+
+      String maskedAccount = '';
+      if (accountNumber.isNotEmpty) {
+        if (accountNumber.length > 4) {
+          maskedAccount =
+              ' ••••${accountNumber.substring(accountNumber.length - 4)}';
+        } else {
+          maskedAccount = ' $accountNumber';
+        }
+      }
+      bankDetailsText = '$bankName$maskedAccount';
+    }
+
+    return CupertinoFormSection.insetGrouped(
+      header: const Text('DATOS BANCARIOS'),
+      children: [
+        GestureDetector(
+          onTap: _abrirPantallaBancaria,
+          child: CupertinoFormRow(
+            prefix: const Text('Cuenta Bancaria'),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    bankDetailsText,
+                    style: TextStyle(
+                      color: (bankInfo?.estanCompletos ?? false)
+                          ? CupertinoColors.label
+                          : CupertinoColors.activeBlue,
+                      fontSize: 15,
+                    ),
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  CupertinoIcons.chevron_right,
+                  size: 16,
+                  color: CupertinoColors.systemGrey3,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================
+  // HELPERS
+  // ============================================
+
+  void _mostrarPickerVehiculo() {
+    final vehiculos = [
+      'motocicleta',
+      'bicicleta',
+      'automovil',
+      'camioneta',
+      'otro',
+    ];
+
+    showCupertinoModalPopup(
+      context: context,
+      builder: (_) => Container(
+        height: 250,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                CupertinoButton(
+                  child: const Text('Cancelar'),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                CupertinoButton(
+                  child: const Text('Listo'),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 32.0,
+                onSelectedItemChanged: (int index) {
+                  setState(() => _vehiculoSeleccionado = vehiculos[index]);
+                },
+                scrollController: FixedExtentScrollController(
+                  initialItem: _vehiculoSeleccionado != null
+                      ? vehiculos.indexOf(_vehiculoSeleccionado!)
+                      : 0,
+                ),
+                children: vehiculos
+                    .map((v) => Center(child: Text(_formatearVehiculo(v))))
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1223,87 +738,25 @@ class _PantallaEditarPerfilRepartidorState
   Future<void> _abrirPantallaBancaria() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const PantallaDatosBancarios()),
+      CupertinoPageRoute(builder: (_) => const PantallaDatosBancarios()),
     );
     await _cargarDatosBancarios();
   }
 
-  String _mascarNumeroCuenta(String? numero) {
-    if (numero == null || numero.isEmpty) return 'no configurada';
-    if (numero.length <= 4) return numero;
-    final visibles = numero.substring(numero.length - 4);
-    return '****$visibles';
+  String _formatearTelefonoParaMostrar(String? telefono) {
+    if (telefono == null || telefono.isEmpty) return '';
+    if (telefono.startsWith('+593')) {
+      return '0${telefono.substring(4)}';
+    }
+    return telefono;
   }
 
-  // ============================================
-  // BOTONES
-  // ============================================
-
-  Widget _buildBotones() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _cardBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: _cardBorderColor.withValues(alpha: 0.4),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _naranja,
-                side: BorderSide(
-                  color: _naranja.withValues(alpha: 0.7),
-                  width: 2,
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text(
-                'Cancelar',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _guardando ? null : _guardarCambios,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _verde,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: _guardando
-                    ? const CupertinoActivityIndicator(
-                        radius: 10,
-                        color: Colors.white,
-                      )
-                    : const Text(
-                        'Guardar Cambios',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  String _obtenerCodigoPaisInicial(String numero) {
+    if (numero.startsWith('+593')) return 'EC';
+    if (numero.startsWith('+1')) return 'US';
+    if (numero.startsWith('+52')) return 'MX';
+    if (numero.startsWith('+57')) return 'CO';
+    return 'EC';
   }
 
   String _normalizarTelefono(String telefono) {
@@ -1313,5 +766,105 @@ class _PantallaEditarPerfilRepartidorState
       return '+593${valor.substring(5)}';
     }
     return valor;
+  }
+
+  String? _normalizarVehiculo(String? vehiculo) {
+    if (vehiculo == null) return null;
+    final v = vehiculo.toLowerCase().trim();
+    if (v == 'moto') return 'motocicleta';
+    if (v == 'bici') return 'bicicleta';
+    if (v == 'auto' || v == 'carro') return 'automovil';
+    final validos = [
+      'motocicleta',
+      'bicicleta',
+      'automovil',
+      'camioneta',
+      'otro',
+    ];
+    return validos.contains(v) ? v : 'otro';
+  }
+
+  String _formatearVehiculo(String v) {
+    switch (v) {
+      case 'motocicleta':
+        return 'Motocicleta';
+      case 'bicicleta':
+        return 'Bicicleta';
+      case 'automovil':
+        return 'Automóvil';
+      case 'camioneta':
+        return 'Camioneta';
+      case 'otro':
+        return 'Otro';
+      default:
+        return v;
+    }
+  }
+
+  // Toast System
+  void _mostrarToast(String mensaje, {IconData? icono, Color? color}) {
+    if (!mounted) return;
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 60, // Mostrar arriba
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 300),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, -20 * (1 - value)),
+                child: child,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: color ?? _successColor,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  if (icono != null) ...[
+                    Icon(icono, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      mensaje,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (overlayEntry.mounted) overlayEntry.remove();
+    });
   }
 }

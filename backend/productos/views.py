@@ -2,7 +2,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from django.db.models import Q, F
 from django.db import transaction 
 from rest_framework import serializers
@@ -27,10 +27,13 @@ import logging
 
 logger = logging.getLogger('productos')
 
-class CategoriaViewSet(viewsets.ReadOnlyModelViewSet):
+class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.filter(activo=True)
     serializer_class = CategoriaSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(activo=True)
 
 class ProductoViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]  

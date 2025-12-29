@@ -16,12 +16,19 @@ class PantallaHistorialRepartidor extends StatefulWidget {
 
 class _PantallaHistorialRepartidorState
     extends State<PantallaHistorialRepartidor> {
-  static const Color _surface = Color(0xFFF2F4F7);
-  static const Color _accent = Color(0xFF0A84FF);
+  static const Color _accent = Color(0xFF0CB7F2); // Celeste corporativo
   static const Color _success = Color(0xFF34C759);
-  static const Color _errorColor = Color(0xFFEA3E3E);
-  static const Color _cardBorder = Color(0xFFE1E4EB);
-  static const Color _shadowColor = Color(0x1A000000);
+  static const Color _errorColor = Color(0xFFFF3B30);
+
+  // Dynamic Colors
+  Color get _surface =>
+      CupertinoColors.systemGroupedBackground.resolveFrom(context);
+  Color get _cardBg =>
+      CupertinoColors.secondarySystemGroupedBackground.resolveFrom(context);
+  Color get _cardBorder => CupertinoColors.separator.resolveFrom(context);
+  Color get _textPrimary => CupertinoColors.label.resolveFrom(context);
+  Color get _textSecondary =>
+      CupertinoColors.secondaryLabel.resolveFrom(context);
 
   final RepartidorService _service = RepartidorService();
   final ScrollController _scrollController = ScrollController();
@@ -32,6 +39,7 @@ class _PantallaHistorialRepartidorState
   bool _loading = true;
   String? _error;
   String _busqueda = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -42,6 +50,7 @@ class _PantallaHistorialRepartidorState
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -54,19 +63,23 @@ class _PantallaHistorialRepartidorState
     try {
       final response = await _service.obtenerHistorialEntregas();
       final parsed = HistorialEntregasResponse.fromJson(response);
+      if (!mounted) return;
       setState(() {
         _entregas = parsed.entregas;
         _totalComisiones = parsed.totalComisiones;
         _totalEntregas = parsed.totalEntregas;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
       });
     } finally {
-      setState(() {
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -82,31 +95,50 @@ class _PantallaHistorialRepartidorState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _surface,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Historial de entregas',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+    // Definir altura segura para el buscador flexible
+    // Un valor base más seguro para evitar superposiciones
+
+    return Material(
+      type: MaterialType.transparency,
+      child: CupertinoPageScaffold(
+        backgroundColor: _surface,
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            CupertinoSliverNavigationBar(
+              largeTitle: const Text('Historial'),
+              backgroundColor: _surface,
+              border: null,
+            ),
+            CupertinoSliverRefreshControl(onRefresh: _cargarHistorial),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Column(
+                  children: [
+                    _buildResumen(),
+                    const SizedBox(height: 16),
+                    CupertinoSearchTextField(
+                      controller: _searchController,
+                      placeholder: 'Buscar por cliente o dirección',
+                      onChanged: (valor) => setState(() => _busqueda = valor),
+                      backgroundColor: CupertinoColors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            _buildListadoSliver(),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+          ],
         ),
-        iconTheme: const IconThemeData(color: Colors.black87),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: _buildResumen(),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildBuscador(),
-          ),
-          const SizedBox(height: 8),
-          Expanded(child: _buildListado()),
-        ],
       ),
     );
   }
@@ -114,11 +146,14 @@ class _PantallaHistorialRepartidorState
   Widget _buildResumen() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _cardBorder),
-        boxShadow: const [
-          BoxShadow(color: _shadowColor, blurRadius: 14, offset: Offset(0, 8)),
+        color: CupertinoColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -128,20 +163,20 @@ class _PantallaHistorialRepartidorState
           _buildResumenItem(
             'Entregas',
             '$_totalEntregas',
-            Icons.check_circle,
+            CupertinoIcons.check_mark_circled_solid,
             _accent,
           ),
           _buildResumenItem(
-            'Comisión',
+            'Ganancia',
             'Bs ${_totalComisiones.toStringAsFixed(2)}',
-            Icons.monetization_on,
+            CupertinoIcons.money_dollar_circle_fill,
             _success,
           ),
           _buildResumenItem(
             'Visibles',
-            '${_entregas.length}',
-            Icons.history,
-            Colors.grey[600]!,
+            '${_entregasFiltradas.length}',
+            CupertinoIcons.eye_fill,
+            CupertinoColors.systemGrey,
           ),
         ],
       ),
@@ -164,62 +199,55 @@ class _PantallaHistorialRepartidorState
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: color,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(label, style: TextStyle(fontSize: 12, color: _textSecondary)),
       ],
     );
   }
 
-  Widget _buildBuscador() {
-    return TextField(
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.search),
-        hintText: 'Buscar por cliente o dirección',
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
-          borderSide: BorderSide(color: _cardBorder),
-        ),
-        contentPadding: EdgeInsets.symmetric(vertical: 12),
-      ),
-      onChanged: (valor) => setState(() => _busqueda = valor),
-    );
-  }
-
-  Widget _buildListado() {
-    if (_loading) {
-      return const Center(child: CupertinoActivityIndicator(radius: 14));
+  Widget _buildListadoSliver() {
+    if (_loading && _entregas.isEmpty) {
+      return const SliverFillRemaining(
+        child: Center(child: CupertinoActivityIndicator()),
+      );
     }
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: _errorColor),
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black87),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _cargarHistorial,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _accent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+      return SliverFillRemaining(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  CupertinoIcons.exclamationmark_circle,
+                  size: 64,
+                  color: _errorColor,
                 ),
-                child: const Text('Reintentar'),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _textPrimary),
+                ),
+                const SizedBox(height: 16),
+                CupertinoButton(
+                  color: _accent,
+                  borderRadius: BorderRadius.circular(20),
+                  onPressed: _cargarHistorial,
+                  minimumSize: const Size.square(40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -228,29 +256,31 @@ class _PantallaHistorialRepartidorState
     final listado = _entregasFiltradas;
 
     if (listado.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(28),
-          child: Text(
-            'Aún no tienes entregas registradas. Se mostrarán aquí en cuanto completes tu primera entrega.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Text(
+              'No se encontraron entregas que coincidan con tu búsqueda.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _textSecondary),
+            ),
           ),
         ),
       );
     }
 
-    return RefreshIndicator(
-      color: _accent,
-      onRefresh: _cargarHistorial,
-      child: ListView.separated(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: listado.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          return _buildEntregaCard(listado[index]);
-        },
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final entrega = listado[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildEntregaCard(entrega),
+          );
+        }, childCount: listado.length),
       ),
     );
   }
@@ -258,74 +288,101 @@ class _PantallaHistorialRepartidorState
   Widget _buildEntregaCard(EntregaHistorial entrega) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _cardBorder),
         boxShadow: const [
-          BoxShadow(color: _shadowColor, blurRadius: 12, offset: Offset(0, 6)),
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () {
-            // Placeholder: podrías mostrar detalles extra
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildCardHeader(entrega),
-                const SizedBox(height: 12),
-                _buildLineaDetalle(
-                  Icons.person,
-                  'Cliente',
-                  entrega.clienteNombre,
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
+        onPressed: () {
+          // Placeholder para detalle
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildCardHeader(entrega),
+              const SizedBox(height: 12),
+              Divider(height: 1, thickness: 0.5, color: _cardBorder),
+              const SizedBox(height: 12),
+              _buildLineaDetalle(
+                CupertinoIcons.person_fill,
+                'Cliente',
+                entrega.clienteNombre.isEmpty
+                    ? 'Cliente invitado'
+                    : entrega.clienteNombre,
+              ),
+              const SizedBox(height: 8),
+              _buildLineaDetalle(
+                CupertinoIcons.location_solid,
+                'Dirección',
+                entrega.clienteDireccion,
+              ),
+              const SizedBox(height: 8),
+              _buildLineaDetalle(
+                CupertinoIcons.creditcard_fill,
+                'Método',
+                entrega.metodoPago,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
-                const SizedBox(height: 8),
-                _buildLineaDetalle(
-                  Icons.location_on,
-                  'Dirección',
-                  entrega.clienteDireccion,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGroupedBackground,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 8),
-                _buildLineaDetalle(Icons.payment, 'Método', entrega.metodoPago),
-                const SizedBox(height: 12),
-                Row(
+                child: Row(
                   children: [
                     Icon(
                       entrega.tieneComprobante
-                          ? Icons.camera_alt
-                          : Icons.info_outline,
-                      color: entrega.tieneComprobante ? _success : Colors.grey,
-                      size: 18,
+                          ? CupertinoIcons.doc_text_fill
+                          : CupertinoIcons.doc_text,
+                      color: entrega.tieneComprobante
+                          ? _success
+                          : CupertinoColors.systemGrey,
+                      size: 16,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Text(
                       entrega.tieneComprobante
-                          ? 'Comprobante recibido'
+                          ? 'Comprobante OK'
                           : 'Sin comprobante',
                       style: TextStyle(
                         color: entrega.tieneComprobante
                             ? _success
-                            : Colors.grey[600],
-                        fontWeight: FontWeight.w600,
+                            : CupertinoColors.systemGrey,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
                       ),
                     ),
                     const Spacer(),
                     Text(
+                      'Total: ',
+                      style: TextStyle(fontSize: 14, color: _textSecondary),
+                    ),
+                    Text(
                       'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: _textPrimary,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -337,21 +394,25 @@ class _PantallaHistorialRepartidorState
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: _accent.withValues(alpha: 0.15),
-            borderRadius: const BorderRadius.all(Radius.circular(10)),
+            color: _accent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
             '#${entrega.id}',
-            style: const TextStyle(color: _accent, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: _accent,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             fecha,
-            style: const TextStyle(fontSize: 13, color: Colors.grey),
+            style: TextStyle(fontSize: 13, color: _textSecondary),
           ),
         ),
         _buildEstadoChip(entrega),
@@ -361,13 +422,22 @@ class _PantallaHistorialRepartidorState
 
   Widget _buildLineaDetalle(IconData icono, String etiqueta, String valor) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icono, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 8),
+        Icon(icono, size: 16, color: CupertinoColors.systemGrey),
+        const SizedBox(width: 10),
         Expanded(
-          child: Text(
-            '$etiqueta: $valor',
-            style: TextStyle(color: Colors.grey[800]),
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(fontSize: 14, color: _textPrimary),
+              children: [
+                TextSpan(
+                  text: '$etiqueta: ',
+                  style: TextStyle(color: _textSecondary),
+                ),
+                TextSpan(text: valor),
+              ],
+            ),
           ),
         ),
       ],
@@ -378,16 +448,17 @@ class _PantallaHistorialRepartidorState
     final color = entrega.montoTotal > 0 ? _success : _errorColor;
     final text = entrega.tieneComprobante ? 'Completado' : 'Pendiente';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
         text,
         style: TextStyle(
           color: color,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
           fontSize: 12,
         ),
       ),

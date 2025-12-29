@@ -1,6 +1,8 @@
-// lib/screens/admin/dashboard/widgets/dashboard_app_bar.dart
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../constants/dashboard_colors.dart';
+import 'package:provider/provider.dart';
+import '../../../../providers/theme_provider.dart';
+import '../../../../theme/app_colors_primary.dart';
 
 class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TabController tabController;
@@ -21,43 +23,71 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final backgroundColor = isDark
+        ? const Color(0xFF000000)
+        : const Color(0xFFF2F2F7);
+    final primaryColor = AppColorsPrimary.main;
+
     return AppBar(
-      title: const Text('Panel de Administración'),
+      backgroundColor: backgroundColor,
       elevation: 0,
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [DashboardColors.morado, DashboardColors.moradoOscuro],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      title: Text(
+        'Panel de Admin',
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black,
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          letterSpacing: -0.5,
         ),
       ),
       actions: [
-        _buildNotificationButton(context),
+        _buildNotificationButton(context, isDark),
         IconButton(
-          icon: const Icon(Icons.refresh),
+          icon: Icon(CupertinoIcons.refresh, color: primaryColor),
           onPressed: onRefresh,
           tooltip: 'Actualizar',
         ),
+        const SizedBox(width: 8),
       ],
-      bottom: TabBar(
-        controller: tabController,
-        indicatorColor: Colors.white,
-        isScrollable: true,
-        tabs: const [
-          Tab(text: 'Resumen', icon: Icon(Icons.dashboard, size: 20)),
-          Tab(text: 'Actividad', icon: Icon(Icons.history, size: 20)),
-        ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(48),
+        child: Container(
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TabBar(
+            controller: tabController,
+            isScrollable: true,
+            labelColor: isDark ? Colors.white : Colors.black,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: primaryColor,
+            indicatorSize: TabBarIndicatorSize.label,
+            dividerColor: Colors.transparent,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+            tabs: const [
+              Tab(text: 'Resumen'),
+              Tab(text: 'Actividad'),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildNotificationButton(BuildContext context) {
+  Widget _buildNotificationButton(BuildContext context, bool isDark) {
     return Stack(
+      alignment: Alignment.center,
       children: [
         IconButton(
-          icon: const Icon(Icons.notifications),
+          icon: Icon(
+            CupertinoIcons.bell,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () {
             if (solicitudesPendientesCount > 0) {
               onSolicitudesTap();
@@ -66,13 +96,11 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
                 const SnackBar(
                   content: Text('No hay notificaciones pendientes'),
                   duration: Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
                 ),
               );
             }
           },
-          tooltip: solicitudesPendientesCount > 0
-              ? 'Ver $solicitudesPendientesCount solicitudes pendientes'
-              : 'Sin notificaciones',
         ),
         if (solicitudesPendientesCount > 0)
           Positioned(
@@ -81,13 +109,10 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
-                color: DashboardColors.rojo,
+                color: Colors.red,
                 shape: BoxShape.circle,
               ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
                 '$solicitudesPendientesCount',
                 style: const TextStyle(

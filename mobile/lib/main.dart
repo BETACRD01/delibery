@@ -19,6 +19,8 @@ import './providers/locale_provider.dart';
 import './providers/notificaciones_provider.dart';
 import './providers/proveedor_carrito.dart';
 import './providers/proveedor_pedido.dart';
+import './providers/theme_provider.dart';
+import 'providers/preferencias_provider.dart';
 import './screens/delivery/pantalla_ver_comprobante.dart';
 import './services/auth/auth_service.dart';
 import './services/notifications/notification_handler.dart';
@@ -33,11 +35,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 void main() async {
-  
   WidgetsFlutterBinding.ensureInitialized();
 
   assert(() {
-    // Ensure debug pa int overlays are disabled.y 
+    // Ensure debug pa int overlays are disabled.y
     debugPaintBaselinesEnabled = false;
     debugPaintSizeEnabled = false;
     debugPaintLayerBordersEnabled = false;
@@ -128,9 +129,11 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => NotificacionesProvider()),
         ChangeNotifierProvider(create: (_) => PedidoProvider(PedidoService())),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => PreferenciasProvider()),
       ],
-      child: Consumer<LocaleProvider>(
-        builder: (context, localeProvider, _) => MaterialApp(
+      child: Consumer2<LocaleProvider, ThemeProvider>(
+        builder: (context, localeProvider, themeProvider, _) => MaterialApp(
           title: 'JP Express',
           debugShowCheckedModeBanner: false,
 
@@ -146,6 +149,8 @@ class _MyAppState extends State<MyApp> {
           supportedLocales: AppLocalizations.supportedLocales,
           locale: localeProvider.locale ?? const Locale('es'),
           theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeProvider.themeMode,
           navigatorKey: Rutas.navigatorKey,
           initialRoute: widget.initialRoute,
           routes: Rutas.obtenerRutas(),
@@ -160,10 +165,9 @@ class _MyAppState extends State<MyApp> {
             return MediaQuery(
               // Limitar escalado de texto para major rendimiento
               data: MediaQuery.of(context).copyWith(
-                textScaler: MediaQuery.of(context).textScaler.clamp(
-                  minScaleFactor: 0.8,
-                  maxScaleFactor: 1.3,
-                ),
+                textScaler: MediaQuery.of(
+                  context,
+                ).textScaler.clamp(minScaleFactor: 0.8, maxScaleFactor: 1.3),
               ),
               child: child!,
             );

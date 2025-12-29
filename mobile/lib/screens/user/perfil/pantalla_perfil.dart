@@ -82,10 +82,14 @@ class _PantallaPerfilState extends State<PantallaPerfil>
           .toList();
       final rolActivo = roleToApi(roleManager.activeRole).toUpperCase();
 
+      // EDIT: Eliminamos la lógica que fuerza agregar el rol activo si no viene del backend.
+      // Si el backend dice que no tengo el rol (ej. me lo quitaron), no debe aparecer.
+      /*
       if ((rolActivo == 'PROVEEDOR' || rolActivo == 'REPARTIDOR') &&
           !rolesAprobados.contains(rolActivo)) {
         rolesAprobados.add(rolActivo);
       }
+      */
 
       if (mounted) {
         setState(() {
@@ -255,8 +259,9 @@ class _PantallaPerfilState extends State<PantallaPerfil>
                           ),
                           child: Container(
                             padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
+                            decoration: BoxDecoration(
+                              color: CupertinoColors.systemBackground
+                                  .resolveFrom(context),
                               shape: BoxShape.circle,
                             ),
                             child: JPAvatar(
@@ -271,14 +276,20 @@ class _PantallaPerfilState extends State<PantallaPerfil>
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF007AFF),
+                              color: CupertinoColors.systemBlue.resolveFrom(
+                                context,
+                              ),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
+                              border: Border.all(
+                                color: CupertinoColors.systemBackground
+                                    .resolveFrom(context),
+                                width: 2,
+                              ),
                             ),
                             child: const Icon(
                               CupertinoIcons.camera_fill,
                               size: 10,
-                              color: Colors.white,
+                              color: CupertinoColors.white,
                             ),
                           ),
                         ),
@@ -341,7 +352,7 @@ class _PantallaPerfilState extends State<PantallaPerfil>
                                 Text(
                                   'Cliente Frecuente',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: CupertinoColors.white,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                   ),

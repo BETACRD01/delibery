@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/supplier/supplier_controller.dart';
+import '../../theme/jp_theme.dart';
 import 'perfil/perfil_proveedor_panel.dart';
 import 'screens/pantalla_productos_proveedor.dart';
 import 'tabs/estadisticas_tab.dart';
@@ -31,8 +32,7 @@ class _PantallaInicioProveedorState extends State<PantallaInicioProveedor> {
   Widget build(BuildContext context) {
     return CupertinoTabScaffold(
       tabBar: CupertinoTabBar(
-        // activeColor: AppColorsPrimary.main, // Usar color del tema si estuviera disponible en el contexto cupertino
-        activeColor: const Color(0xFF0CB7F2),
+        activeColor: JPCupertinoColors.primary(context),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.cube_box),

@@ -1,11 +1,24 @@
 // lib/screens/user/perfil/solicitudes_rol/widgets/formulario_proveedor.dart
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show TimeOfDay;
+import 'package:flutter/material.dart'
+    show
+        TimeOfDay,
+        Material,
+        Icons,
+        InputDecoration,
+        InputBorder,
+        ListTile,
+        Divider;
 import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
 import '../../../../../services/solicitudes/solicitudes_service.dart';
 import '../../../../../services/auth/auth_service.dart';
+import '../../../../../services/core/toast_service.dart';
 import '../../../../../models/solicitud_cambio_rol.dart';
+import '../../../../../widgets/maps/map_location_picker.dart';
 
 /// 📝 FORMULARIO PARA SOLICITUD DE PROVEEDOR
 /// Diseño: iOS Native Style
@@ -36,10 +49,14 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
   final _nombreComercialController = TextEditingController();
   final _descripcionController = TextEditingController();
   final _motivoController = TextEditingController();
+  final _direccionController = TextEditingController();
+  final _ciudadController = TextEditingController();
 
   String? _tipoNegocio;
   TimeOfDay? _horarioApertura;
   TimeOfDay? _horarioCierre;
+  double? _latitud;
+  double? _longitud;
   bool _isLoading = false;
 
   @override
@@ -48,6 +65,8 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
     _nombreComercialController.dispose();
     _descripcionController.dispose();
     _motivoController.dispose();
+    _direccionController.dispose();
+    _ciudadController.dispose();
     super.dispose();
   }
 
@@ -139,7 +158,14 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
 
                       const SizedBox(height: 24),
 
-                      // Grupo 4: Motivo
+                      // Grupo 4: Ubicación del Negocio
+                      _buildSectionHeader('UBICACIÓN DEL NEGOCIO'),
+                      const SizedBox(height: 8),
+                      _buildCampoDireccionConMapa(),
+
+                      const SizedBox(height: 24),
+
+                      // Grupo 5: Motivo
                       _buildSectionHeader('MOTIVO DE SOLICITUD'),
                       const SizedBox(height: 8),
                       _buildGroupedCard([
@@ -177,17 +203,17 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: CupertinoColors.systemBlue.withValues(alpha: 0.15),
+            color: CupertinoColors.systemCyan.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: const Icon(
             CupertinoIcons.building_2_fill,
-            color: CupertinoColors.systemBlue,
+            color: CupertinoColors.systemCyan,
             size: 32,
           ),
         ),
         const SizedBox(width: 16),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -197,15 +223,17 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.5,
-                  color: CupertinoColors.label,
+                  color: CupertinoColors.label
+                      .resolveFrom(context)
+                      .withValues(alpha: 0.85),
                 ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
                 'Registra tu negocio y vende más',
                 style: TextStyle(
                   fontSize: 15,
-                  color: CupertinoColors.secondaryLabel,
+                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   letterSpacing: -0.2,
                 ),
               ),
@@ -350,6 +378,262 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════════════
+  // 📍 CAMPO DE DIRECCIÓN CON MAPA
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  Widget _buildCampoDireccionConMapa() {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          // Campo de dirección con estilo iOS
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemCyan,
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.location_solid,
+                    color: CupertinoColors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Material(
+                    color: CupertinoColors.transparent,
+                    child: GooglePlaceAutoCompleteTextField(
+                      textEditingController: _direccionController,
+                      googleAPIKey: 'AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA',
+                      debounceTime: 300,
+                      countries: const ['ec'],
+                      isLatLngRequired: true,
+                      inputDecoration: InputDecoration(
+                        hintText: 'Ingresa la dirección',
+                        hintStyle: TextStyle(
+                          color: CupertinoColors.placeholderText.resolveFrom(
+                            context,
+                          ),
+                          fontSize: 17,
+                          letterSpacing: -0.4,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
+                      ),
+                      textStyle: TextStyle(
+                        fontSize: 17,
+                        letterSpacing: -0.4,
+                        color: CupertinoColors.label.resolveFrom(context),
+                      ),
+                      itemBuilder: (context, index, Prediction prediction) {
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            Icons.place,
+                            color: CupertinoColors.systemCyan,
+                            size: 20,
+                          ),
+                          title: Text(
+                            prediction.description ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                        );
+                      },
+                      seperatedBuilder: Divider(
+                        height: 1,
+                        indent: 50,
+                        color: CupertinoColors.separator.resolveFrom(context),
+                      ),
+                      itemClick: (Prediction prediction) {
+                        _direccionController.text =
+                            prediction.description ?? '';
+                        _direccionController.selection =
+                            TextSelection.fromPosition(
+                              TextPosition(
+                                offset: _direccionController.text.length,
+                              ),
+                            );
+                      },
+                      getPlaceDetailWithLatLng: (Prediction prediction) async {
+                        _direccionController.text =
+                            prediction.description ?? '';
+                        if (prediction.description != null) {
+                          try {
+                            final locations = await locationFromAddress(
+                              prediction.description!,
+                            );
+                            if (locations.isNotEmpty) {
+                              setState(() {
+                                _latitud = locations.first.latitude;
+                                _longitud = locations.first.longitude;
+                                final parts = prediction.description!.split(
+                                  ',',
+                                );
+                                if (parts.length >= 2) {
+                                  _ciudadController.text =
+                                      parts[parts.length - 2].trim();
+                                }
+                              });
+                            }
+                          } catch (e) {
+                            debugPrint('Error obteniendo coordenadas: $e');
+                          }
+                        }
+                      },
+                      isCrossBtnShown: false,
+                      containerHorizontalPadding: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Divisor
+          Container(
+            margin: const EdgeInsets.only(left: 60),
+            height: 0.5,
+            color: CupertinoColors.separator.resolveFrom(context),
+          ),
+
+          // Botón seleccionar en mapa
+          CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            onPressed: _mostrarSeleccionMapa,
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemCyan,
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.map_fill,
+                    color: CupertinoColors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    _latitud != null
+                        ? 'Ubicación seleccionada ✓'
+                        : 'Seleccionar en mapa',
+                    style: TextStyle(
+                      fontSize: 17,
+                      letterSpacing: -0.4,
+                      color: _latitud != null
+                          ? CupertinoColors.activeGreen
+                          : CupertinoColors.systemCyan,
+                    ),
+                  ),
+                ),
+                Icon(
+                  CupertinoIcons.chevron_right,
+                  size: 18,
+                  color: CupertinoColors.systemGrey3.resolveFrom(context),
+                ),
+              ],
+            ),
+          ),
+
+          // Indicador de ubicación confirmada
+          if (_latitud != null && _longitud != null)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: CupertinoColors.activeGreen.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: CupertinoColors.activeGreen.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    CupertinoIcons.checkmark_shield_fill,
+                    color: CupertinoColors.activeGreen,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ubicación confirmada',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: CupertinoColors.activeGreen,
+                          ),
+                        ),
+                        if (_ciudadController.text.isNotEmpty)
+                          Text(
+                            _ciudadController.text,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: CupertinoColors.secondaryLabel.resolveFrom(
+                                context,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarSeleccionMapa() async {
+    await Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) => MapLocationPicker(
+          initialLatitude: _latitud,
+          initialLongitude: _longitud,
+          onLocationSelected: (lat, lng, address) {
+            setState(() {
+              _latitud = lat;
+              _longitud = lng;
+              if (_direccionController.text.isEmpty) {
+                _direccionController.text = address;
+              }
+              // Extraer ciudad
+              final parts = address.split(',');
+              if (parts.length >= 2) {
+                _ciudadController.text = parts[parts.length - 2].trim();
+              }
+            });
+            ToastService().showSuccess(context, 'Ubicación seleccionada');
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildTipoNegocioField() {
     return GestureDetector(
       onTap: _mostrarSelectorTipoNegocio,
@@ -481,8 +765,8 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
             gradient: !_isLoading
                 ? const LinearGradient(
                     colors: [
-                      CupertinoColors.activeBlue,
-                      CupertinoColors.systemBlue,
+                      CupertinoColors.systemCyan,
+                      CupertinoColors.systemTeal,
                     ],
                   )
                 : null,
@@ -515,7 +799,7 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
               fontSize: 17,
               color: _isLoading
                   ? CupertinoColors.systemGrey
-                  : CupertinoColors.systemBlue,
+                  : CupertinoColors.systemCyan,
             ),
           ),
         ),
@@ -530,61 +814,66 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
   void _mostrarSelectorTipoNegocio() {
     showCupertinoModalPopup(
       context: context,
-      builder: (context) => Container(
-        height: 250,
+      builder: (context) => Material(
         color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: Column(
-          children: [
-            Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: CupertinoColors.separator.resolveFrom(context),
-                    width: 0.5,
+        child: SizedBox(
+          height: 250,
+          child: Column(
+            children: [
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: CupertinoColors.separator.resolveFrom(context),
+                      width: 0.5,
+                    ),
                   ),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const Text(
-                    'Tipo de Negocio',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
-                  ),
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Listo'),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: CupertinoPicker(
-                itemExtent: 40,
-                onSelectedItemChanged: (index) {
-                  setState(
-                    () => _tipoNegocio = TipoNegocio.values[index].value,
-                  );
-                },
-                children: TipoNegocio.values.map((tipo) {
-                  return Center(
-                    child: Text(
-                      tipo.label,
-                      style: const TextStyle(fontSize: 17),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancelar'),
                     ),
-                  );
-                }).toList(),
+                    const Text(
+                      'Tipo de Negocio',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 17,
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Listo'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 40,
+                  onSelectedItemChanged: (index) {
+                    setState(
+                      () => _tipoNegocio = TipoNegocio.values[index].value,
+                    );
+                  },
+                  children: TipoNegocio.values.map((tipo) {
+                    return Center(
+                      child: Text(
+                        tipo.label,
+                        style: const TextStyle(fontSize: 17),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -597,71 +886,73 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
 
     await showCupertinoModalPopup(
       context: context,
-      builder: (context) => Container(
-        height: 250,
+      builder: (context) => Material(
         color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: Column(
-          children: [
-            Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: CupertinoColors.separator.resolveFrom(context),
-                    width: 0.5,
-                  ),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  Text(
-                    esApertura ? 'Hora de Apertura' : 'Hora de Cierre',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 17,
+        child: SizedBox(
+          height: 250,
+          child: Column(
+            children: [
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: CupertinoColors.separator.resolveFrom(context),
+                      width: 0.5,
                     ),
                   ),
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Listo'),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: CupertinoDatePicker(
-                mode: CupertinoDatePickerMode.time,
-                initialDateTime: DateTime(
-                  2000,
-                  1,
-                  1,
-                  initialTime.hour,
-                  initialTime.minute,
                 ),
-                onDateTimeChanged: (DateTime newTime) {
-                  setState(() {
-                    final picked = TimeOfDay(
-                      hour: newTime.hour,
-                      minute: newTime.minute,
-                    );
-                    if (esApertura) {
-                      _horarioApertura = picked;
-                    } else {
-                      _horarioCierre = picked;
-                    }
-                  });
-                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancelar'),
+                    ),
+                    Text(
+                      esApertura ? 'Hora de Apertura' : 'Hora de Cierre',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 17,
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Listo'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.time,
+                  initialDateTime: DateTime(
+                    2000,
+                    1,
+                    1,
+                    initialTime.hour,
+                    initialTime.minute,
+                  ),
+                  onDateTimeChanged: (DateTime newTime) {
+                    setState(() {
+                      final picked = TimeOfDay(
+                        hour: newTime.hour,
+                        minute: newTime.minute,
+                      );
+                      if (esApertura) {
+                        _horarioApertura = picked;
+                      } else {
+                        _horarioCierre = picked;
+                      }
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -715,6 +1006,11 @@ class _FormularioProveedorState extends State<FormularioProveedor> {
         motivo: _motivoController.text.trim(),
         horarioApertura: _horarioApertura?.format(context),
         horarioCierre: _horarioCierre?.format(context),
+        // Campos de ubicación
+        direccion: _direccionController.text.trim(),
+        latitud: _latitud,
+        longitud: _longitud,
+        ciudad: _ciudadController.text.trim(),
       );
 
       if (!mounted) return;

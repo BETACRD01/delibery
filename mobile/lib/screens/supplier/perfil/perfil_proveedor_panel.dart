@@ -295,8 +295,9 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
                           ),
                           child: Container(
                             padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
+                            decoration: BoxDecoration(
+                              color: CupertinoColors.systemBackground
+                                  .resolveFrom(context),
                               shape: BoxShape.circle,
                             ),
                             child: _buildLogoImage(controller),
@@ -312,14 +313,15 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
                                 color: AppColorsPrimary.main,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.white,
+                                  color: CupertinoColors.systemBackground
+                                      .resolveFrom(context),
                                   width: 2,
                                 ),
                               ),
                               child: const Icon(
                                 CupertinoIcons.camera_fill,
                                 size: 10,
-                                color: Colors.white,
+                                color: CupertinoColors.white,
                               ),
                             ),
                           ),
@@ -384,7 +386,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
                                 Text(
                                   'Verificado',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: CupertinoColors.white,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -526,7 +528,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
                 color: iconBgColor,
                 borderRadius: BorderRadius.circular(7),
               ),
-              child: Icon(icon, color: Colors.white, size: 18),
+              child: Icon(icon, color: CupertinoColors.white, size: 18),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -710,7 +712,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
                 color: iconBgColor,
                 borderRadius: BorderRadius.circular(7),
               ),
-              child: Icon(icon, color: Colors.white, size: 18),
+              child: Icon(icon, color: CupertinoColors.white, size: 18),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -769,7 +771,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
               color: iconBgColor,
               borderRadius: BorderRadius.circular(7),
             ),
-            child: Icon(icon, color: Colors.white, size: 18),
+            child: Icon(icon, color: CupertinoColors.white, size: 18),
           ),
           const SizedBox(width: 14),
           Expanded(

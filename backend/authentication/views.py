@@ -63,6 +63,12 @@ def _obtener_rol_estandarizado(user):
     Devuelve un rol en mayúsculas según el rol activo/tipo del usuario.
     """
     valor = (user.rol_activo or user.tipo_usuario or '').lower()
+
+    # FIX: Prioridad Admin para staff/superusers
+    # Si tiene rol 'cliente' pero es admin, devolvemos ADMINISTRADOR
+    if (user.is_staff or user.is_superuser) and (not valor or valor == 'cliente'):
+        return 'ADMINISTRADOR'
+
     if valor in ROLE_MAP:
         return ROLE_MAP[valor]
     return 'USUARIO'
@@ -225,6 +231,10 @@ def login(request):
 
             tokens = get_tokens_for_user(user)
             usuario_data = UserSerializer(user).data
+
+            # FIX: Asegurar que el frontend reciba el rol correcto en el objeto usuario
+            if (user.is_staff or user.is_superuser) and (not user.rol_activo or user.rol_activo == 'cliente'):
+                 usuario_data['rol_activo'] = 'ADMINISTRADOR'
 
             logger.info(f"[OK] Login exitoso: {user.email} desde IP {ip_address}")
 
@@ -687,5 +697,80 @@ def unsubscribe_emails(request, user_id, token):
         logger.error(f"Error en unsubscribe: {e}")
         return Response(
             {"error": "Error al procesar solicitud"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    except Exception as e:
+        logger.error(f"Error en unsubscribe: {e}")
+        return Response(
+            {"error": "Error al procesar solicitud"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+# ==========================================
+# DISPOSITIVOS CONECTADOS
+# ==========================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def listar_dispositivos(request):
+    """
+    Lista las sesiones activas (Outstanding Tokens) del usuario.
+    """
+    try:
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+        
+        # Obtener todos los tokens del usuario
+        tokens = OutstandingToken.objects.filter(user=request.user).order_by('-created_at')
+        
+        # Filtrar los que ya están en blacklist
+        # Nota: Esto podría optimizarse con una subquery o exclude, pero por simplicidad:
+        blacklisted_ids = BlacklistedToken.objects.values_list('token_id', flat=True)
+        
+        activos = []
+        for t in tokens:
+            if t.id in blacklisted_ids:
+                continue
+            
+            activos.append({
+                "id": t.id,
+                "creado": t.created_at,
+                "dispositivo": "Sesión iniciada", # Placeholder ya que no guardamos UA todavía
+                "ip": "No registrada" # Placeholder
+            })
+            
+        return Response(activos, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error listando dispositivos: {e}")
+        return Response(
+            {"error": "Error al listar dispositivos"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def cerrar_sesion_dispositivo(request, dispositivo_id):
+    """
+    Cierra sesión de un dispositivo específico (Blacklist token)
+    """
+    try:
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+
+        try:
+            token = OutstandingToken.objects.get(id=dispositivo_id, user=request.user)
+        except OutstandingToken.DoesNotExist:
+            return Response({"error": "Sesión no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Blacklistear
+        BlacklistedToken.objects.get_or_create(token=token)
+
+        return Response({"mensaje": "Sesión cerrada exitosamente"}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error cerrando sesión dispositivo: {e}")
+        return Response(
+            {"error": "Error al cerrar sesión"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )

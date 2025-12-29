@@ -70,9 +70,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade400),
             child: const Text('Eliminar'),
           ),
         ],
@@ -81,25 +79,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     if (confirmar == true && mounted) {
       // Mostrar indicador de carga
-      unawaited(showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CupertinoActivityIndicator(radius: 14),
-                  SizedBox(height: 16),
-                  Text('Eliminando producto...'),
-                ],
+      unawaited(
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CupertinoActivityIndicator(radius: 14),
+                    SizedBox(height: 16),
+                    Text('Eliminando producto...'),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ));
+      );
 
       try {
         // Importar el controller
@@ -176,10 +176,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7), // iOS Grouped Background
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       body: FutureBuilder<ProductoModel>(
         future: _futureProducto,
         builder: (context, snapshot) {
@@ -242,8 +243,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       expandedHeight: 280,
       pinned: true,
       stretch: true,
-      backgroundColor: const Color(0xFFF2F2F7),
-      foregroundColor: const Color(0xFF3C3C43), // Negro suave
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
+      foregroundColor: CupertinoColors.label.resolveFrom(context),
       actions: [
         IconButton(
           onPressed: () => _abrirEdicion(producto),
@@ -278,7 +281,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ],
             ),
-            child: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.delete_outline,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
       ],
@@ -291,7 +298,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               tag: 'producto-${producto.id}',
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: CupertinoColors.systemBackground.resolveFrom(context),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -369,7 +376,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           const SizedBox(height: 12),
           Text(
             producto.descripcion,
-            style: const TextStyle(fontSize: 15, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 15,
+              color: CupertinoColors.label.resolveFrom(context),
+            ),
           ),
         ],
       ),

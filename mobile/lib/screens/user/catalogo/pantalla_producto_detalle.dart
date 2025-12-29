@@ -52,7 +52,9 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F9),
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       body: Stack(
         children: [
           CustomScrollView(
@@ -72,7 +74,9 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                     _buildInformacionAdicional(producto),
                     const SizedBox(height: 20),
                     _buildSugerencias(),
-                    const SizedBox(height: 100), // Espacio para el botón flotante
+                    const SizedBox(
+                      height: 100,
+                    ), // Espacio para el botón flotante
                   ],
                 ),
               ),
@@ -82,9 +86,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
           Positioned(
             top: 8,
             right: 8,
-            child: SafeArea(
-              child: _CarritoCircularButton(),
-            ),
+            child: SafeArea(child: _CarritoCircularButton()),
           ),
         ],
       ),
@@ -96,7 +98,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
     return SliverAppBar(
       expandedHeight: 280,
       pinned: true,
-      backgroundColor: Colors.white,
+      backgroundColor: CupertinoColors.systemBackground.resolveFrom(context),
       foregroundColor: JPColors.textPrimary,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
@@ -456,7 +458,9 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                   width: 150,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    color: Colors.white,
+                    color: CupertinoColors.systemBackground.resolveFrom(
+                      context,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.06),
@@ -554,7 +558,7 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08), // ✅ CORREGIDO
@@ -610,7 +614,8 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CupertinoActivityIndicator(radius: 14), )
+                        child: CupertinoActivityIndicator(radius: 14),
+                      )
                     : const Icon(Icons.shopping_cart),
                 label: Text(
                   _loading ? 'Agregando...' : 'Agregar al carrito',
@@ -765,7 +770,7 @@ class _CarritoCircularButton extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: CupertinoColors.systemBackground.resolveFrom(context),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(

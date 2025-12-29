@@ -7,6 +7,8 @@ import '../screens/admin/screen/config/pantalla_resetear_password_usuario.dart';
 import '../screens/admin/screen/pantalla_admin_proveedores.dart';
 import '../screens/admin/screen/pantalla_admin_repartidores.dart';
 import '../screens/admin/screen/pantalla_admin_usuarios.dart';
+import '../screens/admin/ajustes/pantalla_gestion_categorias.dart';
+import '../screens/admin/ajustes/pantalla_dispositivos.dart';
 import '../screens/admin/screen/pantalla_ajustes.dart';
 import '../screens/admin/screen/pantalla_config_envios.dart';
 import '../screens/admin/screen/pantalla_crear_rifa.dart';
@@ -19,6 +21,10 @@ import '../screens/auth/recuperacion/pantalla_nueva_password.dart';
 import '../screens/auth/recuperacion/pantalla_verificar_codigo.dart';
 import '../screens/delivery/pantalla_datos_bancarios.dart';
 import '../screens/delivery/pantalla_inicio_repartidor.dart';
+import '../screens/delivery/configuracion/pantalla_configuracion_repartidor.dart';
+import '../screens/delivery/ganancias/pantalla_ganancias_repartidor.dart';
+import '../screens/delivery/perfil/pantalla_perfil_repartidor.dart';
+import '../screens/delivery/soporte/pantalla_ayuda_soporte_repartidor.dart';
 import '../screens/pantalla_router.dart';
 import '../screens/ratings/pantalla_calificaciones_entidad.dart';
 import '../screens/ratings/pantalla_mis_calificaciones.dart';
@@ -113,6 +119,10 @@ class Rutas {
   static const perfilRepartidor = '/repartidor/perfil';
   static const verComprobante = '/delivery/ver-comprobante';
   static const datosBancarios = '/delivery/datos-bancarios';
+  static const repartidorGanancias = '/delivery/ganancias';
+  static const repartidorConfiguracion = '/delivery/configuracion';
+  static const repartidorPerfilEditar = '/delivery/perfil';
+  static const repartidorAyuda = '/delivery/ayuda';
 
   // ============================================================================
   // RUTAS - PROVEEDOR
@@ -132,6 +142,8 @@ class Rutas {
   static const adminReportes = '/admin/reportes';
   static const adminSolicitudesRol = '/admin/solicitudes-rol';
   static const adminAjustes = '/admin/ajustes';
+  static const String adminGestionCategorias = '/admin/ajustes/categorias';
+  static const String adminDispositivos = '/admin/ajustes/dispositivos';
   static const adminCambiarPassword = '/admin/ajustes/cambiar-password';
   static const adminResetPasswordUsuario =
       '/admin/ajustes/reset-password-usuario';
@@ -187,6 +199,10 @@ class Rutas {
     // Repartidor
     repartidorHome: (_) => const PantallaInicioRepartidor(),
     datosBancarios: (_) => const PantallaDatosBancarios(),
+    repartidorGanancias: (_) => const PantallaGananciasRepartidor(),
+    repartidorConfiguracion: (_) => const PantallaConfiguracionRepartidor(),
+    repartidorPerfilEditar: (_) => const PantallaEditarPerfilRepartidor(),
+    repartidorAyuda: (_) => const PantallaAyudaSoporteRepartidor(),
 
     // Proveedor
     proveedorHome: (_) => const PantallaInicioProveedor(),
@@ -195,6 +211,8 @@ class Rutas {
     adminHome: (_) => const PantallaDashboard(),
     adminSolicitudesRol: (_) => const PantallaSolicitudesRol(),
     adminAjustes: (_) => const PantallaAjustesAdmin(),
+    adminGestionCategorias: (_) => const PantallaGestionCategorias(),
+    adminDispositivos: (_) => const PantallaDispositivosConectados(),
     adminCambiarPassword: (_) => const PantallaCambiarPasswordAdmin(),
     adminResetPasswordUsuario: (_) => const PantallaResetearPasswordUsuario(),
     adminUsuariosGestion: (_) => const PantallaAdminUsuarios(),

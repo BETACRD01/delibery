@@ -38,60 +38,63 @@ class JPEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(JPConstants.spacingLarge),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Icono en círculo
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+    return DefaultTextStyle(
+      style: TextStyle(
+        fontSize: 14,
+        color: JPCupertinoColors.label(context),
+        decoration: TextDecoration.none,
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(JPConstants.spacingLarge),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icono en círculo
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 64, color: iconColor),
               ),
-              child: Icon(
-                icon,
-                size: 64,
-                color: iconColor,
-              ),
-            ),
-            const SizedBox(height: JPConstants.spacingSection),
-            // Título
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: JPCupertinoColors.label(context),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: JPConstants.spacingSmall),
-            // Mensaje
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: JPCupertinoColors.secondaryLabel(context),
-                height: 1.4,
-              ),
-            ),
-            // Botón de acción
-            if (customAction != null) ...[
               const SizedBox(height: JPConstants.spacingSection),
-              customAction!,
-            ] else if (actionText != null && onAction != null) ...[
-              const SizedBox(height: JPConstants.spacingSection),
-              JPCupertinoButton.filled(
-                text: actionText,
-                onPressed: onAction,
-                backgroundColor: iconColor,
+              // Título
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: JPCupertinoColors.label(context),
+                ),
+                textAlign: TextAlign.center,
               ),
+              const SizedBox(height: JPConstants.spacingSmall),
+              // Mensaje
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: JPCupertinoColors.secondaryLabel(context),
+                  height: 1.4,
+                ),
+              ),
+              // Botón de acción
+              if (customAction != null) ...[
+                const SizedBox(height: JPConstants.spacingSection),
+                customAction!,
+              ] else if (actionText != null && onAction != null) ...[
+                const SizedBox(height: JPConstants.spacingSection),
+                JPCupertinoButton.filled(
+                  text: actionText,
+                  onPressed: onAction,
+                  backgroundColor: iconColor,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -123,7 +126,9 @@ class JPErrorState extends StatelessWidget {
       icon: CupertinoIcons.exclamationmark_circle,
       iconColor: JPCupertinoColors.systemRed(context),
       title: title ?? 'Algo salió mal',
-      message: message ?? 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+      message:
+          message ??
+          'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
       actionText: actionText ?? 'Reintentar',
       onAction: onRetry,
     );

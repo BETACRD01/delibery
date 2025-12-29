@@ -29,7 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
             # Términos
             'terminos_aceptados', 'terminos_fecha_aceptacion', 'terminos_version_aceptada',
             # Notificaciones
-            'notificaciones_email', 'notificaciones_marketing', 'notificaciones_push',
+            'notificaciones_email', 'notificaciones_marketing', 'notificaciones_push', 'modo_silencio',
             # Estado de cuenta
             'cuenta_desactivada', 'fecha_desactivacion',
             # Roles y permisos
@@ -414,6 +414,7 @@ class PreferenciasNotificacionesSerializer(serializers.ModelSerializer):
             'notificaciones_email',
             'notificaciones_marketing',
             'notificaciones_push',
+            'modo_silencio',
         ]
 
 

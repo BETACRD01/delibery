@@ -134,10 +134,16 @@ def obtener_mi_perfil(request):
         repartidor = request.user.repartidor
         serializer = RepartidorPerfilSerializer(repartidor, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
-    except AttributeError:
-        logger.error(f"Usuario {request.user.email} no tiene perfil de repartidor")
+    except (AttributeError, Exception) as e:
+        # Capturamos Exception genérica por si es RelatedObjectDoesNotExist que no hereda de AttributeError en todas las versiones
+        logger.warning(f"Usuario {request.user.email} no tiene perfil de repartidor (Error: {e}). Restableciendo a Cliente.")
+        
+        # Auto-corregir
+        request.user.rol_activo = 'cliente'
+        request.user.save(update_fields=['rol_activo'])
+
         return Response(
-            {"error": "No tienes perfil de repartidor asociado."},
+            {"error": "No tienes perfil de repartidor asociado. Rol restablecido a Cliente.", "action": "ROLE_RESET"},
             status=status.HTTP_404_NOT_FOUND
         )
 
@@ -1885,12 +1891,16 @@ def mi_repartidor(request):
     except Repartidor.DoesNotExist:
         logger.warning(
             f"Usuario {user.email} con rol repartidor no tiene "
-            f"Repartidor vinculado en la base de datos"
+            f"Repartidor vinculado en la base de datos. Restableciendo a Cliente."
         )
+        # Auto-corregir inconsistencia
+        user.rol_activo = 'cliente'
+        user.save(update_fields=['rol_activo'])
+
         return Response(
             {
-                'error': 'No tienes un repartidor vinculado a tu cuenta',
-                'mensaje': 'Contacta al administrador para vincular tu cuenta'
+                'error': 'No se encontró tu perfil de repartidor. Se ha restablecido tu cuenta a modo Cliente.',
+                'action': 'ROLE_RESET'
             },
             status=status.HTTP_404_NOT_FOUND
         )

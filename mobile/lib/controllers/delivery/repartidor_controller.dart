@@ -60,11 +60,12 @@ class RepartidorController extends ChangeNotifier {
   bool get loadingHistorial => _loadingHistorial;
   List<EntregaHistorial> get entregas => _historialEntregas?.entregas ?? [];
   int get totalEntregasHistorial => _historialEntregas?.totalEntregas ?? 0;
-  double get totalComisionesHistorial => _historialEntregas?.totalComisiones ?? 0.0;
-  
+  double get totalComisionesHistorial =>
+      _historialEntregas?.totalComisiones ?? 0.0;
+
   EstadoRepartidor get estadoActual =>
       _perfil?.estado ?? EstadoRepartidor.fueraServicio;
-  
+
   bool get estaDisponible => estadoActual == EstadoRepartidor.disponible;
 
   // Estadísticas calculadas
@@ -113,30 +114,40 @@ class RepartidorController extends ChangeNotifier {
       // preguntamos al servidor para estar 100% seguros y corregir si es necesario.
       if (!esRepartidor) {
         developer.log(
-          'Rol en caché ($rolCacheado) no coincide. Verificando con servidor...', 
-          name: 'RepartidorController'
+          'Rol en caché ($rolCacheado) no coincide. Verificando con servidor...',
+          name: 'RepartidorController',
         );
-        
+
         try {
           // Llamamos al endpoint que verifica roles
           final info = await _apiClient.get(ApiConfig.infoRol);
-          
+
           // El backend puede devolver 'rol' o 'rol_activo'
           final rolServidorRaw = (info['rol'] ?? info['rol_activo']);
           final rolServidor = rolServidorRaw?.toString().toUpperCase();
-          
+
           if (rolServidor == ApiConfig.rolRepartidor) {
-            developer.log('Servidor confirma: ES REPARTIDOR. Acceso concedido.', name: 'RepartidorController');
+            developer.log(
+              'Servidor confirma: ES REPARTIDOR. Acceso concedido.',
+              name: 'RepartidorController',
+            );
             esRepartidor = true;
-            
+
             // NOTA: Aquí idealmente deberías actualizar _apiClient.userRole si tienes un setter,
             // para que el Drawer y otras partes de la UI se enteren del cambio.
-            // _apiClient.setRole(ApiConfig.rolRepartidor); 
+            // _apiClient.setRole(ApiConfig.rolRepartidor);
           } else {
-             developer.log('Servidor confirma: NO ES REPARTIDOR (Es $rolServidor)', name: 'RepartidorController');
+            developer.log(
+              'Servidor confirma: NO ES REPARTIDOR (Es $rolServidor)',
+              name: 'RepartidorController',
+            );
           }
         } catch (e) {
-          developer.log('Falló la verificación con servidor', name: 'RepartidorController', error: e);
+          developer.log(
+            'Falló la verificación con servidor',
+            name: 'RepartidorController',
+            error: e,
+          );
           // Si falla la conexión, nos quedamos con la decisión del caché (false)
         }
       }
@@ -159,12 +170,11 @@ class RepartidorController extends ChangeNotifier {
       // 5. Validación post-carga (Doble seguridad)
       // Si cargamos el perfil pero viene vacío o con datos extraños, bloqueamos.
       if (_perfil == null) {
-         _setError('No se pudo cargar el perfil de repartidor.');
-         return false;
+        _setError('No se pudo cargar el perfil de repartidor.');
+        return false;
       }
 
       return true;
-      
     } catch (e, stackTrace) {
       developer.log(
         'Error crítico en verificación',
@@ -194,10 +204,14 @@ class RepartidorController extends ChangeNotifier {
       );
 
       // Perfil es obligatorio; estadísticas son best-effort
-      _perfil = await _repartidorService.obtenerPerfil(forzarRecarga: forzarRecarga);
+      _perfil = await _repartidorService.obtenerPerfil(
+        forzarRecarga: forzarRecarga,
+      );
 
       try {
-        _estadisticas = await _repartidorService.obtenerEstadisticas(forzarRecarga: forzarRecarga);
+        _estadisticas = await _repartidorService.obtenerEstadisticas(
+          forzarRecarga: forzarRecarga,
+        );
       } catch (e, stack) {
         developer.log(
           'Error obteniendo estadísticas (se continúa sin bloquear)',
@@ -236,6 +250,21 @@ class RepartidorController extends ChangeNotifier {
         name: 'RepartidorController',
       );
     } on ApiException catch (e) {
+      if (e.statusCode == 404 &&
+          (e.errors['action'] == 'ROLE_RESET' ||
+              e.details?['action'] == 'ROLE_RESET')) {
+        developer.log(
+          'Detectado ROLE_RESET - Cerrando sesión para limpiar estado',
+          name: 'RepartidorController',
+        );
+        _setError(
+          'Tu perfil de repartidor ha sido desactivado. Inicia sesión nuevamente como Cliente.',
+        );
+        _setLoading(false);
+        await cerrarSesion(); // Forzar logout para limpiar cache de rol
+        return;
+      }
+
       developer.log(
         'API Exception: ${e.message}',
         name: 'RepartidorController',
@@ -278,7 +307,7 @@ class RepartidorController extends ChangeNotifier {
       _perfil = _perfil?.copyWith(estado: nuevoEstado);
       _notifySafely();
 
-       // Gestionar ubicación inicial según estado
+      // Gestionar ubicación inicial según estado
       if (nuevoEstado == EstadoRepartidor.disponible) {
         developer.log(
           '[DEBUG] Repartidor cambió a DISPONIBLE - verificando ubicación inicial',
@@ -359,9 +388,15 @@ class RepartidorController extends ChangeNotifier {
   }
 
   /// Rechaza un pedido disponible (ej. por distancia).
-  Future<bool> rechazarPedido(int pedidoId, {String motivo = 'No puedo tomarlo'}) async {
+  Future<bool> rechazarPedido(
+    int pedidoId, {
+    String motivo = 'No puedo tomarlo',
+  }) async {
     try {
-      developer.log('Rechazando pedido $pedidoId', name: 'RepartidorController');
+      developer.log(
+        'Rechazando pedido $pedidoId',
+        name: 'RepartidorController',
+      );
       await _repartidorService.rechazarPedido(pedidoId, motivo: motivo);
       await cargarDatos(forzarRecarga: true);
       return true;
@@ -402,7 +437,8 @@ class RepartidorController extends ChangeNotifier {
         } else {
           // Reutiliza última ubicación conocida o la guardada en el perfil
           lat = ubicacionService.ultimaUbicacion?.latitude ?? _perfil?.latitud;
-          lng = ubicacionService.ultimaUbicacion?.longitude ?? _perfil?.longitud;
+          lng =
+              ubicacionService.ultimaUbicacion?.longitude ?? _perfil?.longitud;
         }
 
         // Si seguimos sin coordenadas, avisamos y evitamos llamar a la API
@@ -434,13 +470,23 @@ class RepartidorController extends ChangeNotifier {
       _pendientes = resp.pedidos;
       _notifySafely();
     } on ApiException catch (e, stackTrace) {
-      developer.log('Error obteniendo pedidos disponibles', name: 'RepartidorController', error: e, stackTrace: stackTrace);
+      developer.log(
+        'Error obteniendo pedidos disponibles',
+        name: 'RepartidorController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       // Manejo amigable: dejar lista vacía y mensaje, no reventar el flujo
       _pendientes = [];
       _setError(e.getUserFriendlyMessage());
       _notifySafely();
     } catch (e, stackTrace) {
-      developer.log('Error obteniendo pedidos disponibles', name: 'RepartidorController', error: e, stackTrace: stackTrace);
+      developer.log(
+        'Error obteniendo pedidos disponibles',
+        name: 'RepartidorController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _pendientes = [];
       _setError('No se pudieron cargar pedidos disponibles');
       _notifySafely();
@@ -453,15 +499,31 @@ class RepartidorController extends ChangeNotifier {
       final pedidos = await _repartidorService.obtenerMisPedidosActivos();
       _pedidosActivos = pedidos;
       _notifySafely();
-      developer.log('Pedidos activos cargados: ${pedidos.length}', name: 'RepartidorController');
+      developer.log(
+        'Pedidos activos cargados: ${pedidos.length}',
+        name: 'RepartidorController',
+      );
     } on ApiException catch (e, stackTrace) {
       if (e.isNetworkError) {
-        developer.log('Sin conexion al obtener pedidos activos', name: 'RepartidorController');
+        developer.log(
+          'Sin conexion al obtener pedidos activos',
+          name: 'RepartidorController',
+        );
       } else {
-        developer.log('Error obteniendo pedidos activos', name: 'RepartidorController', error: e, stackTrace: stackTrace);
+        developer.log(
+          'Error obteniendo pedidos activos',
+          name: 'RepartidorController',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     } catch (e, stackTrace) {
-      developer.log('Error obteniendo pedidos activos', name: 'RepartidorController', error: e, stackTrace: stackTrace);
+      developer.log(
+        'Error obteniendo pedidos activos',
+        name: 'RepartidorController',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -506,10 +568,7 @@ class RepartidorController extends ChangeNotifier {
       await _repartidorService.marcarPedidoEnCamino(pedidoId);
 
       // Recargar listas de pedidos en paralelo
-      await Future.wait([
-        cargarPedidosActivos(),
-        cargarPedidosDisponibles(),
-      ]);
+      await Future.wait([cargarPedidosActivos(), cargarPedidosDisponibles()]);
 
       developer.log(
         'Pedido #$pedidoId marcado como en camino exitosamente',
@@ -533,7 +592,8 @@ class RepartidorController extends ChangeNotifier {
       } else if (e.toString().contains('ya está finalizado')) {
         errorMsg = 'Este pedido ya fue finalizado';
       } else if (e.toString().contains('Estado inválido')) {
-        errorMsg = 'El pedido no puede ser marcado como en camino en su estado actual';
+        errorMsg =
+            'El pedido no puede ser marcado como en camino en su estado actual';
       }
 
       _setError(errorMsg);
@@ -573,10 +633,7 @@ class RepartidorController extends ChangeNotifier {
       );
 
       // Recargar listas de pedidos en paralelo
-      await Future.wait([
-        cargarPedidosActivos(),
-        cargarPedidosDisponibles(),
-      ]);
+      await Future.wait([cargarPedidosActivos(), cargarPedidosDisponibles()]);
 
       developer.log(
         'Pedido #$pedidoId marcado como entregado exitosamente',
@@ -657,11 +714,14 @@ class RepartidorController extends ChangeNotifier {
 
       if (e.toString().contains('No tienes perfil de repartidor')) {
         errorMsg = 'No tienes perfil de repartidor asociado';
-      } else if (e.toString().contains('Network') || e.toString().contains('SocketException')) {
+      } else if (e.toString().contains('Network') ||
+          e.toString().contains('SocketException')) {
         errorMsg = 'Error de conexión. Verifica tu internet';
-      } else if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+      } else if (e.toString().contains('401') ||
+          e.toString().contains('Unauthorized')) {
         errorMsg = 'Sesión expirada. Inicia sesión nuevamente';
-      } else if (e.toString().contains('403') || e.toString().contains('Forbidden')) {
+      } else if (e.toString().contains('403') ||
+          e.toString().contains('Forbidden')) {
         errorMsg = 'No tienes permisos para ver el historial';
       }
 
@@ -868,11 +928,13 @@ class RepartidorController extends ChangeNotifier {
       final ahora = DateTime.now();
 
       // Verificar si debe actualizar pedidos disponibles
-      final debeActualizarPendientes = _lastPedidosUpdate == null ||
+      final debeActualizarPendientes =
+          _lastPedidosUpdate == null ||
           ahora.difference(_lastPedidosUpdate!) >= _minUpdateInterval;
 
       // Verificar si debe actualizar pedidos activos
-      final debeActualizarActivos = _lastPedidosActivosUpdate == null ||
+      final debeActualizarActivos =
+          _lastPedidosActivosUpdate == null ||
           ahora.difference(_lastPedidosActivosUpdate!) >= _minUpdateInterval;
 
       // Solo actualizar si pasó el intervalo mínimo
@@ -912,7 +974,10 @@ class RepartidorController extends ChangeNotifier {
 
   /// Fuerza una actualización inmediata (sin esperar intervalo)
   Future<void> forzarActualizacion() async {
-    developer.log('Forzando actualización inmediata', name: 'RepartidorController');
+    developer.log(
+      'Forzando actualización inmediata',
+      name: 'RepartidorController',
+    );
 
     // Resetear timestamps para permitir actualización
     _lastPedidosUpdate = null;

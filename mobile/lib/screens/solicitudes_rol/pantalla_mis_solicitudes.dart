@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../models/solicitud_cambio_rol.dart';
 import '../../../../services/solicitudes/solicitudes_service.dart';
+import '../../../../theme/app_colors_primary.dart';
 import 'pantalla_solicitar_rol.dart';
 
 /// 📋 PANTALLA DE MIS SOLICITUDES
@@ -96,10 +97,10 @@ class _PantallaMisSolicitudesState extends State<PantallaMisSolicitudes> {
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: _crearSolicitud,
-          child: const Icon(
+          child: Icon(
             CupertinoIcons.add_circled_solid,
             size: 28,
-            color: CupertinoColors.activeBlue,
+            color: AppColorsPrimary.main,
           ),
         ),
       ),
@@ -184,7 +185,10 @@ class _PantallaMisSolicitudesState extends State<PantallaMisSolicitudes> {
             delegate: SliverChildBuilderDelegate(
               (context, index) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _SolicitudCard(solicitud: _solicitudes[index]),
+                child: _SolicitudCard(
+                  solicitud: _solicitudes[index],
+                  onDelete: () => _eliminarSolicitud(_solicitudes[index]),
+                ),
               ),
               childCount: _solicitudes.length,
             ),
@@ -192,6 +196,87 @@ class _PantallaMisSolicitudesState extends State<PantallaMisSolicitudes> {
         ),
       ],
     );
+  }
+
+  Future<void> _eliminarSolicitud(SolicitudCambioRol solicitud) async {
+    final esPendiente = solicitud.estado == 'PENDIENTE';
+    final titulo = esPendiente
+        ? 'Cancelar Solicitud'
+        : 'Eliminar del Historial';
+    final mensaje = esPendiente
+        ? '¿Estás seguro de que quieres cancelar tu solicitud para ser ${solicitud.rolTexto}?\n\nEsta acción no se puede deshacer.'
+        : '¿Quieres eliminar este registro de tu historial?\n\nEsto no afectará tu rol actual si ya fue aprobado.';
+
+    // Mostrar confirmación
+    final confirmar = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: Text(titulo),
+        content: Text(mensaje),
+        actions: [
+          CupertinoDialogAction(
+            isDestructiveAction: false,
+            child: const Text('No'),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            child: Text(esPendiente ? 'Sí, cancelar' : 'Sí, eliminar'),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    try {
+      await _solicitudesService.eliminarSolicitud(solicitud.id);
+
+      if (mounted) {
+        // Mostrar mensaje de éxito
+        await showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Icon(
+              CupertinoIcons.checkmark_circle_fill,
+              color: CupertinoColors.systemGreen,
+              size: 48,
+            ),
+            content: const Text('Solicitud cancelada exitosamente'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+
+        // Recargar lista
+        await _cargarSolicitudes();
+      }
+    } catch (e) {
+      if (mounted) {
+        await showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Icon(
+              CupertinoIcons.exclamationmark_circle_fill,
+              color: CupertinoColors.systemRed,
+              size: 48,
+            ),
+            content: Text('Error al cancelar: ${e.toString()}'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 
   void _crearSolicitud() async {
@@ -206,8 +291,9 @@ class _PantallaMisSolicitudesState extends State<PantallaMisSolicitudes> {
 /// 🎴 TARJETA DE SOLICITUD - ESTILO iOS
 class _SolicitudCard extends StatelessWidget {
   final SolicitudCambioRol solicitud;
+  final VoidCallback? onDelete;
 
-  const _SolicitudCard({required this.solicitud});
+  const _SolicitudCard({required this.solicitud, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -348,6 +434,41 @@ class _SolicitudCard extends StatelessWidget {
                 ),
               ),
             ],
+
+            // Botón eliminar para TODAS las solicitudes
+            if (onDelete != null) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: CupertinoButton(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  color: CupertinoColors.systemRed.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  onPressed: onDelete,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        CupertinoIcons.trash,
+                        size: 18,
+                        color: CupertinoColors.systemRed.resolveFrom(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        solicitud.estado == 'PENDIENTE'
+                            ? 'Cancelar Solicitud'
+                            : 'Eliminar del Historial',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: CupertinoColors.systemRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -356,7 +477,7 @@ class _SolicitudCard extends StatelessWidget {
 
   Color _getColorForRole() {
     return solicitud.esProveedor
-        ? CupertinoColors.systemBlue
+        ? AppColorsPrimary.main
         : CupertinoColors.systemGreen;
   }
 }

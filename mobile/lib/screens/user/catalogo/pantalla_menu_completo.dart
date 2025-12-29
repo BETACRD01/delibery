@@ -134,10 +134,12 @@ class _PantallaMenuCompletoState extends State<PantallaMenuCompleto>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: JPColors.background,
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       appBar: AppBar(
         backgroundColor: JPColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: CupertinoColors.white,
         title: const Text('Menú Completo'),
         elevation: 0,
         actions: [
@@ -522,7 +524,9 @@ class _ProductoListItem extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+            context,
+          ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -673,7 +677,9 @@ class _FiltroChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? JPColors.primary : Colors.grey[200],
+          color: selected
+              ? JPColors.primary
+              : CupertinoColors.systemGrey5.resolveFrom(context),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

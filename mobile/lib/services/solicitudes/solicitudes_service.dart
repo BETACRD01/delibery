@@ -20,7 +20,9 @@ class SolicitudesService {
   Future<Map<String, dynamic>> obtenerMisSolicitudes() async {
     try {
       _log('Obteniendo solicitudes propias...');
-      final response = await _client.get(ApiConfig.usuariosSolicitudesCambioRol);
+      final response = await _client.get(
+        ApiConfig.usuariosSolicitudesCambioRol,
+      );
       _log('Solicitudes obtenidas: ${response['total'] ?? 0}');
       return response;
     } on ApiException catch (e) {
@@ -37,6 +39,11 @@ class SolicitudesService {
     required String motivo,
     String? horarioApertura,
     String? horarioCierre,
+    // Campos de ubicación
+    String? direccion,
+    double? latitud,
+    double? longitud,
+    String? ciudad,
   }) async {
     try {
       _log('Creando solicitud PROVEEDOR: $nombreComercial');
@@ -45,7 +52,9 @@ class SolicitudesService {
         throw ApiException(
           statusCode: 400,
           message: 'El RUC debe tener exactamente 13 digitos',
-          errors: {'ruc': ['Longitud incorrecta']},
+          errors: {
+            'ruc': ['Longitud incorrecta'],
+          },
           stackTrace: StackTrace.current,
         );
       }
@@ -54,7 +63,9 @@ class SolicitudesService {
         throw ApiException(
           statusCode: 400,
           message: 'El motivo debe ser mas detallado (min. 10 caracteres)',
-          errors: {'motivo': ['Muy corto']},
+          errors: {
+            'motivo': ['Muy corto'],
+          },
           stackTrace: StackTrace.current,
         );
       }
@@ -70,19 +81,36 @@ class SolicitudesService {
 
       if (horarioApertura != null) body['horario_apertura'] = horarioApertura;
       if (horarioCierre != null) body['horario_cierre'] = horarioCierre;
+      // Campos de ubicación
+      if (direccion != null && direccion.isNotEmpty) {
+        body['direccion'] = direccion;
+      }
+      if (latitud != null) {
+        // Truncar a 7 decimales para evitar exceder max_digits
+        body['latitud'] = latitud.toStringAsFixed(7);
+      }
+      if (longitud != null) {
+        // Truncar a 7 decimales para evitar exceder max_digits
+        body['longitud'] = longitud.toStringAsFixed(7);
+      }
+      if (ciudad != null && ciudad.isNotEmpty) {
+        body['ciudad'] = ciudad;
+      }
 
-      final response = await _client.post(ApiConfig.usuariosSolicitudesCambioRol, body);
+      final response = await _client.post(
+        ApiConfig.usuariosSolicitudesCambioRol,
+        body,
+      );
       _log('Solicitud PROVEEDOR creada exitosamente');
       return response;
-
     } on ApiException catch (e) {
       _log('Error creando solicitud PROVEEDOR', error: e);
       // 🔥 AQUI ESTÁ LA CLAVE: Usamos el mismo helper de limpieza que creamos antes
-      _procesarYLanzarError(e); 
+      _procesarYLanzarError(e);
       rethrow;
     }
   }
-  
+
   Future<Map<String, dynamic>> crearSolicitudRepartidor({
     required String cedulaIdentidad,
     required String tipoVehiculo,
@@ -97,7 +125,9 @@ class SolicitudesService {
         throw ApiException(
           statusCode: 400,
           message: 'La cedula debe tener al menos 10 digitos',
-          errors: {'cedula_identidad': ['Longitud incorrecta']},
+          errors: {
+            'cedula_identidad': ['Longitud incorrecta'],
+          },
           stackTrace: StackTrace.current,
         );
       }
@@ -114,10 +144,12 @@ class SolicitudesService {
         body['disponibilidad'] = disponibilidad;
       }
 
-      final response = await _client.post(ApiConfig.usuariosSolicitudesCambioRol, body);
+      final response = await _client.post(
+        ApiConfig.usuariosSolicitudesCambioRol,
+        body,
+      );
       _log('Solicitud REPARTIDOR creada exitosamente');
       return response;
-
     } on ApiException catch (e) {
       _log('Error creando solicitud REPARTIDOR', error: e);
       _procesarYLanzarError(e); // Usamos la función auxiliar
@@ -163,13 +195,24 @@ class SolicitudesService {
     }
   }
 
+  /// Elimina/Cancela una solicitud pendiente
+  Future<void> eliminarSolicitud(String id) async {
+    try {
+      _log('Eliminando solicitud: $id');
+      await _client.delete('${ApiConfig.usuariosSolicitudesCambioRol}$id/');
+      _log('Solicitud eliminada exitosamente');
+    } on ApiException catch (e) {
+      _log('Error eliminando solicitud', error: e);
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> cambiarRolActivo(String nuevoRol) async {
     try {
       _log('Cambiando rol activo a: $nuevoRol');
-      final response = await _client.post(
-        ApiConfig.usuariosCambiarRolActivo, 
-        {'nuevo_rol': nuevoRol}
-      );
+      final response = await _client.post(ApiConfig.usuariosCambiarRolActivo, {
+        'nuevo_rol': nuevoRol,
+      });
       _log('Rol activo cambiado exitosamente');
       return response;
     } on ApiException catch (e) {
@@ -198,10 +241,10 @@ class SolicitudesService {
   }) async {
     try {
       _log('[ADMIN] Listando solicitudes...');
-      
+
       String url = ApiConfig.adminSolicitudesCambioRol;
       final params = <String, String>{};
-      
+
       if (estado != null) params['estado'] = estado;
       if (rolSolicitado != null) params['rol_solicitado'] = rolSolicitado;
 
@@ -229,7 +272,10 @@ class SolicitudesService {
     }
   }
 
-  Future<Map<String, dynamic>> adminAceptarSolicitud(String id, {String? motivo}) async {
+  Future<Map<String, dynamic>> adminAceptarSolicitud(
+    String id, {
+    String? motivo,
+  }) async {
     try {
       _log('[ADMIN] Aceptando solicitud: $id');
       final body = <String, dynamic>{};
@@ -242,23 +288,27 @@ class SolicitudesService {
     }
   }
 
-  Future<Map<String, dynamic>> adminRechazarSolicitud(String id, {required String motivo}) async {
+  Future<Map<String, dynamic>> adminRechazarSolicitud(
+    String id, {
+    required String motivo,
+  }) async {
     try {
       _log('[ADMIN] Rechazando solicitud: $id');
-      
+
       if (motivo.trim().isEmpty) {
         throw ApiException(
           statusCode: 400,
           message: 'El motivo de rechazo es obligatorio',
-          errors: {'motivo_respuesta': ['Requerido']},
+          errors: {
+            'motivo_respuesta': ['Requerido'],
+          },
           stackTrace: StackTrace.current,
         );
       }
 
-      return await _client.post(
-        ApiConfig.adminRechazarSolicitud(id), 
-        {'motivo_respuesta': motivo}
-      );
+      return await _client.post(ApiConfig.adminRechazarSolicitud(id), {
+        'motivo_respuesta': motivo,
+      });
     } on ApiException catch (e) {
       _log('[ADMIN] Error rechazando solicitud', error: e);
       rethrow;
@@ -274,7 +324,6 @@ class SolicitudesService {
       rethrow;
     }
   }
-  
 
   Future<Map<String, dynamic>> adminObtenerEstadisticas() async {
     try {
