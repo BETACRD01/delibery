@@ -328,6 +328,8 @@ class PedidoListSerializer(serializers.ModelSerializer):
     primer_producto_imagen = serializers.SerializerMethodField()
     # Logística básica en lista
     costo_envio = serializers.SerializerMethodField()
+    # Datos de envío completos para calcular total con recargo nocturno
+    datos_envio = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
@@ -341,6 +343,7 @@ class PedidoListSerializer(serializers.ModelSerializer):
             'direccion_entrega', 'tiempo_transcurrido',
             'creado_en', 'actualizado_en',
             'cantidad_items', 'primer_producto_imagen',
+            'datos_envio',  # Incluir para calcular total con recargo nocturno
         ]
 
     def get_costo_envio(self, obj):
@@ -348,6 +351,17 @@ class PedidoListSerializer(serializers.ModelSerializer):
         if ENVIOS_INSTALLED and hasattr(obj, 'datos_envio'):
             return obj.datos_envio.total_envio
         return 0
+
+    def get_datos_envio(self, obj):
+        """Retorna datos de envío para calcular total con recargo nocturno en frontend"""
+        if ENVIOS_INSTALLED and hasattr(obj, 'datos_envio'):
+            envio = obj.datos_envio
+            return {
+                'costo_envio': envio.total_envio,
+                'recargo_nocturno': envio.recargo_nocturno,
+                'recargo_nocturno_aplicado': envio.recargo_nocturno > 0,
+            }
+        return None
 
     def get_cliente_nombre(self, obj):
         return obj.cliente.user.get_full_name() if obj.cliente else None
@@ -531,7 +545,7 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
             return {
                 'ciudad_origen': envio.ciudad_origen,
                 'zona_destino': envio.zona_destino,
-                'zona_nombre': dict(envio.ZONAS_CHOICES).get(envio.zona_destino) if envio.zona_destino else None,
+                'zona_nombre': envio.get_zona_destino_display() if envio.zona_destino else None,
                 'distancia_km': envio.distancia_km,
                 'tiempo_estimado_mins': envio.tiempo_estimado_mins,
                 'costo_base': envio.costo_base,
@@ -735,7 +749,21 @@ class PedidoRepartidorResumidoSerializer(serializers.ModelSerializer):
             'latitud_destino',  # Coordenadas para mostrar en mapa
             'longitud_destino',
             'creado_en',
+            'datos_envio',  # Incluir para calcular total con recargo nocturno
         ]
+
+    datos_envio = serializers.SerializerMethodField()
+
+    def get_datos_envio(self, obj):
+        """Retorna datos de envío para calcular total con recargo nocturno en frontend"""
+        if ENVIOS_INSTALLED and hasattr(obj, 'datos_envio'):
+            envio = obj.datos_envio
+            return {
+                'costo_envio': envio.total_envio,
+                'recargo_nocturno': envio.recargo_nocturno,
+                'recargo_nocturno_aplicado': envio.recargo_nocturno > 0,
+            }
+        return None
 
     def get_proveedor_nombre(self, obj):
         return obj.proveedor.nombre if obj.proveedor else None
@@ -808,7 +836,24 @@ class PedidoRepartidorDetalladoSerializer(serializers.ModelSerializer):
             'fecha_en_proceso',
             'fecha_en_camino',
             'tiempo_transcurrido',
+            'datos_envio',  # Incluir para calcular total con recargo nocturno
         ]
+
+    datos_envio = serializers.SerializerMethodField()
+
+    def get_datos_envio(self, obj):
+        """Retorna datos de envío para calcular total con recargo nocturno en frontend"""
+        if ENVIOS_INSTALLED and hasattr(obj, 'datos_envio'):
+            envio = obj.datos_envio
+            return {
+                'distancia_km': envio.distancia_km,
+                'tiempo_estimado_mins': envio.tiempo_estimado_mins,
+                'costo_base': envio.costo_base,
+                'costo_envio': envio.total_envio,
+                'recargo_nocturno': envio.recargo_nocturno,
+                'recargo_nocturno_aplicado': envio.recargo_nocturno > 0,
+            }
+        return None
 
     def get_cliente(self, obj):
         """Datos COMPLETOS del cliente (solo para repartidor asignado)"""

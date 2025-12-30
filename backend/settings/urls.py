@@ -71,7 +71,6 @@ urlpatterns = [
     path("api/pedidos/", include(("pedidos.urls", "pedidos"), namespace="pedidos")),
     path("api/pagos/", include(("pagos.urls", "pagos"), namespace="pagos")),
     path("api/calificaciones/", include(("calificaciones.urls", "calificaciones"), namespace="calificaciones")),
-    path("api/super-categorias/", include(("super_categorias.urls", "super_categorias"), namespace="super_categorias")),  # <-- Super Categorías
     
     # Módulos de Soporte y Engagement
     path("api/rifas/", include(("rifas.urls", "rifas"), namespace="rifas")),

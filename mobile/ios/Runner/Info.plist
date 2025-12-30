@@ -54,5 +54,19 @@
 		<string>Necesitamos tu ubicación para mostrarte restaurantes cercanos y gestionar entregas.</string>
 		<key>NSLocationAlwaysUsageDescription</key>
 		<string>Necesitamos tu ubicación para mostrarte restaurantes cercanos y gestionar entregas.</string>
+		<!-- Google Sign-In -->
+		<key>GIDClientID</key>
+		<string>78064502855-conlfd431sfckh3ddl6v0qt71gq7nbl5.apps.googleusercontent.com</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.78064502855-conlfd431sfckh3ddl6v0qt71gq7nbl5</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>

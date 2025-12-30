@@ -10,10 +10,10 @@ import '../../config/rutas.dart';
 import '../../providers/proveedor_pedido.dart';
 import '../../services/core/toast_service.dart';
 import '../../theme/jp_theme.dart';
+import 'envios/pantalla_courier.dart';
 import 'inicio/pantalla_home.dart';
 import 'pedidos/pantalla_mis_pedidos.dart';
 import 'perfil/pantalla_perfil.dart';
-import 'super/pantalla_super.dart';
 
 /// Pantalla principal que contiene el CupertinoTabBar y gestiona
 /// la navegación entre las 4 pantallas principales de la aplicación
@@ -33,7 +33,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
     // ✅ CORREGIDO: Usamos PantallaHome (el contenido) en lugar de PantallaInicio (el contenedor)
     PantallaHome(),
 
-    PantallaSuper(),
+    PantallaCourier(), // <-- REEMPLAZO: Envios en lugar de Super
     PantallaMisPedidos(),
     PantallaPerfil(),
   ];
@@ -260,9 +260,9 @@ class _PantallaInicioState extends State<PantallaInicio> {
             label: 'Inicio',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.cube_box),
+            icon: Icon(CupertinoIcons.cube_box), // O usar paperplane
             activeIcon: Icon(CupertinoIcons.cube_box_fill),
-            label: 'Super',
+            label: 'Envíos', // CAMBIO DE ETIQUETA
           ),
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.bag),
@@ -279,7 +279,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
       tabBuilder: (context, index) {
         return CupertinoTabView(
           navigatorKey: _navigatorKeys[index],
-          routes: Rutas.obtenerRutas(),
+          routes: Map.from(Rutas.obtenerRutas())..remove(Rutas.root),
           builder: (context) {
             return _pantallas[index];
           },

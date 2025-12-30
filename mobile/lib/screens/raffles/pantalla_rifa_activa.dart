@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../../services/usuarios/usuarios_service.dart';
 import '../../apis/helpers/api_exception.dart';
 import '../../config/api_config.dart';
+import '../../theme/app_colors_primary.dart';
 import 'pantalla_rifa_detalle_usuario.dart';
 
 class PantallaRifaActiva extends StatefulWidget {
@@ -55,9 +56,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
       _error = null;
     });
     try {
-      _rifas = await _usuarioService.obtenerRifasMesActual(
-        forzarRecarga: true,
-      );
+      _rifas = await _usuarioService.obtenerRifasMesActual(forzarRecarga: true);
       await _animationController.forward();
     } on ApiException catch (e) {
       _error = e.message;
@@ -75,31 +74,35 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Rifas del mes',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
             letterSpacing: -0.4,
-            color: Color(0xFF1C1C1E),
+            color: CupertinoColors.label.resolveFrom(context),
           ),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF1C1C1E),
+        foregroundColor: CupertinoColors.label.resolveFrom(context),
         elevation: 0,
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.95),
+                color: CupertinoColors.systemBackground
+                    .resolveFrom(context)
+                    .withValues(alpha: 0.95),
                 border: Border(
                   bottom: BorderSide(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: CupertinoColors.separator.resolveFrom(context),
                     width: 0.5,
                   ),
                 ),
@@ -127,15 +130,15 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
   }
 
   Widget _buildLoadingShimmer() {
-    return const SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(20, 120, 20, 20),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 120, 20, 20),
       child: Column(
         children: [
-          _ShimmerBox(height: 240, borderRadius: 24),
-          SizedBox(height: 16),
-          _ShimmerBox(height: 160, borderRadius: 20),
-          SizedBox(height: 16),
-          _ShimmerBox(height: 180, borderRadius: 20),
+          _ShimmerBox(height: 240, borderRadius: 24, context: context),
+          const SizedBox(height: 16),
+          _ShimmerBox(height: 160, borderRadius: 20, context: context),
+          const SizedBox(height: 16),
+          _ShimmerBox(height: 180, borderRadius: 20, context: context),
         ],
       ),
     );
@@ -152,32 +155,34 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF3B30).withValues(alpha: 0.1),
+                color: CupertinoColors.systemRed
+                    .resolveFrom(context)
+                    .withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.warning_rounded,
                 size: 40,
-                color: Color(0xFFFF3B30),
+                color: CupertinoColors.systemRed.resolveFrom(context),
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Algo salió mal',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.5,
-                color: Color(0xFF1C1C1E),
+                color: CupertinoColors.label.resolveFrom(context),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
-                color: Color(0xFF8E8E93),
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
                 height: 1.4,
               ),
             ),
@@ -210,32 +215,32 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFF007AFF).withValues(alpha: 0.1),
+                color: AppColorsPrimary.main.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.card_giftcard_outlined,
                 size: 40,
-                color: Color(0xFF007AFF),
+                color: AppColorsPrimary.main,
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'No hay rifas activas este mes',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.5,
-                color: Color(0xFF1C1C1E),
+                color: CupertinoColors.label.resolveFrom(context),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'En este momento no hay rifas disponibles.\nVuelve pronto para participar.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: Color(0xFF8E8E93),
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
                 height: 1.4,
               ),
             ),
@@ -275,8 +280,12 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
   Widget _buildRifaCard(Map<String, dynamic> rifa) {
     final titulo = (rifa['titulo'] ?? 'Rifa').toString();
     final pedidosMinimos =
-        int.tryParse((rifa['meta_pedidos'] ?? rifa['pedidos_minimos'] ?? 3).toString()) ?? 3;
-    final pedidosCompletados = int.tryParse(
+        int.tryParse(
+          (rifa['meta_pedidos'] ?? rifa['pedidos_minimos'] ?? 3).toString(),
+        ) ??
+        3;
+    final pedidosCompletados =
+        int.tryParse(
           (rifa['pedidos_usuario_mes'] ?? rifa['mis_pedidos'] ?? 0).toString(),
         ) ??
         0;
@@ -286,8 +295,8 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
     final progreso = (rifa['progreso'] is num)
         ? (rifa['progreso'] as num).toDouble().clamp(0.0, 1.0)
         : (pedidosMinimos > 0
-            ? (pedidosMostrados / pedidosMinimos).clamp(0.0, 1.0)
-            : 0.0);
+              ? (pedidosMostrados / pedidosMinimos).clamp(0.0, 1.0)
+              : 0.0);
     final estadoLabel = (rifa['estado_display'] ?? rifa['estado'] ?? 'Activa')
         .toString();
     final estadoColor = _colorEstado(estadoLabel);
@@ -302,20 +311,20 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
         Navigator.push(
           context,
           CupertinoPageRoute(
-            builder: (_) => PantallaRifaDetalleUsuario(
-              rifaId: rifaId,
-              resumen: rifa,
-            ),
+            builder: (_) =>
+                PantallaRifaDetalleUsuario(rifaId: rifaId, resumen: rifa),
           ),
         ).then((_) => _cargar());
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+            context,
+          ),
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: CupertinoColors.black.withValues(alpha: 0.06),
               blurRadius: 16,
               offset: const Offset(0, 10),
             ),
@@ -335,11 +344,11 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
                     titulo,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.3,
-                      color: Color(0xFF1C1C1E),
+                      color: CupertinoColors.label.resolveFrom(context),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -410,20 +419,20 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Progreso del mes',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF8E8E93),
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
               ),
             ),
             Text(
               '$pedidosCompletados/$pedidosMinimos pedidos',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1C1C1E),
+                color: CupertinoColors.label.resolveFrom(context),
               ),
             ),
           ],
@@ -432,7 +441,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
         Container(
           height: 8,
           decoration: BoxDecoration(
-            color: const Color(0xFFF2F2F7),
+            color: CupertinoColors.systemGrey5.resolveFrom(context),
             borderRadius: BorderRadius.circular(4),
           ),
           child: FractionallySizedBox(
@@ -440,7 +449,7 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
             widthFactor: progreso,
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF34C759),
+                color: CupertinoColors.systemGreen.resolveFrom(context),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -452,11 +461,11 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
 
   Widget _buildImagePlaceholder() {
     return Container(
-      color: const Color(0xFFF2F2F7),
-      child: const Center(
+      color: CupertinoColors.systemGrey5.resolveFrom(context),
+      child: Center(
         child: Icon(
           CupertinoIcons.photo,
-          color: Color(0xFF8E8E93),
+          color: CupertinoColors.secondaryLabel.resolveFrom(context),
           size: 40,
         ),
       ),
@@ -465,9 +474,9 @@ class _PantallaRifaActivaState extends State<PantallaRifaActiva>
 
   Color _colorEstado(String estado) {
     final normalized = estado.toLowerCase();
-    if (normalized.contains('final')) return const Color(0xFF8E8E93);
-    if (normalized.contains('cancel')) return const Color(0xFFFF3B30);
-    return const Color(0xFF34C759);
+    if (normalized.contains('final')) return CupertinoColors.systemGrey;
+    if (normalized.contains('cancel')) return CupertinoColors.systemRed;
+    return CupertinoColors.systemGreen;
   }
 
   String? _resolveImageUrl(dynamic value) {
@@ -494,7 +503,7 @@ class _IOSButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF007AFF),
+      color: AppColorsPrimary.main,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onPressed,
@@ -519,8 +528,13 @@ class _IOSButton extends StatelessWidget {
 class _ShimmerBox extends StatefulWidget {
   final double height;
   final double borderRadius;
+  final BuildContext context;
 
-  const _ShimmerBox({required this.height, required this.borderRadius});
+  const _ShimmerBox({
+    required this.height,
+    required this.borderRadius,
+    required this.context,
+  });
 
   @override
   State<_ShimmerBox> createState() => _ShimmerBoxState();
@@ -547,6 +561,9 @@ class _ShimmerBoxState extends State<_ShimmerBox>
 
   @override
   Widget build(BuildContext context) {
+    final baseColor = CupertinoColors.systemGrey4.resolveFrom(context);
+    final highlightColor = CupertinoColors.systemGrey5.resolveFrom(context);
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -557,11 +574,7 @@ class _ShimmerBoxState extends State<_ShimmerBox>
             gradient: LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: const [
-                Color(0xFFE5E5EA),
-                Color(0xFFF2F2F7),
-                Color(0xFFE5E5EA),
-              ],
+              colors: [baseColor, highlightColor, baseColor],
               stops: [
                 _controller.value - 0.3,
                 _controller.value,

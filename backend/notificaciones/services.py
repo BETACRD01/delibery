@@ -279,19 +279,38 @@ def notificar_repartidores_nuevo_pedido(pedido):
             activo=True
         )
 
-        proveedor_nombre = pedido.proveedor.nombre if pedido.proveedor else "JP Express"
+        # Obtener tipo de pedido de forma segura
+        es_courier = False
+        if hasattr(pedido, 'tipo') and str(pedido.tipo).lower() in ['directo', 'courier']:
+            es_courier = True
+
+        proveedor_nombre = "JP Express"
+        if pedido.proveedor:
+            proveedor_nombre = pedido.proveedor.nombre
+        
+        # Personalización del mensaje
+        if es_courier:
+            titulo = "📦 Nuevo Encargo Disponible"
+            # Intentar obtener direcciones si existen
+            origen = getattr(pedido, 'direccion_origen', 'Ubicación de retiro')
+            destino = getattr(pedido, 'direccion_entrega', 'Ubicación de entrega')
+            mensaje = f"Nuevo encargo: Retirar en {origen} -> {destino}. Ganancia: ${pedido.total}"
+        else:
+            titulo = "Nuevo pedido disponible"
+            mensaje = f"Tienes un nuevo pedido para recoger y entregar de {proveedor_nombre}. Total: ${pedido.total}"
 
         for repartidor in repartidores_disponibles:
             crear_y_enviar_notificacion(
                 usuario=repartidor.user,
-                titulo="Nuevo pedido disponible",
-                mensaje=f"Tienes un nuevo pedido para recoger y entregar de {proveedor_nombre}. Total: ${pedido.total}",
+                titulo=titulo,
+                mensaje=mensaje,
                 tipo='repartidor',
                 pedido=pedido,
                 datos_extra={
                     'accion': 'ver_pedido_disponible',
                     'pedido_id': str(pedido.id),
-                    'total': str(pedido.total)
+                    'total': str(pedido.total),
+                    'es_courier': 'true' if es_courier else 'false'
                 }
             )
 

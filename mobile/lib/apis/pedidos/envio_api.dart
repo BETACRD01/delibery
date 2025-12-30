@@ -3,7 +3,7 @@
 import '../../config/api_config.dart';
 import '../subapis/http_client.dart';
 
-/// API para cotización de envíos
+/// API para cotización y creación de envíos
 class EnvioApi {
   static final EnvioApi _instance = EnvioApi._internal();
   factory EnvioApi() => _instance;
@@ -14,5 +14,12 @@ class EnvioApi {
   /// Cotiza un envío
   Future<Map<String, dynamic>> cotizarEnvio(Map<String, dynamic> body) async {
     return await _client.post(ApiConfig.enviosCotizar, body);
+  }
+
+  /// Crea un pedido de tipo Courier
+  Future<Map<String, dynamic>> crearPedidoCourier(
+    Map<String, dynamic> body,
+  ) async {
+    return await _client.post(ApiConfig.enviosCrearCourier, body);
   }
 }

@@ -13,8 +13,11 @@ import '../../models/entrega_historial.dart';
 import '../../widgets/mapa_pedidos_widget.dart';
 import '../../controllers/delivery/repartidor_controller.dart';
 import 'widgets/lista_vacia_widget.dart';
+import 'widgets/card_encargo_disponible.dart';
+import 'widgets/card_encargo_activo.dart';
 import '../../services/auth/session_cleanup.dart';
 import '../../widgets/ratings/dialogo_calificar_cliente.dart';
+import '../../widgets/role/role_selector_modal.dart';
 import 'pantalla_ver_comprobante.dart';
 
 /// ✅ REFACTORIZADA: Pantalla principal para REPARTIDORES (iOS Native Style)
@@ -687,18 +690,53 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   Future<void> _abrirNavegacion(PedidoDetalladoRepartidor pedido) async {
     Uri? url;
 
-    // Prioridad 1: Usar coordenadas GPS si están disponibles
-    if (pedido.latitudDestino != null && pedido.longitudDestino != null) {
-      url = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=${pedido.latitudDestino},${pedido.longitudDestino}',
-      );
+    // Determinar destino según estado
+    final estado = pedido.estado.toLowerCase();
+    final irAEntregar = estado == 'en_camino';
+    final esDirecto = pedido.tipo.toLowerCase() == 'directo';
+
+    if (!irAEntregar) {
+      // ESTADO: Yendo a Recoger
+      if (esDirecto) {
+        // COURIER: Usar dirección de origen (texto)
+        if (pedido.direccionOrigen != null &&
+            pedido.direccionOrigen!.isNotEmpty) {
+          final q = Uri.encodeComponent(pedido.direccionOrigen!);
+          url = Uri.parse(
+            'https://www.google.com/maps/dir/?api=1&destination=$q',
+          );
+        }
+      } else {
+        // PROVEEDOR: Usar lat/lon o dirección del proveedor
+        if (pedido.proveedor.latitud != null &&
+            pedido.proveedor.longitud != null) {
+          url = Uri.parse(
+            'https://www.google.com/maps/dir/?api=1&destination=${pedido.proveedor.latitud},${pedido.proveedor.longitud}',
+          );
+        } else if (pedido.proveedor.direccion != null) {
+          final q = Uri.encodeComponent(pedido.proveedor.direccion!);
+          url = Uri.parse(
+            'https://www.google.com/maps/dir/?api=1&destination=$q',
+          );
+        }
+      }
     }
-    // Prioridad 2: Usar la dirección de entrega
-    else if (pedido.direccionEntrega.isNotEmpty) {
-      final direccionCodificada = Uri.encodeComponent(pedido.direccionEntrega);
-      url = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=$direccionCodificada',
-      );
+
+    // Si no se asignó URL arriba (o es irAEntregar), intentar destino final
+    if (url == null) {
+      // ESTADO: Yendo a Entregar (o fallback)
+      if (pedido.latitudDestino != null && pedido.longitudDestino != null) {
+        url = Uri.parse(
+          'https://www.google.com/maps/dir/?api=1&destination=${pedido.latitudDestino},${pedido.longitudDestino}',
+        );
+      } else if (pedido.direccionEntrega.isNotEmpty) {
+        final direccionCodificada = Uri.encodeComponent(
+          pedido.direccionEntrega,
+        );
+        url = Uri.parse(
+          'https://www.google.com/maps/dir/?api=1&destination=$direccionCodificada',
+        );
+      }
     }
 
     if (url == null) {
@@ -1071,6 +1109,21 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
           icon: CupertinoIcons.map_fill,
           title: 'Ver Mapa de Pedidos',
           onTap: _abrirMapaPedidos,
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemPurple,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Text(
+              'BETA',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ),
         _buildMenuTile(
           icon: CupertinoIcons.money_dollar_circle,
@@ -1095,6 +1148,13 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
           onTap: () => Navigator.pushNamed(context, Rutas.repartidorAyuda),
         ),
         const SizedBox(height: 20),
+        // Cambiar Rol
+        _buildMenuTile(
+          icon: CupertinoIcons.arrow_right_arrow_left,
+          title: 'Cambiar Rol',
+          subtitle: 'Cliente / Proveedor',
+          onTap: () => showRoleSelectorModal(context),
+        ),
         _buildMenuTile(
           icon: CupertinoIcons.arrow_right_square,
           title: 'Cerrar Sesión',
@@ -1109,6 +1169,8 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    String? subtitle,
+    Widget? trailing,
     bool isDestructive = false,
   }) {
     return Container(
@@ -1126,14 +1188,30 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             Icon(icon, color: isDestructive ? _rojo : _accent, size: 24),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  color: isDestructive ? _rojo : _textPrimary,
-                  fontSize: 16,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: isDestructive ? _rojo : _textPrimary,
+                      fontSize: 16,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
+            if (trailing != null) ...[trailing, const SizedBox(width: 8)],
             Icon(
               CupertinoIcons.chevron_right,
               color: CupertinoColors.systemGrey,
@@ -1169,7 +1247,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: _cardBorder),
         boxShadow: [
@@ -1187,6 +1265,14 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   Widget _buildPedidosPendientes() {
     final pendientes = _controller.pendientes ?? [];
 
+    // Separar encargos y pedidos
+    final encargos = pendientes
+        .where((p) => p.tipo.toLowerCase() == 'directo')
+        .toList();
+    final pedidos = pendientes
+        .where((p) => p.tipo.toLowerCase() != 'directo')
+        .toList();
+
     final banner = (_ultimoPedidoNuevo != null)
         ? _buildBannerPush(_ultimoPedidoNuevo!, _ultimoPayload)
         : null;
@@ -1200,12 +1286,87 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        if (banner != null) banner,
-        ...pendientes.map(_buildCardPedidoDisponible),
-      ],
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _controller.cargarPedidosDisponibles();
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (banner != null) banner,
+
+          // === SECCIÓN ENCARGOS ===
+          if (encargos.isNotEmpty) ...[
+            _buildSeccionHeader(
+              icono: CupertinoIcons.paperplane_fill,
+              titulo: 'Encargos',
+              subtitulo:
+                  '${encargos.length} disponible${encargos.length > 1 ? 's' : ''}',
+              color: Colors.deepOrange,
+            ),
+            const SizedBox(height: 12),
+            ...encargos.map(_buildCardPedidoDisponible),
+          ],
+
+          // === SECCIÓN PEDIDOS ===
+          if (pedidos.isNotEmpty) ...[
+            if (encargos.isNotEmpty) const SizedBox(height: 20),
+            _buildSeccionHeader(
+              icono: CupertinoIcons.cube_box_fill,
+              titulo: 'Pedidos',
+              subtitulo:
+                  '${pedidos.length} disponible${pedidos.length > 1 ? 's' : ''}',
+              color: _accent,
+            ),
+            const SizedBox(height: 12),
+            ...pedidos.map(_buildCardPedidoDisponible),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Header de sección con icono y contador
+  Widget _buildSeccionHeader({
+    required IconData icono,
+    required String titulo,
+    required String subtitulo,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icono, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _textPrimary,
+                  ),
+                ),
+                Text(
+                  subtitulo,
+                  style: TextStyle(fontSize: 13, color: _textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1229,9 +1390,10 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                     'Nuevo encargo #$pedidoId',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
+                      color: _textPrimary,
                     ),
                   ),
                 ),
@@ -1241,14 +1403,17 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
               const SizedBox(height: 8),
               Text(
                 'Cliente: $cliente',
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: _textSecondary),
               ),
             ],
             if (total != null) ...[
               const SizedBox(height: 4),
               Text(
                 'Total: $total',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: _textPrimary,
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -1263,8 +1428,8 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                       });
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey[700],
-                      side: BorderSide(color: Colors.grey.shade300),
+                      foregroundColor: _textSecondary,
+                      side: BorderSide(color: _cardBorder),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1297,6 +1462,23 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   }
 
   Widget _buildCardPedidoDisponible(PedidoDisponible pedido) {
+    // Determinar si es un encargo (envío directo) o pedido de proveedor
+    final esEncargo = pedido.tipo.toLowerCase() == 'directo';
+
+    // Si es encargo, usar el nuevo widget especializado
+    if (esEncargo) {
+      return CardEncargoDisponible(
+        encargo: pedido,
+        onAceptar: () => _aceptarPedido(pedido.id),
+        onRechazar: () => _controller.rechazarPedido(pedido.id),
+      );
+    }
+
+    // Pedido regular: usar el card existente
+    final titulo = '${pedido.proveedorNombre} • #${pedido.numeroPedido}';
+    final iconoPedido = CupertinoIcons.cube_box_fill;
+    final colorIcono = _accent;
+
     return _buildSurfaceCard(
       margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
@@ -1307,24 +1489,21 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  CupertinoIcons.cube_box_fill,
-                  color: _accent,
-                  size: 20,
-                ),
+                Icon(iconoPedido, color: colorIcono, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '${pedido.proveedorNombre} • #${pedido.numeroPedido}',
-                    style: const TextStyle(
+                    titulo,
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
+                      color: _textPrimary,
                     ),
                   ),
                 ),
                 Text(
                   '${pedido.distanciaKm.toStringAsFixed(1)} km',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  style: TextStyle(color: _textSecondary, fontSize: 13),
                 ),
               ],
             ),
@@ -1340,7 +1519,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                 Expanded(
                   child: Text(
                     pedido.zonaEntrega,
-                    style: const TextStyle(color: Colors.black87),
+                    style: TextStyle(color: _textPrimary),
                   ),
                 ),
               ],
@@ -1352,7 +1531,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                 const SizedBox(width: 6),
                 Text(
                   '${pedido.tiempoEstimadoMin} min est.',
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: _textSecondary),
                 ),
                 const SizedBox(width: 16),
                 const Icon(
@@ -1362,9 +1541,9 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '\$${pedido.total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Colors.black,
+                  '\$${pedido.totalConRecargo.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: _textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1381,7 +1560,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                 const SizedBox(width: 6),
                 Text(
                   'Pago: ${pedido.metodoPago}',
-                  style: const TextStyle(color: Colors.black87),
+                  style: TextStyle(color: _textPrimary),
                 ),
                 if (pedido.comisionRepartidor != null) ...[
                   const Spacer(),
@@ -1409,15 +1588,19 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                   child: OutlinedButton(
                     onPressed: () => _controller.rechazarPedido(pedido.id),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey.shade300),
+                      foregroundColor: _textPrimary,
+                      side: BorderSide(color: _cardBorder),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Rechazar',
-                      style: TextStyle(color: Colors.black87),
+                      style: TextStyle(
+                        color: _textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -1447,6 +1630,14 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   Widget _buildPedidosEnCurso() {
     final pedidosActivos = _controller.pedidosActivos ?? [];
 
+    // Separar encargos y pedidos activos
+    final encargosActivos = pedidosActivos
+        .where((p) => p.tipo.toLowerCase() == 'directo')
+        .toList();
+    final pedidosRegulares = pedidosActivos
+        .where((p) => p.tipo.toLowerCase() != 'directo')
+        .toList();
+
     if (pedidosActivos.isEmpty) {
       return const ListaVaciaWidget(
         icono: CupertinoIcons.cube_box,
@@ -1460,17 +1651,74 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
       onRefresh: () async {
         await _controller.cargarPedidosActivos();
       },
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: pedidosActivos.length,
-        itemBuilder: (context, index) {
-          return _buildCardPedidoActivo(pedidosActivos[index]);
-        },
+        children: [
+          // === SECCIÓN ENCARGOS EN CURSO ===
+          if (encargosActivos.isNotEmpty) ...[
+            _buildSeccionHeader(
+              icono: CupertinoIcons.paperplane_fill,
+              titulo: 'Encargos en Curso',
+              subtitulo:
+                  '${encargosActivos.length} activo${encargosActivos.length > 1 ? 's' : ''}',
+              color: Colors.deepOrange,
+            ),
+            const SizedBox(height: 12),
+            ...encargosActivos.map(_buildCardPedidoActivo),
+          ],
+
+          // === SECCIÓN PEDIDOS EN CURSO ===
+          if (pedidosRegulares.isNotEmpty) ...[
+            if (encargosActivos.isNotEmpty) const SizedBox(height: 20),
+            _buildSeccionHeader(
+              icono: CupertinoIcons.cube_box_fill,
+              titulo: 'Pedidos en Curso',
+              subtitulo:
+                  '${pedidosRegulares.length} activo${pedidosRegulares.length > 1 ? 's' : ''}',
+              color: _accent,
+            ),
+            const SizedBox(height: 12),
+            ...pedidosRegulares.map(_buildCardPedidoActivo),
+          ],
+        ],
       ),
     );
   }
 
   Widget _buildCardPedidoActivo(PedidoDetalladoRepartidor pedido) {
+    // Determinar si es un encargo (envío directo) o pedido de proveedor
+    final esEncargo = pedido.tipo.toLowerCase() == 'directo';
+
+    // Si es encargo, usar el nuevo widget especializado con flujo de dos etapas
+    if (esEncargo) {
+      return CardEncargoActivo(
+        encargo: pedido,
+        onMarcarRecogido: () => _marcarEnCamino(pedido),
+        onMarcarEntregado: () => _mostrarDialogoMarcarEntregado(pedido),
+        onNavegar: () => _abrirNavegacion(pedido),
+        onLlamar: () => _llamarCliente(pedido.cliente.telefono),
+        onWhatsApp: () => _abrirWhatsAppCliente(pedido),
+        onVerComprobante:
+            pedido.pagoId != null &&
+                (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        PantallaVerComprobante(pagoId: pedido.pagoId!),
+                  ),
+                );
+              }
+            : null,
+      );
+    }
+
+    // Pedido regular: usar el card existente
+    final tipoLabel = '';
+    final iconoPedido = CupertinoIcons.cube_box_fill;
+    final colorBadge = _success;
+
     return _buildSurfaceCard(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -1480,34 +1728,36 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _success.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        CupertinoIcons.cube_box_fill,
-                        size: 18,
-                        color: _success,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '#${pedido.numeroPedido}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorBadge.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(iconoPedido, size: 18, color: colorBadge),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            '$tipoLabel#${pedido.numeroPedido}',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 _buildChipEstado(pedido.estado),
               ],
             ),
@@ -1900,6 +2150,10 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   }
 
   Future<void> _marcarEnCamino(PedidoDetalladoRepartidor pedido) async {
+    final esEncargo = pedido.tipo.toLowerCase() == 'directo';
+    final tipoTexto = esEncargo ? 'encargo' : 'pedido';
+    final destinoTexto = esEncargo ? 'punto de entrega' : 'cliente';
+
     final confirmar = await showCupertinoDialog<bool>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -1912,7 +2166,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
           ],
         ),
         content: Text(
-          '¿Confirmas que ya recogiste el pedido #${pedido.numeroPedido} y estás en camino hacia el cliente?',
+          '¿Confirmas que ya recogiste el $tipoTexto #${pedido.numeroPedido} y estás en camino hacia el $destinoTexto?',
         ),
         actions: [
           CupertinoDialogAction(
@@ -1965,6 +2219,9 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   Future<void> _mostrarDialogoMarcarEntregado(
     PedidoDetalladoRepartidor pedido,
   ) async {
+    final esEncargo = pedido.tipo.toLowerCase() == 'directo';
+    final tipoTexto = esEncargo ? 'encargo' : 'pedido';
+
     final esTransferencia = pedido.metodoPago.toLowerCase() == 'transferencia';
     final tieneComprobante =
         (pedido.transferenciaComprobanteUrl ?? '').isNotEmpty;
@@ -1984,7 +2241,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '¿Confirmas que el pedido #${pedido.numeroPedido} fue entregado exitosamente?',
+                    '¿Confirmas que el $tipoTexto #${pedido.numeroPedido} fue entregado exitosamente?',
                   ),
                   const SizedBox(height: 16),
                   Container(

@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/theme/app_colors_primary.dart';
-import 'package:mobile/theme/app_colors_support.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../config/rutas.dart';
@@ -58,7 +58,9 @@ class _PantallaHomeState extends State<PantallaHome> {
     return ChangeNotifierProvider.value(
       value: _homeController,
       child: Scaffold(
-        backgroundColor: CupertinoColors.systemGroupedBackground,
+        backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+          context,
+        ),
         floatingActionButton: const CarritoFloatingButton(),
         body: _HomeBody(
           onAgregarCarrito: _agregarProductoAlCarrito,
@@ -270,12 +272,12 @@ class _SeccionCategorias extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Categorías',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColorsSupport.textPrimary,
+                  color: CupertinoColors.label.resolveFrom(context),
                   letterSpacing: -0.5,
                 ),
               ),
@@ -353,10 +355,14 @@ class _CategoriaChip extends StatelessWidget {
               height: 64,
               decoration: BoxDecoration(
                 color: (imagen != null && imagen.isNotEmpty)
-                    ? Colors.white
+                    ? CupertinoColors.secondarySystemGroupedBackground
+                          .resolveFrom(context)
                     : baseColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20), // Squaricle
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                border: Border.all(
+                  color: CupertinoColors.systemGrey4.resolveFrom(context),
+                  width: 0.5,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
@@ -376,10 +382,10 @@ class _CategoriaChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: AppColorsSupport.textSecondary,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
                 letterSpacing: -0.2,
               ),
             ),
@@ -444,12 +450,12 @@ class _SeccionPromociones extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: const Text(
+          child: Text(
             'Promociones',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppColorsSupport.textPrimary,
+              color: CupertinoColors.label.resolveFrom(context),
               letterSpacing: -0.5,
             ),
           ),
@@ -511,7 +517,10 @@ class _PromoCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: const LinearGradient(
-            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+            colors: [
+              Color(0xFF667eea),
+              Color(0xFF764ba2),
+            ], // Keep gradient but verify opacity in dark mode if needed (gradients often okay)
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -552,7 +561,9 @@ class _PromoCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: CupertinoColors.systemBackground.resolveFrom(
+                          context,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -640,10 +651,10 @@ class _SeccionProductos extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 titulo,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColorsSupport.textPrimary,
+                  color: CupertinoColors.label.resolveFrom(context),
                 ),
               ),
             ],
@@ -699,4 +710,3 @@ class _SeccionProductos extends StatelessWidget {
     );
   }
 }
-

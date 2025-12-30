@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../apis/helpers/api_exception.dart';
 import '../../config/rutas.dart';
 import '../../services/auth/auth_service.dart';
+import '../../services/auth/google_auth_service.dart';
 import '../../theme/app_colors_primary.dart';
 import '../../theme/jp_theme.dart';
 import './pantalla_recuperar_password.dart';
@@ -26,6 +27,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
   final _api = AuthService();
 
   bool _loading = false;
+  bool _loadingGoogle = false;
   bool _obscurePassword = true;
   String? _error;
   int? _intentosRestantes;
@@ -79,6 +81,39 @@ class _PantallaLoginState extends State<PantallaLogin> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _loadingGoogle = true;
+      _error = null;
+    });
+
+    try {
+      final result = await GoogleAuthService().signInWithGoogle();
+
+      if (result == null) {
+        // Usuario canceló
+        if (mounted) setState(() => _loadingGoogle = false);
+        return;
+      }
+
+      if (mounted) {
+        await Navigator.pushReplacementNamed(context, Rutas.router);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _error = e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Error al conectar con Google');
+      }
+    } finally {
+      if (mounted) setState(() => _loadingGoogle = false);
     }
   }
 
@@ -155,7 +190,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      backgroundColor: JPCupertinoColors.background(context),
+      backgroundColor: CupertinoColors.white,
       child: DefaultTextStyle(
         style: TextStyle(
           fontSize: 17,
@@ -180,6 +215,10 @@ class _PantallaLoginState extends State<PantallaLogin> {
                     if (_error != null) _buildErrorMessage(),
                     const SizedBox(height: 32),
                     _buildLoginButton(),
+                    const SizedBox(height: 20),
+                    _buildDivider(),
+                    const SizedBox(height: 20),
+                    _buildGoogleButton(),
                     const SizedBox(height: 28),
                     _buildFooter(),
                     const SizedBox(height: 40),
@@ -231,6 +270,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 15,
+            fontWeight: FontWeight.w500,
             color: JPCupertinoColors.secondaryLabel(context),
           ),
         ),
@@ -515,6 +555,89 @@ class _PantallaLoginState extends State<PantallaLogin> {
     );
   }
 
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 1,
+            color: JPCupertinoColors.separator(context),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'o',
+            style: TextStyle(
+              color: JPCupertinoColors.secondaryLabel(context),
+              fontSize: 14,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: JPCupertinoColors.separator(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    final isDisabled = _loading || _loadingGoogle;
+
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        color: isDisabled
+            ? JPCupertinoColors.quaternaryLabel(context)
+            : CupertinoColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: JPCupertinoColors.separator(context),
+          width: 1,
+        ),
+        boxShadow: isDisabled
+            ? null
+            : [
+                BoxShadow(
+                  color: CupertinoColors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: CupertinoButton(
+        onPressed: isDisabled ? null : _loginWithGoogle,
+        padding: EdgeInsets.zero,
+        child: _loadingGoogle
+            ? const CupertinoActivityIndicator(radius: 12)
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Google Logo Original
+                  Image.asset(
+                    'assets/images/google_logo.png',
+                    width: 24,
+                    height: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Continuar con Google',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
+                      color: JPCupertinoColors.label(context),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
   Widget _buildFooter() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -550,9 +673,9 @@ class _PantallaLoginState extends State<PantallaLogin> {
       child: Text(
         'Versión 1.0.0',
         style: TextStyle(
-          color: JPCupertinoColors.tertiaryLabel(context),
+          color: AppColorsPrimary.main, // Celeste empresarial
           fontSize: 12,
-          fontWeight: FontWeight.w400,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

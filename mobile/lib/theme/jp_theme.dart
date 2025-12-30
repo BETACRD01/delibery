@@ -244,7 +244,7 @@ class JPSnackbar {
     show(
       context,
       message,
-      color: JPColors.success,
+      color: JPColors.primary, // Celeste empresarial
       icon: Icons.check_circle_outline,
     );
   }
@@ -296,9 +296,7 @@ class JPLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CupertinoActivityIndicator(radius: 14),
-    );
+    return const Center(child: CupertinoActivityIndicator(radius: 14));
   }
 }
 

@@ -7,7 +7,9 @@ import '../../../widgets/common/jp_empty_state.dart';
 import '../../../widgets/common/jp_cupertino_button.dart';
 import '../../../../../theme/app_colors_primary.dart';
 import '../../../theme/jp_theme.dart';
-import 'pedido_detalle_screen.dart'; 
+import 'pedido_detalle_screen.dart';
+import '../../../widgets/cards/jp_courier_card.dart';
+import 'pantalla_detalle_courier.dart';
 
 class PantallaMisPedidos extends StatefulWidget {
   const PantallaMisPedidos({super.key});
@@ -33,9 +35,7 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
 
   void _cargarPedidos({bool refresh = false}) {
     _ultimaRecarga = DateTime.now();
-    context.read<PedidoProvider>().cargarPedidos(
-      refresh: refresh,
-    );
+    context.read<PedidoProvider>().cargarPedidos(refresh: refresh);
   }
 
   @override
@@ -45,7 +45,8 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
       final provider = context.read<PedidoProvider>();
       final yaCargando = provider.isLoading;
       final listaVacia = provider.pedidos.isEmpty;
-      final haceMucho = DateTime.now().difference(_ultimaRecarga) >
+      final haceMucho =
+          DateTime.now().difference(_ultimaRecarga) >
           const Duration(seconds: 30);
 
       if (!yaCargando && (listaVacia || haceMucho)) {
@@ -56,14 +57,13 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    
+
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-    
+
     // Cargar más cuando falten 200px para llegar al final
     if (maxScroll - currentScroll <= 200) {
-      context.read<PedidoProvider>().cargarPedidos(
-      );
+      context.read<PedidoProvider>().cargarPedidos();
     }
   }
 
@@ -113,7 +113,10 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
                 onRefresh: () async => _cargarPedidos(refresh: true),
               ),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -121,7 +124,9 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
                         return provider.hasMore
                             ? const Padding(
                                 padding: EdgeInsets.all(16),
-                                child: Center(child: CupertinoActivityIndicator()),
+                                child: Center(
+                                  child: CupertinoActivityIndicator(),
+                                ),
                               )
                             : const SizedBox.shrink();
                       }
@@ -132,7 +137,8 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
                         child: _buildTarjetaPedido(pedido),
                       );
                     },
-                    childCount: provider.pedidos.length + (provider.hasMore ? 1 : 0),
+                    childCount:
+                        provider.pedidos.length + (provider.hasMore ? 1 : 0),
                   ),
                 ),
               ),
@@ -144,6 +150,30 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
   }
 
   Widget _buildTarjetaPedido(PedidoListItem pedido) {
+    // Si es un encargo (Courier), usamos la tarjeta específica
+    if (pedido.tipo.toLowerCase() == 'directo' ||
+        pedido.tipo.toLowerCase() == 'courier') {
+      return JPCourierCard(
+        numeroPedido: pedido.numeroPedido,
+        estado: pedido.estado,
+        estadoDisplay: pedido.estadoDisplay,
+        direccionOrigen:
+            pedido.proveedorNombre ??
+            'Origen desconocido', // En courier, proveedorNombre suele mapearse al origen o nombre del remitente si no hay proveedor real
+        direccionDestino: pedido.direccionEntrega,
+        creadoEn: pedido.creadoEn,
+        total: pedido.totalConRecargo,
+        onTap: () => Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => PantallaDetalleCourier(pedidoId: pedido.id),
+          ),
+        ),
+        actionButton: _buildBotonAccion(pedido, isCourier: true),
+      );
+    }
+
+    // Pedido normal (Shopping/Comida)
     return JPOrderCard(
       numeroPedido: pedido.numeroPedido,
       estado: pedido.estado,
@@ -151,16 +181,18 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
       proveedorNombre: pedido.proveedorNombre,
       creadoEn: pedido.creadoEn,
       cantidadItems: pedido.cantidadItems,
-      total: pedido.total,
+      total: pedido.totalConRecargo,
       onTap: () => Navigator.push(
         context,
-        CupertinoPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
+        CupertinoPageRoute(
+          builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id),
+        ),
       ),
       actionButton: _buildBotonAccion(pedido),
     );
   }
 
-  Widget _buildBotonAccion(PedidoListItem pedido) {
+  Widget _buildBotonAccion(PedidoListItem pedido, {bool isCourier = false}) {
     if (pedido.estado == 'en_ruta') {
       return JPCupertinoButton.filled(
         text: 'Rastrear',
@@ -168,7 +200,11 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
         size: JPButtonSize.compact,
         onPressed: () => Navigator.push(
           context,
-          CupertinoPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
+          CupertinoPageRoute(
+            builder: (_) => isCourier
+                ? PantallaDetalleCourier(pedidoId: pedido.id)
+                : PedidoDetalleScreen(pedidoId: pedido.id),
+          ),
         ),
       );
     }
@@ -177,7 +213,11 @@ class _PantallaMisPedidosState extends State<PantallaMisPedidos>
       size: JPButtonSize.compact,
       onPressed: () => Navigator.push(
         context,
-        CupertinoPageRoute(builder: (_) => PedidoDetalleScreen(pedidoId: pedido.id)),
+        CupertinoPageRoute(
+          builder: (_) => isCourier
+              ? PantallaDetalleCourier(pedidoId: pedido.id)
+              : PedidoDetalleScreen(pedidoId: pedido.id),
+        ),
       ),
     );
   }

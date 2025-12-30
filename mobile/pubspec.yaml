@@ -60,6 +60,7 @@ dependencies:
   # ---------------------------------------------------------------------------
   google_maps_flutter: ^2.5.3
   google_places_flutter: ^2.0.9
+  google_sign_in: ^6.2.1
 
   # ---------------------------------------------------------------------------
   # 🔥 FIREBASE
@@ -114,6 +115,7 @@ flutter:
   assets:
     - assets/icon/LOGO1.jpeg
     - assets/images/Beta.png
+    - assets/images/google_logo.png
     
 ###############################################################################
 #                         ✔ FIN DEL ARCHIVO DISEÑADO                           #

@@ -185,7 +185,9 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -268,7 +270,9 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade100),
       ),
@@ -289,7 +293,9 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -372,7 +378,9 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade100),
       ),
@@ -481,7 +489,11 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                 'Comisión de servicio',
                 '\$${comision.toStringAsFixed(2)}',
               ),
-            _buildInfoRow('Total', '\$${pedido.total.toStringAsFixed(2)}'),
+            // Calcular total incluyendo recargo nocturno (sumado al total base del pedido)
+            _buildInfoRow(
+              'Total',
+              '\$${(pedido.total + recargoNocturno).toStringAsFixed(2)}',
+            ),
           ],
         ],
       ),
@@ -553,7 +565,10 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     return _buildContactoCard(
       titulo: 'Proveedor',
       nombre: pedido.proveedor!.nombre,
-      detalle: pedido.proveedor!.direccion ?? pedido.proveedor!.telefono ?? 'Sin información',
+      detalle:
+          pedido.proveedor!.direccion ??
+          pedido.proveedor!.telefono ??
+          'Sin información',
       icono: Icons.store_mall_directory_rounded,
       color: Colors.orange,
       fotoPerfil: pedido.proveedor!.fotoPerfil,
@@ -609,11 +624,8 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                       fit: BoxFit.cover,
                       placeholder: (context, url) =>
                           const CupertinoActivityIndicator(radius: 12),
-                      errorWidget: (context, url, error) => Icon(
-                        icono,
-                        color: color,
-                        size: 24,
-                      ),
+                      errorWidget: (context, url, error) =>
+                          Icon(icono, color: color, size: 24),
                     ),
                   )
                 : Icon(icono, color: color, size: 24),
@@ -707,7 +719,9 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
 
   Widget _buildCancelacionCard(Pedido pedido) {
     return _buildSurfaceCard(
-      backgroundColor: Colors.red[50],
+      backgroundColor: CupertinoColors.systemRed
+          .resolveFrom(context)
+          .withValues(alpha: 0.1),
       child: Column(
         children: [
           Row(
@@ -718,7 +732,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                 'Pedido Cancelado',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.red[900],
+                  color: CupertinoColors.systemRed.resolveFrom(context),
                   fontSize: 16,
                 ),
               ),
@@ -796,7 +810,8 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: CupertinoColors.secondarySystemGroupedBackground
+                  .resolveFrom(context),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(

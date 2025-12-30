@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:ui';
 
+import '../../../../../theme/app_colors_primary.dart';
+
 class PantallaAyudaSoporte extends StatefulWidget {
   const PantallaAyudaSoporte({super.key});
 
@@ -53,7 +55,9 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
       body: FadeTransition(
@@ -85,28 +89,30 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text(
+      title: Text(
         'Ayuda y Soporte',
         style: TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.4,
-          color: Color(0xFF1C1C1E),
+          color: CupertinoColors.label.resolveFrom(context),
         ),
       ),
       centerTitle: true,
       backgroundColor: Colors.transparent,
-      foregroundColor: const Color(0xFF1C1C1E),
+      foregroundColor: CupertinoColors.label.resolveFrom(context),
       elevation: 0,
       flexibleSpace: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
+              color: CupertinoColors.systemBackground
+                  .resolveFrom(context)
+                  .withValues(alpha: 0.95),
               border: Border(
                 bottom: BorderSide(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: CupertinoColors.separator.resolveFrom(context),
                   width: 0.5,
                 ),
               ),
@@ -115,10 +121,10 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
         ),
       ),
       leading: IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.arrow_back_ios_new,
           size: 20,
-          color: Color(0xFF1C1C1E),
+          color: CupertinoColors.label.resolveFrom(context),
         ),
         onPressed: () => Navigator.pop(context),
       ),
@@ -133,32 +139,32 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFF007AFF).withValues(alpha: 0.1),
+              color: AppColorsPrimary.main.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.support_agent_rounded,
               size: 40,
-              color: Color(0xFF007AFF),
+              color: AppColorsPrimary.main,
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             '¿Cómo podemos ayudarte?',
             style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
-              color: Color(0xFF1C1C1E),
+              color: CupertinoColors.label.resolveFrom(context),
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Estamos aquí para resolver tus dudas',
             style: TextStyle(
               fontSize: 16,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               letterSpacing: -0.2,
             ),
             textAlign: TextAlign.center,
@@ -172,14 +178,14 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             'CANALES DE ATENCIÓN',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               letterSpacing: 0.5,
             ),
           ),
@@ -190,7 +196,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
               child: _buildContactCard(
                 icon: Icons.chat_bubble_outline,
                 label: 'Chat',
-                color: const Color(0xFF34C759),
+                color: CupertinoColors.systemGreen.resolveFrom(context),
                 onTap: () => _simularAccion('Abriendo WhatsApp...'),
               ),
             ),
@@ -199,7 +205,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
               child: _buildContactCard(
                 icon: Icons.phone_outlined,
                 label: 'Llamar',
-                color: const Color(0xFF007AFF),
+                color: AppColorsPrimary.main,
                 onTap: () => _simularAccion('Llamando a soporte...'),
               ),
             ),
@@ -208,7 +214,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
               child: _buildContactCard(
                 icon: Icons.email_outlined,
                 label: 'Email',
-                color: const Color(0xFFFF9500),
+                color: AppColorsPrimary.secondary,
                 onTap: () => _simularAccion('Abriendo correo...'),
               ),
             ),
@@ -225,7 +231,9 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
     required VoidCallback onTap,
   }) {
     return Material(
-      color: Colors.white,
+      color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+        context,
+      ),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -236,7 +244,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: CupertinoColors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -257,10 +265,10 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
               const SizedBox(height: 12),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1C1C1E),
+                  color: CupertinoColors.label.resolveFrom(context),
                   letterSpacing: -0.2,
                 ),
               ),
@@ -275,25 +283,27 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             'PREGUNTAS FRECUENTES',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               letterSpacing: 0.5,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+              context,
+            ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: CupertinoColors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -333,8 +343,8 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
     return Theme(
       data: Theme.of(context).copyWith(
         dividerColor: Colors.transparent,
-        splashColor: const Color(0xFFF2F2F7),
-        highlightColor: const Color(0xFFF2F2F7),
+        splashColor: CupertinoColors.systemGrey5.resolveFrom(context),
+        highlightColor: CupertinoColors.systemGrey5.resolveFrom(context),
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -347,21 +357,21 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
         ),
         title: Text(
           question,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1C1C1E),
+            color: CupertinoColors.label.resolveFrom(context),
             letterSpacing: -0.3,
           ),
         ),
-        iconColor: const Color(0xFF007AFF),
-        collapsedIconColor: const Color(0xFF8E8E93),
+        iconColor: AppColorsPrimary.main,
+        collapsedIconColor: CupertinoColors.secondaryLabel.resolveFrom(context),
         children: [
           Text(
             answer,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               height: 1.4,
               letterSpacing: -0.2,
             ),
@@ -377,7 +387,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
       child: Divider(
         height: 1,
         thickness: 0.5,
-        color: Colors.black.withValues(alpha: 0.1),
+        color: CupertinoColors.separator.resolveFrom(context),
       ),
     );
   }
@@ -386,25 +396,27 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             'ENVÍANOS UN MENSAJE',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               letterSpacing: 0.5,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+              context,
+            ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: CupertinoColors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -452,10 +464,10 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               letterSpacing: 0.5,
             ),
           ),
@@ -463,20 +475,21 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
         TextFormField(
           controller: controller,
           maxLines: maxLines,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
-            color: Color(0xFF1C1C1E),
+            color: CupertinoColors.label.resolveFrom(context),
             fontWeight: FontWeight.w500,
             letterSpacing: -0.3,
           ),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(
-              color: Color(0xFFC7C7CC),
+            hintStyle: TextStyle(
+              color: CupertinoColors.placeholderText.resolveFrom(context),
               fontWeight: FontWeight.w400,
             ),
             filled: true,
-            fillColor: const Color(0xFFF2F2F7),
+            fillColor: CupertinoColors.tertiarySystemGroupedBackground
+                .resolveFrom(context),
             contentPadding: EdgeInsets.symmetric(
               horizontal: 16,
               vertical: maxLines > 1 ? 14 : 14,
@@ -491,17 +504,26 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF007AFF), width: 2),
+              borderSide: BorderSide(color: AppColorsPrimary.main, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFFF3B30), width: 2),
+              borderSide: BorderSide(
+                color: CupertinoColors.systemRed.resolveFrom(context),
+                width: 2,
+              ),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFFF3B30), width: 2),
+              borderSide: BorderSide(
+                color: CupertinoColors.systemRed.resolveFrom(context),
+                width: 2,
+              ),
             ),
-            errorStyle: const TextStyle(fontSize: 12, color: Color(0xFFFF3B30)),
+            errorStyle: TextStyle(
+              fontSize: 12,
+              color: CupertinoColors.systemRed.resolveFrom(context),
+            ),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) return 'Campo obligatorio';
@@ -521,7 +543,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
             ? []
             : [
                 BoxShadow(
-                  color: const Color(0xFF007AFF).withValues(alpha: 0.3),
+                  color: AppColorsPrimary.main.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -533,8 +555,10 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
         child: ElevatedButton(
           onPressed: _enviando ? null : _enviarMensaje,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF007AFF),
-            disabledBackgroundColor: const Color(0xFFE5E5EA),
+            backgroundColor: AppColorsPrimary.main,
+            disabledBackgroundColor: CupertinoColors.systemGrey4.resolveFrom(
+              context,
+            ),
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -571,7 +595,7 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
             fontWeight: FontWeight.w500,
           ),
         ),
-        backgroundColor: const Color(0xFF007AFF),
+        backgroundColor: AppColorsPrimary.main,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -599,12 +623,16 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
         context: context,
         barrierDismissible: true,
         builder: (ctx) => CupertinoAlertDialog(
-          title: const Row(
+          title: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.check_circle, color: Color(0xFF34C759), size: 24),
-              SizedBox(width: 8),
-              Text('Mensaje Enviado'),
+              Icon(
+                Icons.check_circle,
+                color: CupertinoColors.systemGreen.resolveFrom(context),
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Text('Mensaje Enviado'),
             ],
           ),
           content: const Padding(
@@ -618,10 +646,10 @@ class _PantallaAyudaSoporteState extends State<PantallaAyudaSoporte>
             CupertinoDialogAction(
               isDefaultAction: true,
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
+              child: Text(
                 'Entendido',
                 style: TextStyle(
-                  color: Color(0xFF007AFF),
+                  color: AppColorsPrimary.main,
                   fontWeight: FontWeight.w600,
                 ),
               ),

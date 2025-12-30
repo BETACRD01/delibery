@@ -11,7 +11,7 @@ from django.dispatch import receiver
 from django.conf import settings
 
 # Modelos
-from pedidos.models import Pedido, EstadoPedido
+from pedidos.models import Pedido, EstadoPedido, TipoPedido
 
 # Servicios
 from notificaciones.services import crear_y_enviar_notificacion
@@ -120,10 +120,18 @@ def _obtener_plantilla_mensaje(pedido, evento, estado_anterior):
 
     # --- NUEVO PEDIDO ---
     if evento == 'creado':
-        return {
-            'titulo': "¡Pedido Recibido!",
-            'mensaje': f"Tu pedido {numero} ha sido creado. Un repartidor lo tomará pronto."
-        }
+        es_courier = pedido.tipo == TipoPedido.DIRECTO
+        
+        if es_courier:
+            return {
+                'titulo': "¡Encargo Recibido!",
+                'mensaje': f"Tu encargo {numero} ha sido creado. Buscando repartidor cercano..."
+            }
+        else:
+            return {
+                'titulo': "¡Pedido Recibido!",
+                'mensaje': f"Tu pedido {numero} ha sido creado. Un repartidor lo tomará pronto."
+            }
 
     # --- CAMBIOS DE ESTADO ---
 

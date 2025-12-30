@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../theme/jp_theme.dart';
 import '../../../../services/usuarios/usuarios_service.dart';
 import '../../../../apis/helpers/api_exception.dart';
+import '../../../../utils/image_orientation_fixer.dart';
 
 /// 📸 Pantalla para cambiar foto de perfil
 class PantallaEditarFoto extends StatefulWidget {
@@ -36,11 +37,17 @@ class _PantallaEditarFotoState extends State<PantallaEditarFoto> {
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 85,
+        requestFullMetadata: true, // Asegura corrección de orientación EXIF
       );
 
       if (imagen != null) {
+        // Corregir orientación
+        final fixedImage = await ImageOrientationFixer.fixAndCompress(
+          File(imagen.path),
+        );
+
         setState(() {
-          _imagenSeleccionada = File(imagen.path);
+          _imagenSeleccionada = fixedImage;
         });
       }
     } catch (e) {
@@ -56,11 +63,20 @@ class _PantallaEditarFotoState extends State<PantallaEditarFoto> {
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 85,
+        preferredCameraDevice:
+            CameraDevice.front, // Cámara frontal para selfies
+        requestFullMetadata:
+            true, // Corrige la orientación EXIF automáticamente
       );
 
       if (imagen != null) {
+        // Corregir orientación
+        final fixedImage = await ImageOrientationFixer.fixAndCompress(
+          File(imagen.path),
+        );
+
         setState(() {
-          _imagenSeleccionada = File(imagen.path);
+          _imagenSeleccionada = fixedImage;
         });
       }
     } catch (e) {
@@ -197,7 +213,9 @@ class _PantallaEditarFotoState extends State<PantallaEditarFoto> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: JPColors.success,
                   minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -211,7 +229,9 @@ class _PantallaEditarFotoState extends State<PantallaEditarFoto> {
                 label: const Text('Cambiar selección'),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
@@ -274,14 +294,14 @@ class _PantallaEditarFotoState extends State<PantallaEditarFoto> {
         child: _imagenSeleccionada != null
             ? Image.file(_imagenSeleccionada!, fit: BoxFit.cover)
             : widget.fotoActual != null
-                ? Image.network(
-                    widget.fotoActual!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildPlaceholder();
-                    },
-                  )
-                : _buildPlaceholder(),
+            ? Image.network(
+                widget.fotoActual!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return _buildPlaceholder();
+                },
+              )
+            : _buildPlaceholder(),
       ),
     );
   }
@@ -308,7 +328,10 @@ class _PantallaEditarFotoState extends State<PantallaEditarFoto> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: baseColor.withValues(alpha: 0.5), width: 1.2),
+          border: Border.all(
+            color: baseColor.withValues(alpha: 0.5),
+            width: 1.2,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -338,11 +361,7 @@ class _PantallaEditarFotoState extends State<PantallaEditarFoto> {
                 ),
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: baseColor,
-            ),
+            Icon(Icons.arrow_forward_ios, size: 14, color: baseColor),
           ],
         ),
       ),

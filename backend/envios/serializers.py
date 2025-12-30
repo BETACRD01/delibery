@@ -51,6 +51,18 @@ class CotizacionEnvioRequestSerializer(serializers.Serializer):
         max_length=50
     )
 
+    # --- NUEVOS CAMPOS PARA COURIER/ENCARGO ---
+    lat_origen = serializers.FloatField(
+        required=False, 
+        allow_null=True,
+        help_text="Latitud de recogida (Obligatorio para tipo_servicio='courier')"
+    )
+    lng_origen = serializers.FloatField(
+        required=False, 
+        allow_null=True,
+        help_text="Longitud de recogida (Obligatorio para tipo_servicio='courier')"
+    )
+
     def validate(self, data):
         """
         Validación adicional a nivel de objeto.
@@ -58,6 +70,18 @@ class CotizacionEnvioRequestSerializer(serializers.Serializer):
         """
         lat = data.get('lat_destino')
         lng = data.get('lng_destino')
+        
+        # Validación de Courier
+        tipo = data.get('tipo_servicio', 'delivery')
+        lat_origen = data.get('lat_origen')
+        lng_origen = data.get('lng_origen')
+
+        # Regla de Negocio: Si es courier, NECESITAMOS saber dónde recoger
+        if tipo == 'courier':
+            if lat_origen is None or lng_origen is None:
+                raise serializers.ValidationError(
+                    "Para el servicio de Courier/Encargo, las coordenadas de origen son obligatorias."
+                )
         
         # Coordenadas aproximadas de Ecuador: -5° a 2° lat, -92° a -75° lng
         # Solo advertencia en logs, no rechazamos la petición
@@ -67,6 +91,60 @@ class CotizacionEnvioRequestSerializer(serializers.Serializer):
                     f"Coordenadas fuera de Ecuador detectadas: "
                     f"lat={lat}, lng={lng}. Posible error del cliente."
                 )
+        
+        return data
+
+
+# ======================================================
+#  CREAR PEDIDO COURIER (Request desde App Móvil)
+# ======================================================
+class UbicacionSerializer(serializers.Serializer):
+    """Serializer para datos de ubicación (origen/destino)"""
+    lat = serializers.FloatField(required=True, min_value=-90, max_value=90)
+    lng = serializers.FloatField(required=True, min_value=-180, max_value=180)
+    direccion = serializers.CharField(required=True, max_length=500)
+
+
+class ReceptorSerializer(serializers.Serializer):
+    """Serializer para datos del receptor del paquete"""
+    nombre = serializers.CharField(required=True, max_length=150)
+    telefono = serializers.CharField(required=True, max_length=20)
+
+
+class PaqueteSerializer(serializers.Serializer):
+    """Serializer para datos del paquete"""
+    tipo = serializers.CharField(required=True, max_length=50)
+    descripcion = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+class PagoSerializer(serializers.Serializer):
+    """Serializer para datos de pago"""
+    metodo = serializers.ChoiceField(choices=['EFECTIVO', 'TRANSFERENCIA'], required=True)
+    total_estimado = serializers.FloatField(required=True, min_value=0)
+
+
+class CrearPedidoCourierSerializer(serializers.Serializer):
+    """
+    Serializer principal para crear un pedido de tipo Courier.
+    Recibe todos los datos necesarios desde la app móvil.
+    """
+    origen = UbicacionSerializer(required=True)
+    destino = UbicacionSerializer(required=True)
+    receptor = ReceptorSerializer(required=True)
+    paquete = PaqueteSerializer(required=True)
+    pago = PagoSerializer(required=True)
+
+    def validate(self, data):
+        """Validaciones adicionales"""
+        origen = data.get('origen', {})
+        destino = data.get('destino', {})
+        
+        # Verificar que origen y destino no sean el mismo punto
+        if (origen.get('lat') == destino.get('lat') and 
+            origen.get('lng') == destino.get('lng')):
+            raise serializers.ValidationError(
+                "El origen y destino no pueden ser el mismo punto."
+            )
         
         return data
 

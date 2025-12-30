@@ -11,6 +11,7 @@ import '../../../controllers/user/perfil_controller.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../services/roles/role_manager.dart';
 import '../../../services/core/toast_service.dart';
+import '../../../providers/theme_provider.dart';
 import '../../../switch/role_router.dart';
 import '../../../switch/roles.dart';
 import '../../../theme/app_colors_primary.dart';
@@ -25,7 +26,6 @@ import 'configuracion/direcciones/pantalla_lista_direcciones.dart';
 import 'configuracion/idioma/pantalla_idioma.dart';
 import 'configuracion/notificaciones/pantalla_notificaciones.dart';
 import 'configuracion/seguridad/dialogo_cambiar_password.dart';
-import 'editar/pantalla_editar_foto.dart';
 import 'editar/pantalla_editar_informacion.dart';
 
 class PantallaPerfil extends StatefulWidget {
@@ -149,21 +149,12 @@ class _PantallaPerfilState extends State<PantallaPerfil>
     if (resultado == true) await _recargarDatos();
   }
 
-  void _editarFoto() async {
-    final resultado = await Navigator.push<bool>(
-      context,
-      CupertinoPageRoute(
-        builder: (context) =>
-            PantallaEditarFoto(fotoActual: _controller.perfil?.fotoPerfilUrl),
-      ),
-    );
-    if (resultado == true) await _recargarDatos();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
@@ -242,58 +233,29 @@ class _PantallaPerfilState extends State<PantallaPerfil>
               child: Row(
                 children: [
                   // Foto de perfil
-                  GestureDetector(
-                    onTap: _editarFoto,
-                    child: Stack(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColorsPrimary.main,
-                                AppColorsPrimary.main.withValues(alpha: 0.8),
-                              ],
-                            ),
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: CupertinoColors.systemBackground
-                                  .resolveFrom(context),
-                              shape: BoxShape.circle,
-                            ),
-                            child: JPAvatar(
-                              imageUrl: perfil.fotoPerfilUrl,
-                              radius: 32,
-                            ),
-                          ),
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorsPrimary.main,
+                          AppColorsPrimary.main.withValues(alpha: 0.8),
+                        ],
+                      ),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemBackground.resolveFrom(
+                          context,
                         ),
-                        Positioned(
-                          right: -2,
-                          bottom: -2,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: CupertinoColors.systemBlue.resolveFrom(
-                                context,
-                              ),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: CupertinoColors.systemBackground
-                                    .resolveFrom(context),
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              CupertinoIcons.camera_fill,
-                              size: 10,
-                              color: CupertinoColors.white,
-                            ),
-                          ),
-                        ),
-                      ],
+                        shape: BoxShape.circle,
+                      ),
+                      child: JPAvatar(
+                        imageUrl: perfil.fotoPerfilUrl,
+                        radius: 32,
+                      ),
                     ),
                   ),
 
@@ -438,6 +400,23 @@ class _PantallaPerfilState extends State<PantallaPerfil>
             title: 'Idioma',
             onTap: () => _navegarA(const PantallaIdioma()),
           ),
+          _buildDivider(),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) => _buildSettingsTile(
+              icon: themeProvider.isDarkMode
+                  ? CupertinoIcons.moon_fill
+                  : CupertinoIcons.sun_max_fill,
+              iconBgColor: themeProvider.isDarkMode
+                  ? const Color(0xFF5856D6)
+                  : const Color(0xFFFFCC00),
+              title: 'Modo oscuro',
+              onTap: () => themeProvider.toggleTheme(!themeProvider.isDarkMode),
+              trailing: CupertinoSwitch(
+                value: themeProvider.isDarkMode,
+                onChanged: (value) => themeProvider.toggleTheme(value),
+              ),
+            ),
+          ),
         ]),
 
         const SizedBox(height: 24),
@@ -581,9 +560,9 @@ class _PantallaPerfilState extends State<PantallaPerfil>
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      color: CupertinoColors.label,
+                      color: CupertinoColors.label.resolveFrom(context),
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -654,37 +633,48 @@ class _PantallaPerfilState extends State<PantallaPerfil>
   }
 
   Widget _buildWarningBanner() {
+    final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+
+    // Colores dinámicos para el banner de advertencia
+    final bgColor = isDark
+        ? const Color(0xFF5C4D00) // Amarillo oscuro para fondo dark
+        : const Color(0xFFFFF3CD); // Amarillo claro para light
+
+    final borderColor = isDark
+        ? const Color(0xFF7A6500)
+        : const Color(0xFFFFECB5);
+
+    final textColor = isDark
+        ? const Color(0xFFFFD54F) // Amarillo texto legible en dark
+        : const Color(0xFF856404);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3CD),
+        color: bgColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFFECB5)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             CupertinoIcons.exclamationmark_triangle_fill,
-            color: Color(0xFF856404),
+            color: textColor,
             size: 20,
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Alguna información no se pudo cargar.',
-              style: TextStyle(color: Color(0xFF856404), fontSize: 13),
+              style: TextStyle(color: textColor, fontSize: 13),
             ),
           ),
           CupertinoButton(
             padding: EdgeInsets.zero,
             minimumSize: Size.zero,
             onPressed: _recargarDatos,
-            child: const Icon(
-              CupertinoIcons.refresh,
-              color: Color(0xFF856404),
-              size: 18,
-            ),
+            child: Icon(CupertinoIcons.refresh, color: textColor, size: 18),
           ),
         ],
       ),
@@ -711,12 +701,12 @@ class _PantallaPerfilState extends State<PantallaPerfil>
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Error al cargar perfil',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: CupertinoColors.label,
+                color: CupertinoColors.label.resolveFrom(context),
               ),
             ),
             const SizedBox(height: 8),

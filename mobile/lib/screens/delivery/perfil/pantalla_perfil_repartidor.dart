@@ -745,8 +745,11 @@ class _PantallaEditarPerfilRepartidorState
 
   String _formatearTelefonoParaMostrar(String? telefono) {
     if (telefono == null || telefono.isEmpty) return '';
+    // Remover código de país +593 y cualquier cero inicial
     if (telefono.startsWith('+593')) {
-      return '0${telefono.substring(4)}';
+      var local = telefono.substring(4);
+      if (local.startsWith('0')) local = local.substring(1);
+      return local;
     }
     return telefono;
   }

@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:mobile/theme/app_colors_primary.dart';
-import 'package:mobile/theme/app_colors_support.dart';
 
 import '../../../../../models/categoria_model.dart';
 
@@ -27,30 +26,30 @@ class SeccionCategorias extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(),
+        _buildHeader(context),
         const SizedBox(height: 12),
         if (loading)
           _buildLoadingState()
         else if (categorias.isEmpty)
-          _buildEmptyState()
+          _buildEmptyState(context)
         else
           _buildCategoriasList(),
       ],
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+          Text(
             'Categorías',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppColorsSupport.textPrimary,
+              color: CupertinoColors.label.resolveFrom(context),
               letterSpacing: -0.5,
             ),
           ),
@@ -111,7 +110,7 @@ class SeccionCategorias extends StatelessWidget {
                   height: 60,
                   width: 60,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: CupertinoColors.systemGrey6.resolveFrom(context),
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
@@ -120,7 +119,7 @@ class SeccionCategorias extends StatelessWidget {
                   height: 12,
                   width: 50,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: CupertinoColors.systemGrey6.resolveFrom(context),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -132,13 +131,15 @@ class SeccionCategorias extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return const Padding(
+  Widget _buildEmptyState(BuildContext context) {
+    return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: Center(
         child: Text(
           'No hay categorías disponibles',
-          style: TextStyle(color: AppColorsSupport.textSecondary),
+          style: TextStyle(
+            color: CupertinoColors.secondaryLabel.resolveFrom(context),
+          ),
         ),
       ),
     );
@@ -166,7 +167,8 @@ class _CategoriaItem extends StatelessWidget {
               decoration: BoxDecoration(
                 // Si tiene foto fondo blanco, si no fondo suave del color
                 color: categoria.tieneImagen
-                    ? Colors.white
+                    ? CupertinoColors.secondarySystemGroupedBackground
+                          .resolveFrom(context)
                     : (categoria.color ?? AppColorsPrimary.main).withValues(
                         alpha: 0.1,
                       ),
@@ -190,10 +192,10 @@ class _CategoriaItem extends StatelessWidget {
               width: 70,
               child: Text(
                 categoria.nombre,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: AppColorsSupport.textSecondary,
+                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   letterSpacing: -0.2,
                 ),
                 textAlign: TextAlign.center,
@@ -218,9 +220,7 @@ class _CategoriaItem extends StatelessWidget {
         fit: BoxFit.cover,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
-          return const Center(
-            child: CupertinoActivityIndicator(radius: 10),
-          );
+          return const Center(child: CupertinoActivityIndicator(radius: 10));
         },
         // Si la imagen falla (404), mostramos el icono como respaldo
         errorBuilder: (_, _, _) => _buildIcono(),

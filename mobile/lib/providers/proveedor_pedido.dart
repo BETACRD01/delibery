@@ -135,6 +135,10 @@ class PedidoProvider extends ChangeNotifier {
           cantidadItems: pedido.items.length,
           creadoEn: pedido.creadoEn,
           actualizadoEn: pedido.actualizadoEn,
+          recargoNocturno: pedido.datosEnvio?.recargoNocturno,
+          recargoNocturnoAplicado:
+              pedido.datosEnvio?.recargoNocturnoAplicado ?? false,
+          costoEnvio: pedido.datosEnvio?.costoEnvio,
         ),
       );
 
@@ -393,6 +397,11 @@ class PedidoProvider extends ChangeNotifier {
         cantidadItems: pedido.items.length,
         creadoEn: pedido.creadoEn,
         actualizadoEn: pedido.actualizadoEn,
+        // Incluir datos de recargo nocturno
+        recargoNocturno: pedido.datosEnvio?.recargoNocturno,
+        recargoNocturnoAplicado:
+            pedido.datosEnvio?.recargoNocturnoAplicado ?? false,
+        costoEnvio: pedido.datosEnvio?.costoEnvio,
       );
     }
   }
@@ -440,6 +449,10 @@ class PedidoProvider extends ChangeNotifier {
         cantidadItems: _pedidos[index].cantidadItems,
         creadoEn: _pedidos[index].creadoEn,
         actualizadoEn: DateTime.now(),
+        // Preservar recargo nocturno existente
+        recargoNocturno: _pedidos[index].recargoNocturno,
+        recargoNocturnoAplicado: _pedidos[index].recargoNocturnoAplicado,
+        costoEnvio: _pedidos[index].costoEnvio,
       );
       notifyListeners();
     }

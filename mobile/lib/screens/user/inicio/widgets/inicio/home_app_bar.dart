@@ -2,7 +2,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:mobile/theme/app_colors_primary.dart';
-import 'package:mobile/theme/app_colors_support.dart';
+// unused import
+
 import 'package:mobile/theme/app_theme.dart';
 
 /// AppBar estilo iOS para Home.
@@ -34,7 +35,7 @@ class HomeAppBar extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.fromLTRB(20, topPadding + 12, 20, 16),
         decoration: BoxDecoration(
-          color: AppColorsSupport.surface, // Use app surface color
+          color: CupertinoColors.systemBackground.resolveFrom(context),
           boxShadow: AppConstants.subtleShadow(context),
         ),
         child: Column(

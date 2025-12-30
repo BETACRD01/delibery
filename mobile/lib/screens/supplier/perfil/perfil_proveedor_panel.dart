@@ -107,7 +107,9 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       body: Consumer<SupplierController>(
         builder: (context, controller, child) {
           if (controller.loading) {
@@ -119,7 +121,7 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
             slivers: [
               SliverToBoxAdapter(child: _buildHeader(controller)),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     // Calificaciones
@@ -537,9 +539,9 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      color: CupertinoColors.label,
+                      color: CupertinoColors.label.resolveFrom(context),
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -731,9 +733,9 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
                   const SizedBox(height: 2),
                   Text(
                     value.isNotEmpty ? value : '---',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      color: CupertinoColors.label,
+                      color: CupertinoColors.label.resolveFrom(context),
                       fontWeight: FontWeight.w400,
                     ),
                     maxLines: maxLines,
@@ -1265,9 +1267,11 @@ class _PerfilProveedorEditableState extends State<PerfilProveedorEditable> {
 
   String _formatearTelefonoParaMostrar(String? telefono) {
     if (telefono == null || telefono.isEmpty) return '';
+    // Remover código de país +593 y cualquier cero inicial
     if (telefono.startsWith('+593')) {
-      final resto = telefono.substring(4);
-      return '0$resto';
+      var local = telefono.substring(4);
+      if (local.startsWith('0')) local = local.substring(1);
+      return local;
     }
     return telefono;
   }

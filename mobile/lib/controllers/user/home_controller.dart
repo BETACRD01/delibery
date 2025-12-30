@@ -39,6 +39,7 @@ class HomeController extends ChangeNotifier {
   // ESTADO
   // ════════════════════════════════════════════════════════════════
 
+  bool _isDisposed = false;
   bool _loading = false;
   String? _error;
 
@@ -85,11 +86,21 @@ class HomeController extends ChangeNotifier {
   // MÉTODOS PÚBLICOS - CARGA DE DATOS
   // ════════════════════════════════════════════════════════════════
 
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  void _safeNotify() {
+    if (!_isDisposed) notifyListeners();
+  }
+
   /// Carga todos los datos de la pantalla home
   Future<void> cargarDatos() async {
     _loading = true;
     _error = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
       await Future.wait([
@@ -105,11 +116,11 @@ class HomeController extends ChangeNotifier {
       _loading = false;
       _error = null;
       _guardarCache();
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
       _loading = false;
       _error = 'Error al cargar datos: $e';
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -117,7 +128,7 @@ class HomeController extends ChangeNotifier {
   Future<void> refrescar() async {
     _loading = true;
     _error = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
       await Future.wait([
@@ -133,11 +144,11 @@ class HomeController extends ChangeNotifier {
       _loading = false;
       _error = null;
       _guardarCache();
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
       _loading = false;
       _error = 'Error al refrescar datos: $e';
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -163,7 +174,8 @@ class HomeController extends ChangeNotifier {
 
   Future<void> _cargarProductosDestacados() async {
     try {
-      _productosDestacados = await _productosService.obtenerProductosDestacados();
+      _productosDestacados = await _productosService
+          .obtenerProductosDestacados();
     } catch (e) {
       _productosDestacados = [];
     }
@@ -179,7 +191,9 @@ class HomeController extends ChangeNotifier {
 
   Future<void> _cargarProductosEnOfertaRandom() async {
     try {
-      _productosEnOferta = await _productosService.obtenerProductosEnOferta(random: true);
+      _productosEnOferta = await _productosService.obtenerProductosEnOferta(
+        random: true,
+      );
     } catch (e) {
       _productosEnOferta = [];
     }
@@ -195,7 +209,9 @@ class HomeController extends ChangeNotifier {
 
   Future<void> _cargarProductosNovedadesRandom() async {
     try {
-      _productosNovedades = await _productosService.obtenerProductosNovedades(random: true);
+      _productosNovedades = await _productosService.obtenerProductosNovedades(
+        random: true,
+      );
     } catch (e) {
       _productosNovedades = [];
     }
@@ -203,7 +219,8 @@ class HomeController extends ChangeNotifier {
 
   Future<void> _cargarProductosMasPopulares() async {
     try {
-      _productosMasPopulares = await _productosService.obtenerProductosMasPopulares();
+      _productosMasPopulares = await _productosService
+          .obtenerProductosMasPopulares();
     } catch (e) {
       _productosMasPopulares = [];
     }
@@ -211,7 +228,8 @@ class HomeController extends ChangeNotifier {
 
   Future<void> _cargarProductosMasPopularesRandom() async {
     try {
-      _productosMasPopulares = await _productosService.obtenerProductosMasPopulares(random: true);
+      _productosMasPopulares = await _productosService
+          .obtenerProductosMasPopulares(random: true);
     } catch (e) {
       _productosMasPopulares = [];
     }
@@ -219,12 +237,16 @@ class HomeController extends ChangeNotifier {
 
   Future<void> _cargarEstadisticas() async {
     try {
-      final stats = await _usuarioService.obtenerEstadisticas(forzarRecarga: true);
+      final stats = await _usuarioService.obtenerEstadisticas(
+        forzarRecarga: true,
+      );
       _totalPedidos = stats.totalPedidos;
       _puntosAcumulados = stats.totalResenas;
       _cuponesDisponibles = stats.totalMetodosPago;
 
-      final rifas = await _usuarioService.obtenerRifasParticipaciones(forzarRecarga: true);
+      final rifas = await _usuarioService.obtenerRifasParticipaciones(
+        forzarRecarga: true,
+      );
       _rifasParticipadas = (rifas['total'] as num?)?.toInt() ?? 0;
       _rifasGanadas = (rifas['victorias'] as num?)?.toInt() ?? 0;
     } catch (e) {
@@ -269,7 +291,7 @@ class HomeController extends ChangeNotifier {
   /// Limpia el error actual
   void limpiarError() {
     _error = null;
-    notifyListeners();
+    _safeNotify();
   }
 
   void _hidratarDesdeCache() {
@@ -280,7 +302,7 @@ class HomeController extends ChangeNotifier {
     _productosEnOferta = _cacheOfertas ?? [];
     _productosNovedades = _cacheNovedades ?? [];
     _productosMasPopulares = _cachePopulares ?? [];
-    notifyListeners();
+    _safeNotify();
   }
 
   void _guardarCache() {

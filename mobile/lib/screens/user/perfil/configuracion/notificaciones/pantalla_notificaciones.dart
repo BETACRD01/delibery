@@ -55,7 +55,9 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
       body: AnimatedBuilder(
@@ -79,28 +81,30 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text(
+      title: Text(
         'Notificaciones',
         style: TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.4,
-          color: Color(0xFF1C1C1E),
+          color: CupertinoColors.label.resolveFrom(context),
         ),
       ),
       centerTitle: true,
       backgroundColor: Colors.transparent,
-      foregroundColor: const Color(0xFF1C1C1E),
+      foregroundColor: CupertinoColors.label.resolveFrom(context),
       elevation: 0,
       flexibleSpace: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
+              color: CupertinoColors.systemBackground
+                  .resolveFrom(context)
+                  .withValues(alpha: 0.95),
               border: Border(
                 bottom: BorderSide(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: CupertinoColors.separator.resolveFrom(context),
                   width: 0.5,
                 ),
               ),
@@ -109,10 +113,10 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
         ),
       ),
       leading: IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.arrow_back_ios_new,
           size: 20,
-          color: Color(0xFF1C1C1E),
+          color: CupertinoColors.label.resolveFrom(context),
         ),
         onPressed: () => Navigator.pop(context),
       ),
@@ -121,7 +125,10 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
 
   Widget _buildLoadingState() {
     return const Center(
-      child: CupertinoActivityIndicator(radius: 14, color: AppColorsPrimary.main),
+      child: CupertinoActivityIndicator(
+        radius: 14,
+        color: AppColorsPrimary.main,
+      ),
     );
   }
 
@@ -168,14 +175,14 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
   }
 
   Widget _buildHeader() {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Elige qué notificaciones deseas recibir y mantente informado sobre lo que más te interesa.',
           style: TextStyle(
             fontSize: 15,
-            color: Color(0xFF8E8E93),
+            color: CupertinoColors.secondaryLabel.resolveFrom(context),
             height: 1.4,
             letterSpacing: -0.2,
           ),
@@ -195,11 +202,13 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: CupertinoColors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -225,19 +234,21 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.3,
-                      color: Color(0xFF1C1C1E),
+                      color: CupertinoColors.label.resolveFrom(context),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF8E8E93),
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
                       height: 1.3,
                       letterSpacing: -0.2,
                     ),
@@ -281,12 +292,12 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones>
             size: 20,
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Puedes cambiar estas preferencias en cualquier momento. Las notificaciones te ayudan a estar al tanto de tu actividad.',
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF1C1C1E),
+                color: CupertinoColors.label.resolveFrom(context),
                 height: 1.4,
                 letterSpacing: -0.2,
               ),

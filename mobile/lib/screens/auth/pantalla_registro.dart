@@ -49,7 +49,7 @@ class _PantallaRegistroState extends State<PantallaRegistro>
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      backgroundColor: JPCupertinoColors.background(context),
+      backgroundColor: CupertinoColors.white, // Fondo blanco
       navigationBar: CupertinoNavigationBar(
         backgroundColor: JPCupertinoColors.surface(
           context,
@@ -88,7 +88,10 @@ class _PantallaRegistroState extends State<PantallaRegistro>
             height: double.infinity,
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 0,
+              ), // Sin padding vertical: 8,
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: SlideTransition(
@@ -96,7 +99,7 @@ class _PantallaRegistroState extends State<PantallaRegistro>
                   child: Column(
                     children: [
                       _buildHeader(),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20), // Reducido el espacio
 
                       const RegistroUsuarioForm(),
 
@@ -115,34 +118,43 @@ class _PantallaRegistroState extends State<PantallaRegistro>
   }
 
   Widget _buildHeader() {
+    // Obtener el 30% del ancho de la pantalla para el logo
+    final screenWidth = MediaQuery.of(context).size.width;
+    final logoSize = screenWidth * 0.35; // 35% del ancho de pantalla
+
     return Column(
       children: [
-        Container(
-          height: 90,
-          width: 90,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColorsPrimary.main.withValues(alpha: 0.12),
-                AppColorsPrimary.main.withValues(alpha: 0.04),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            shape: BoxShape.circle,
-          ),
+        // Logo de la empresa
+        SizedBox(
+          height: logoSize,
+          width: logoSize,
           child: Image.asset(
-            'assets/icon/logo.png',
+            'assets/images/Beta.png',
             fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => Icon(
-              CupertinoIcons.person_add,
-              size: 44,
-              color: AppColorsPrimary.main,
+            errorBuilder: (_, _, _) => Container(
+              height: 90,
+              width: 90,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColorsPrimary.main.withValues(alpha: 0.12),
+                    AppColorsPrimary.main.withValues(alpha: 0.04),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                CupertinoIcons.person_add,
+                size: 44,
+                color: AppColorsPrimary.main,
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16), // Reducido el espacio
         Text(
           'Crear Cuenta',
           style: TextStyle(
@@ -152,12 +164,13 @@ class _PantallaRegistroState extends State<PantallaRegistro>
             letterSpacing: -0.8,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8), // Reducido el espacio
         Text(
           'Completa tus datos para unirte a JP Express',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 15,
+            fontWeight: FontWeight.w500,
             color: JPCupertinoColors.secondaryLabel(context),
             height: 1.4,
           ),

@@ -1,8 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 import '../../../../../providers/locale_provider.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../theme/app_colors_primary.dart';
 
 class PantallaIdioma extends StatefulWidget {
   const PantallaIdioma({super.key});
@@ -65,7 +67,9 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(),
       body: FadeTransition(
@@ -97,26 +101,28 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
     return AppBar(
       title: Text(
         AppLocalizations.of(context).languageTitle,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.4,
-          color: Color(0xFF1C1C1E),
+          color: CupertinoColors.label.resolveFrom(context),
         ),
       ),
       centerTitle: true,
       backgroundColor: Colors.transparent,
-      foregroundColor: const Color(0xFF1C1C1E),
+      foregroundColor: CupertinoColors.label.resolveFrom(context),
       elevation: 0,
       flexibleSpace: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
+              color: CupertinoColors.systemBackground
+                  .resolveFrom(context)
+                  .withValues(alpha: 0.95),
               border: Border(
                 bottom: BorderSide(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: CupertinoColors.separator.resolveFrom(context),
                   width: 0.5,
                 ),
               ),
@@ -125,10 +131,10 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
         ),
       ),
       leading: IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.arrow_back_ios_new,
           size: 20,
-          color: Color(0xFF1C1C1E),
+          color: CupertinoColors.label.resolveFrom(context),
         ),
         onPressed: () => Navigator.pop(context),
       ),
@@ -145,7 +151,7 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFF007AFF).withValues(alpha: 0.1),
+                color: AppColorsPrimary.main.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Center(
@@ -157,21 +163,23 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Idioma',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
-                      color: Color(0xFF1C1C1E),
+                      color: CupertinoColors.label.resolveFrom(context),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     AppLocalizations.of(context).languageSubtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
-                      color: Color(0xFF8E8E93),
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
                       letterSpacing: -0.2,
                     ),
                   ),
@@ -187,11 +195,13 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
   Widget _buildLanguageList() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: CupertinoColors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -250,7 +260,8 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F7),
+                  color: CupertinoColors.tertiarySystemGroupedBackground
+                      .resolveFrom(context),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -265,14 +276,14 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
                     fontSize: 17,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     letterSpacing: -0.3,
-                    color: const Color(0xFF1C1C1E),
+                    color: CupertinoColors.label.resolveFrom(context),
                   ),
                 ),
               ),
               if (isSelected)
-                const Icon(
+                Icon(
                   Icons.check_circle,
-                  color: Color(0xFF34C759),
+                  color: CupertinoColors.systemGreen.resolveFrom(context),
                   size: 28,
                 ),
             ],
@@ -288,7 +299,7 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
       child: Divider(
         height: 1,
         thickness: 0.5,
-        color: Colors.black.withValues(alpha: 0.1),
+        color: CupertinoColors.separator.resolveFrom(context),
       ),
     );
   }
@@ -298,10 +309,10 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF007AFF).withValues(alpha: 0.05),
+        color: AppColorsPrimary.main.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+          color: AppColorsPrimary.main.withValues(alpha: 0.15),
           width: 1,
         ),
       ),
@@ -310,16 +321,16 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
         children: [
           Icon(
             Icons.info_outline,
-            color: const Color(0xFF007AFF).withValues(alpha: 0.8),
+            color: AppColorsPrimary.main.withValues(alpha: 0.8),
             size: 20,
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Los cambios se aplicarán inmediatamente en toda la aplicación.',
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF1C1C1E),
+                color: CupertinoColors.label.resolveFrom(context),
                 height: 1.4,
                 letterSpacing: -0.2,
               ),
@@ -350,7 +361,7 @@ class _PantallaIdiomaState extends State<PantallaIdioma>
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF34C759),
+        backgroundColor: CupertinoColors.systemGreen,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(milliseconds: 1500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

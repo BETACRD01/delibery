@@ -40,7 +40,7 @@ class CategoriaVisualizer:
         Analiza la categoría y retorna la configuración visual exacta.
         """
         
-        # CASO 1: Hay foto real
+        # CASO 1: Hay foto real (archivo subido)
         if categoria.imagen:
             url_imagen = categoria.imagen.url
             if request:
@@ -52,7 +52,15 @@ class CategoriaVisualizer:
                 "color_hex": "#FFFFFF" 
             }
 
-        # CASO 2: No hay foto -> Usar Icono y Color Específico
+        # CASO 2: Hay URL de imagen externa
+        if categoria.imagen_url:
+            return {
+                "tipo": "IMAGEN",
+                "contenido": categoria.imagen_url,
+                "color_hex": "#FFFFFF" 
+            }
+
+        # CASO 3: No hay foto -> Usar Icono y Color Específico
         nombre_normalizado = categoria.nombre.lower().strip()
         
         # Buscar icono

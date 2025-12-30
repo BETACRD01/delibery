@@ -660,11 +660,15 @@ class _PantallaProductoDetalleState extends State<PantallaProductoDetalle> {
       setState(() => _cantidad = 1);
 
       if (!context.mounted) return;
+
+      // ✅ Capturar navigator ANTES del toast para evitar acceso a context disposed
+      final navigator = Navigator.of(context);
+
       ToastService().showSuccess(
         context,
         '${producto.nombre} agregado',
         actionLabel: 'Ver Carrito',
-        onActionTap: () => Rutas.irACarrito(context),
+        onActionTap: () => navigator.pushNamed(Rutas.carrito),
       );
     } else {
       if (!context.mounted) return;

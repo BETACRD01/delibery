@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:mobile/theme/app_colors_primary.dart';
 import 'package:mobile/theme/app_colors_secondary.dart';
-import 'package:mobile/theme/app_colors_support.dart';
+// unused import
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 🛍️ PRODUCT CARD - Card de producto unificada estilo iOS
@@ -82,7 +82,9 @@ class _JPProductCardState extends State<JPProductCard>
         child: Container(
           width: 160,
           decoration: BoxDecoration(
-            color: CupertinoColors.white,
+            color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+              context,
+            ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -109,10 +111,10 @@ class _JPProductCardState extends State<JPProductCard>
                       Expanded(
                         child: Text(
                           widget.nombre,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: AppColorsSupport.textPrimary,
+                            color: CupertinoColors.label.resolveFrom(context),
                             height: 1.2,
                             letterSpacing: -0.2,
                           ),
@@ -128,11 +130,12 @@ class _JPProductCardState extends State<JPProductCard>
                           Expanded(
                             child: Text(
                               '\$${widget.precio.toStringAsFixed(2)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: AppColorsSupport
-                                    .price, // Updated price color
+                                color: CupertinoColors.label.resolveFrom(
+                                  context,
+                                ),
                                 letterSpacing: -0.5,
                               ),
                               maxLines: 1,
@@ -186,24 +189,24 @@ class _JPProductCardState extends State<JPProductCard>
                     imageUrl: widget.imagenUrl!,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
-                      color: AppColorsSupport.surface,
+                      color: CupertinoColors.systemGrey6.resolveFrom(context),
                       child: const CupertinoActivityIndicator(),
                     ),
                     errorWidget: (context, url, error) => Container(
-                      color: AppColorsSupport.surface,
-                      child: const Icon(
+                      color: CupertinoColors.systemGrey6.resolveFrom(context),
+                      child: Icon(
                         CupertinoIcons.photo,
                         size: 40,
-                        color: AppColorsSupport.textHint,
+                        color: CupertinoColors.systemGrey.resolveFrom(context),
                       ),
                     ),
                   )
                 : Container(
-                    color: AppColorsSupport.surface,
-                    child: const Icon(
+                    color: CupertinoColors.systemGrey6.resolveFrom(context),
+                    child: Icon(
                       CupertinoIcons.photo,
                       size: 40,
-                      color: AppColorsSupport.textHint,
+                      color: CupertinoColors.systemGrey.resolveFrom(context),
                     ),
                   ),
           ),

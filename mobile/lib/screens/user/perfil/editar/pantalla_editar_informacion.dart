@@ -1,10 +1,12 @@
 // lib/screens/user/perfil/editar/pantalla_editar_informacion.dart
 
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
 import '../../../../apis/helpers/api_exception.dart';
@@ -13,6 +15,7 @@ import '../../../../services/usuarios/usuarios_service.dart';
 import '../../../../theme/app_colors_primary.dart';
 import '../../../../theme/jp_theme.dart';
 import '../../../../widgets/util/phone_normalizer.dart';
+import '../../../../utils/image_orientation_fixer.dart';
 
 class PantallaEditarInformacion extends StatefulWidget {
   final PerfilModel perfil;
@@ -28,6 +31,12 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _usuarioService = UsuarioService();
+  final _imagePicker = ImagePicker();
+
+  // Estado de foto de perfil
+  File? _imagenSeleccionada;
+  String? _fotoActualUrl;
+  bool _guardandoFoto = false;
 
   late final TextEditingController _nombreCtrl;
   late final TextEditingController _apellidoCtrl;
@@ -90,6 +99,7 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
     _telefonoNumero = _telefonoCtrl.text;
     _dialCode = _dialCodeDesdePerfil(widget.perfil.telefono);
     _fechaNacimiento = widget.perfil.fechaNacimiento;
+    _fotoActualUrl = widget.perfil.fotoPerfilUrl;
 
     _animationController.forward();
   }
@@ -102,6 +112,197 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
     _emailCtrl.dispose();
     _telefonoCtrl.dispose();
     super.dispose();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 📸 MÉTODOS DE FOTO DE PERFIL
+  // ══════════════════════════════════════════════════════════════════════════
+
+  void _mostrarOpcionesFoto() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('Cambiar Foto de Perfil'),
+        message: const Text('Elige una opción para actualizar tu foto'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _seleccionarDesdeGaleria();
+            },
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.photo, color: AppColorsPrimary.main),
+                SizedBox(width: 10),
+                Text('Seleccionar de Galería'),
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _tomarFoto();
+            },
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.camera, color: AppColorsPrimary.main),
+                SizedBox(width: 10),
+                Text('Tomar Foto'),
+              ],
+            ),
+          ),
+          if (_fotoActualUrl != null || _imagenSeleccionada != null)
+            CupertinoActionSheetAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+                _eliminarFoto();
+              },
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    CupertinoIcons.delete,
+                    color: CupertinoColors.destructiveRed,
+                  ),
+                  SizedBox(width: 10),
+                  Text('Eliminar Foto'),
+                ],
+              ),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _seleccionarDesdeGaleria() async {
+    try {
+      final XFile? imagen = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+        requestFullMetadata: true,
+      );
+
+      if (imagen != null && mounted) {
+        // Corregir orientación
+        final fixedImage = await ImageOrientationFixer.fixAndCompress(
+          File(imagen.path),
+        );
+
+        setState(() => _imagenSeleccionada = fixedImage);
+        await _guardarFoto();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      JPSnackbar.error(context, 'Error al seleccionar imagen');
+    }
+  }
+
+  Future<void> _tomarFoto() async {
+    try {
+      final XFile? imagen = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+        preferredCameraDevice:
+            CameraDevice.front, // Cámara frontal para selfies
+        requestFullMetadata: true,
+      );
+
+      if (imagen != null && mounted) {
+        // Corregir orientación
+        final fixedImage = await ImageOrientationFixer.fixAndCompress(
+          File(imagen.path),
+        );
+
+        setState(() => _imagenSeleccionada = fixedImage);
+        await _guardarFoto();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      JPSnackbar.error(context, 'Error al tomar foto');
+    }
+  }
+
+  Future<void> _guardarFoto() async {
+    if (_imagenSeleccionada == null) return;
+
+    setState(() => _guardandoFoto = true);
+
+    try {
+      await _usuarioService.subirFotoPerfil(_imagenSeleccionada!);
+      final perfilActualizado = await _usuarioService.obtenerPerfil(
+        forzarRecarga: true,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _fotoActualUrl = perfilActualizado.fotoPerfilUrl;
+        _imagenSeleccionada = null;
+      });
+      JPSnackbar.success(context, 'Foto actualizada exitosamente');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      JPSnackbar.error(context, e.getUserFriendlyMessage());
+    } catch (e) {
+      if (!mounted) return;
+      JPSnackbar.error(context, 'Error al actualizar foto');
+    } finally {
+      if (mounted) setState(() => _guardandoFoto = false);
+    }
+  }
+
+  Future<void> _eliminarFoto() async {
+    final confirmar = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Eliminar foto'),
+        content: const Text('¿Estás seguro de eliminar tu foto de perfil?'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _guardandoFoto = true);
+
+    try {
+      await _usuarioService.eliminarFotoPerfil();
+
+      if (!mounted) return;
+      setState(() {
+        _fotoActualUrl = null;
+        _imagenSeleccionada = null;
+      });
+      JPSnackbar.success(context, 'Foto eliminada');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      JPSnackbar.error(context, e.getUserFriendlyMessage());
+    } catch (e) {
+      if (!mounted) return;
+      JPSnackbar.error(context, 'Error al eliminar foto');
+    } finally {
+      if (mounted) setState(() => _guardandoFoto = false);
+    }
   }
 
   Future<void> _seleccionarFecha() async {
@@ -275,18 +476,18 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text(
+      title: Text(
         'Editar Información',
         style: TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.4,
-          color: Color(0xFF1C1C1E),
+          color: CupertinoColors.label.resolveFrom(context),
         ),
       ),
       centerTitle: true,
       backgroundColor: Colors.transparent,
-      foregroundColor: const Color(0xFF1C1C1E),
+      foregroundColor: CupertinoColors.label.resolveFrom(context),
       elevation: 0,
       flexibleSpace: ClipRect(
         child: BackdropFilter(
@@ -307,10 +508,10 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
         ),
       ),
       leading: IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.arrow_back_ios_new,
           size: 20,
-          color: Color(0xFF1C1C1E),
+          color: CupertinoColors.label.resolveFrom(context),
         ),
         onPressed: () => Navigator.pop(context),
       ),
@@ -318,89 +519,104 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
   }
 
   Widget _buildHeader() {
+    // Determinar qué imagen mostrar
+    final ImageProvider? avatarImage;
+    if (_imagenSeleccionada != null) {
+      avatarImage = FileImage(_imagenSeleccionada!);
+    } else if (_fotoActualUrl != null) {
+      avatarImage = NetworkImage(_fotoActualUrl!);
+    } else {
+      avatarImage = null;
+    }
+
     return Center(
       child: Column(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: CupertinoColors.systemBackground.resolveFrom(
-                      context,
+          GestureDetector(
+            onTap: _guardandoFoto ? null : _mostrarOpcionesFoto,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: CupertinoColors.systemBackground.resolveFrom(
+                        context,
+                      ),
+                      border: Border.all(
+                        color: const Color(0xFFE5E5EA),
+                        width: 3,
+                      ),
+                      image: avatarImage != null
+                          ? DecorationImage(
+                              image: avatarImage,
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
-                    border: Border.all(
-                      color: const Color(0xFFE5E5EA),
-                      width: 3,
-                    ),
-                    image: widget.perfil.fotoPerfilUrl != null
-                        ? DecorationImage(
-                            image: NetworkImage(widget.perfil.fotoPerfilUrl!),
-                            fit: BoxFit.cover,
+                    child: _guardandoFoto
+                        ? const Center(child: CupertinoActivityIndicator())
+                        : avatarImage == null
+                        ? Center(
+                            child: Text(
+                              widget.perfil.usuarioNombre.isNotEmpty
+                                  ? widget.perfil.usuarioNombre[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.w700,
+                                color: AppColorsPrimary.main,
+                              ),
+                            ),
                           )
                         : null,
                   ),
-                  child: widget.perfil.fotoPerfilUrl == null
-                      ? Center(
-                          child: Text(
-                            widget.perfil.usuarioNombre.isNotEmpty
-                                ? widget.perfil.usuarioNombre[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.w700,
-                              color: AppColorsPrimary.main,
-                            ),
+                  Positioned(
+                    bottom: 2,
+                    right: 2,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColorsPrimary.main,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColorsPrimary.main.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                        )
-                      : null,
-                ),
-                Positioned(
-                  bottom: 2,
-                  right: 2,
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppColorsPrimary.main,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColorsPrimary.main.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.edit,
-                      size: 16,
-                      color: Colors.white,
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Mantén tus datos actualizados',
+          Text(
+            'Toca la foto para cambiarla',
             style: TextStyle(
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               fontSize: 15,
               letterSpacing: -0.2,
             ),
@@ -524,7 +740,9 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
   Widget _buildContactSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -591,10 +809,10 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
             label.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               letterSpacing: 0.5,
             ),
           ),
@@ -604,20 +822,21 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           validator: validator,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
-            color: Color(0xFF1C1C1E),
+            color: CupertinoColors.label.resolveFrom(context),
             fontWeight: FontWeight.w500,
             letterSpacing: -0.3,
           ),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(
-              color: Color(0xFFC7C7CC),
+            hintStyle: TextStyle(
+              color: CupertinoColors.placeholderText.resolveFrom(context),
               fontWeight: FontWeight.w400,
             ),
             filled: true,
-            fillColor: const Color(0xFFF2F2F7),
+            fillColor: CupertinoColors.tertiarySystemGroupedBackground
+                .resolveFrom(context),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -656,14 +875,14 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 6),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
             'TELÉFONO CELULAR',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               letterSpacing: 0.5,
             ),
           ),
@@ -674,12 +893,13 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
           disableLengthCheck: true,
           decoration: InputDecoration(
             hintText: 'Número de celular',
-            hintStyle: const TextStyle(
-              color: Color(0xFFC7C7CC),
+            hintStyle: TextStyle(
+              color: CupertinoColors.placeholderText.resolveFrom(context),
               fontWeight: FontWeight.w400,
             ),
             filled: true,
-            fillColor: const Color(0xFFF2F2F7),
+            fillColor: CupertinoColors.tertiarySystemGroupedBackground
+                .resolveFrom(context),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -745,14 +965,14 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 6),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
             'FECHA DE NACIMIENTO',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF8E8E93),
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
               letterSpacing: 0.5,
             ),
           ),
@@ -763,7 +983,8 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF2F2F7),
+              color: CupertinoColors.tertiarySystemGroupedBackground
+                  .resolveFrom(context),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -778,8 +999,8 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
                     fontWeight: FontWeight.w500,
                     letterSpacing: -0.3,
                     color: _fechaNacimiento != null
-                        ? const Color(0xFF1C1C1E)
-                        : const Color(0xFFC7C7CC),
+                        ? CupertinoColors.label.resolveFrom(context)
+                        : CupertinoColors.placeholderText.resolveFrom(context),
                   ),
                 ),
                 Row(
@@ -881,11 +1102,11 @@ class _PantallaEditarInformacionState extends State<PantallaEditarInformacion>
     if (telefono == null || telefono.trim().isEmpty) return '';
     final limpio = telefono.trim();
 
-    // Prioridad Ecuador
+    // Prioridad Ecuador - remover +593 y devolver número sin cero inicial
     if (limpio.startsWith('+593')) {
-      final local = limpio.substring(4); // Remover +593
-      // Asegurar 0 inicial para visualización en Ecuador
-      if (local.isNotEmpty && !local.startsWith('0')) return '0$local';
+      var local = limpio.substring(4); // Remover +593
+      // Remover cero inicial si existe (el widget lo muestra aparte)
+      if (local.startsWith('0')) local = local.substring(1);
       return local;
     }
 

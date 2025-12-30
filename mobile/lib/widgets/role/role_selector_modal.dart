@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../services/roles/role_manager.dart';
 import '../../switch/roles.dart';
 import '../../theme/jp_theme.dart';
+import '../../config/rutas.dart';
 
 /// Muestra un modal iOS-style para seleccionar roles
 /// Integra con RoleManager para mostrar estados y cambiar roles
@@ -185,40 +186,42 @@ class _RoleSelectorModalState extends State<_RoleSelectorModal> {
 
   Widget _buildErrorState(String error) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              CupertinoIcons.exclamationmark_triangle,
-              size: 64,
-              color: JPCupertinoColors.systemRed(context),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Error al cargar roles',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: JPCupertinoColors.label(context),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                CupertinoIcons.exclamationmark_triangle,
+                size: 64,
+                color: JPCupertinoColors.systemRed(context),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: JPCupertinoColors.secondaryLabel(context),
+              const SizedBox(height: 16),
+              Text(
+                'Error al cargar roles',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: JPCupertinoColors.label(context),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            CupertinoButton.filled(
-              onPressed: () => widget.roleManager.refresh(),
-              child: const Text('Reintentar'),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: JPCupertinoColors.secondaryLabel(context),
+                ),
+              ),
+              const SizedBox(height: 24),
+              CupertinoButton.filled(
+                onPressed: () => widget.roleManager.refresh(),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -435,11 +438,22 @@ class _RoleSelectorModalState extends State<_RoleSelectorModal> {
   }
 
   void _navigateToRoleScreen(AppRole role) {
-    // Importar RoleRouter para la navegación
-    // Por ahora simplemente pop y el router principal debería manejar
+    String routeName;
+    switch (role) {
+      case AppRole.user:
+        routeName = Rutas.inicio;
+        break;
+      case AppRole.provider:
+        routeName = Rutas.proveedorHome;
+        break;
+      case AppRole.courier:
+        routeName = Rutas.repartidorHome;
+        break;
+    }
+
     Navigator.of(
       context,
       rootNavigator: true,
-    ).pushNamedAndRemoveUntil('/', (route) => false);
+    ).pushNamedAndRemoveUntil(routeName, (route) => false);
   }
 }

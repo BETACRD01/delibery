@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/theme_provider.dart';
 import '../../../services/usuarios/usuarios_service.dart';
 
 /// ⚙️ Pantalla de Configuración del Repartidor con lenguaje visual iOS.
@@ -34,7 +36,6 @@ class _PantallaConfiguracionRepartidorState
   bool notificacionesPush = true;
   bool notificacionesEmail = true;
   bool notificacionesMarketing = true;
-  bool modoOscuro = false;
   bool ubicacionEnTiempoReal = true;
 
   @override
@@ -259,13 +260,18 @@ class _PantallaConfiguracionRepartidorState
                             const SizedBox(height: 24),
                             _buildSectionHeader('APP'),
                             _buildSectionGroup([
-                              _buildSwitchRow(
-                                title: 'Modo oscuro',
-                                icon: CupertinoIcons.moon_fill,
-                                color: CupertinoColors.black,
-                                value: modoOscuro,
-                                onChanged: (v) =>
-                                    setState(() => modoOscuro = v),
+                              Consumer<ThemeProvider>(
+                                builder: (context, themeProvider, _) =>
+                                    _buildSwitchRow(
+                                      title: 'Modo oscuro',
+                                      icon: CupertinoIcons.moon_fill,
+                                      color: themeProvider.isDarkMode
+                                          ? CupertinoColors.systemYellow
+                                          : CupertinoColors.systemIndigo,
+                                      value: themeProvider.isDarkMode,
+                                      onChanged: (v) =>
+                                          themeProvider.toggleTheme(v),
+                                    ),
                               ),
                               _buildDivider(),
                               _buildSwitchRow(
@@ -343,11 +349,11 @@ class _PantallaConfiguracionRepartidorState
   }
 
   Widget _buildDivider() {
-    return const Divider(
+    return Divider(
       height: 1,
       thickness: 0.5,
-      indent: 54, // Alineado con el texto, dejando espacio para el icono
-      color: CupertinoColors.separator,
+      indent: 54,
+      color: CupertinoColors.separator.resolveFrom(context),
     );
   }
 
@@ -377,9 +383,9 @@ class _PantallaConfiguracionRepartidorState
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
-                color: CupertinoColors.label,
+                color: CupertinoColors.label.resolveFrom(context),
               ),
             ),
           ),
@@ -418,15 +424,15 @@ class _PantallaConfiguracionRepartidorState
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
-                  color: CupertinoColors.label,
+                  color: CupertinoColors.label.resolveFrom(context),
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               CupertinoIcons.chevron_forward,
-              color: CupertinoColors.systemGrey3,
+              color: CupertinoColors.systemGrey3.resolveFrom(context),
               size: 20,
             ),
           ],
@@ -450,8 +456,9 @@ class _PantallaConfiguracionRepartidorState
             notificacionesPush = true;
             notificacionesEmail = true;
             notificacionesMarketing = true;
-            modoOscuro = false;
             ubicacionEnTiempoReal = true;
+            // Reset theme to light mode
+            context.read<ThemeProvider>().toggleTheme(false);
           });
           _mostrarToast(
             'Configuración restablecida',

@@ -59,86 +59,77 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
   }
 
   Future<void> _seleccionarFecha() async {
-    await showCupertinoModalPopup<void>(
+    final DateTime? picked = await showDatePicker(
       context: context,
-      builder: (BuildContext context) {
-        return Material(
-          type: MaterialType.transparency,
-          child: Container(
-            height: 300,
-            color: JPCupertinoColors.surface(context),
-            child: Column(
-              children: [
-                // Header con botón Listo
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: JPCupertinoColors.separator(context),
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(
-                          'Cancelar',
-                          style: TextStyle(
-                            color: JPCupertinoColors.secondaryLabel(context),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Fecha de Nacimiento',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: JPCupertinoColors.label(context),
-                          ),
-                        ),
-                      ),
-                      CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(
-                          'Listo',
-                          style: TextStyle(
-                            color: AppColorsPrimary.main,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Date picker
-                Expanded(
-                  child: CupertinoDatePicker(
-                    mode: CupertinoDatePickerMode.date,
-                    initialDateTime: _fechaNacimiento ?? DateTime(2000),
-                    minimumDate: DateTime(1920),
-                    maximumDate: DateTime.now(),
-                    onDateTimeChanged: (DateTime newDate) {
-                      setState(() => _fechaNacimiento = newDate);
-                    },
-                  ),
-                ),
-              ],
+      initialDate: _fechaNacimiento ?? DateTime(2000, 1, 1),
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
+      locale: const Locale('es', 'ES'),
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColorsPrimary.main,
+              onPrimary: CupertinoColors.white,
+              onSurface: CupertinoColors.black,
+              surface: CupertinoColors.white,
             ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: CupertinoColors.white,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColorsPrimary.main,
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            datePickerTheme: DatePickerThemeData(
+              backgroundColor: CupertinoColors.white,
+              headerBackgroundColor: AppColorsPrimary.main,
+              headerForegroundColor: CupertinoColors.white,
+              headerHeadlineStyle: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.white,
+              ),
+              headerHelpStyle: const TextStyle(
+                fontSize: 13,
+                color: CupertinoColors.white,
+              ),
+              dayStyle: const TextStyle(fontSize: 13),
+              weekdayStyle: TextStyle(
+                fontSize: 12,
+                color: AppColorsPrimary.main,
+                fontWeight: FontWeight.w600,
+              ),
+              yearStyle: const TextStyle(fontSize: 14),
+              todayBorder: BorderSide(color: AppColorsPrimary.main, width: 1),
+              todayForegroundColor: WidgetStateProperty.all(
+                AppColorsPrimary.main,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              surfaceTintColor: Colors.transparent,
+            ),
+          ),
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(0.9), // Texto más pequeño
+            ),
+            child: child!,
           ),
         );
       },
     );
+
+    if (picked != null) {
+      setState(() => _fechaNacimiento = picked);
+    }
   }
 
   int _calcularEdad() {
@@ -533,7 +524,7 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: JPCupertinoColors.tertiaryLabel(context),
+          color: AppColorsPrimary.main, // Celeste empresarial
           letterSpacing: -0.08,
         ),
       ),
@@ -546,6 +537,10 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
       decoration: BoxDecoration(
         color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: JPCupertinoColors.separator(context),
+          width: 1.0,
+        ),
       ),
       child: Column(children: children),
     );
@@ -747,10 +742,8 @@ class _RegistroUsuarioFormState extends State<RegistroUsuarioForm> {
         color: JPCupertinoColors.surface(context),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: _aceptaTerminos
-              ? AppColorsPrimary.main.withValues(alpha: 0.3)
-              : JPCupertinoColors.separator(context),
-          width: 1.5,
+          color: JPCupertinoColors.separator(context),
+          width: 1.0,
         ),
       ),
       child: Row(

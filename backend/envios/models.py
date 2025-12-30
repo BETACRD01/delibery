@@ -263,6 +263,21 @@ class Envio(models.Model):
         verbose_name="Pedido Asociado"
     )
 
+    tipo_servicio = models.CharField(
+        max_length=20, 
+        choices=[('delivery', 'Delivery'), ('courier', 'Courier')],
+        default='delivery',
+        verbose_name="Tipo de Servicio"
+    )
+
+    # Coordenadas exactas de origen para Courier (Punto A)
+    lat_origen_real = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Latitud Origen (Courier)")
+    lng_origen_real = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Longitud Origen (Courier)")
+
+    # Desglose financiero
+    comision_app = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Comisión App")
+    ganancia_conductor = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Ganancia Conductor")
+
     ciudad_origen = models.CharField(
         max_length=50,
         verbose_name="Ciudad de Origen",

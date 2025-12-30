@@ -158,6 +158,11 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
 
         _usuarioService.limpiarCacheDirecciones();
 
+        // ✅ También actualizar el celular del usuario si fue ingresado
+        if (telefono.isNotEmpty) {
+          await _actualizarCelularUsuario(telefono);
+        }
+
         if (!mounted) return;
         ToastService().showSuccess(
           context,
@@ -193,6 +198,11 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
           await _usuarioService.crearDireccion(nuevaDireccion);
           _usuarioService.limpiarCacheDirecciones();
 
+          // ✅ También actualizar el celular del usuario si fue ingresado
+          if (telefono.isNotEmpty) {
+            await _actualizarCelularUsuario(telefono);
+          }
+
           if (!mounted) return;
           ToastService().showSuccess(context, 'Dirección creada correctamente');
           Navigator.pop(context, true);
@@ -219,6 +229,17 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
       ToastService().showError(context, 'Error al guardar dirección: $e');
     } finally {
       if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  /// Actualiza el campo celular del usuario en el backend
+  Future<void> _actualizarCelularUsuario(String telefono) async {
+    try {
+      // El backend espera el campo 'telefono' para actualizar user.celular
+      await _usuarioService.actualizarPerfil({'telefono': telefono});
+    } catch (e) {
+      // No bloquear si falla la actualización del celular
+      debugPrint('Error actualizando celular del usuario: $e');
     }
   }
 
@@ -420,8 +441,8 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
                 isLatLngRequired: true,
                 inputDecoration: InputDecoration(
                   hintText: 'Ej: Av. Amazonas y 10 de Agosto',
-                  hintStyle: const TextStyle(
-                    color: CupertinoColors.placeholderText,
+                  hintStyle: TextStyle(
+                    color: CupertinoColors.placeholderText.resolveFrom(context),
                     fontSize: 14,
                   ),
                   border: OutlineInputBorder(
@@ -642,8 +663,8 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
             ),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: const TextStyle(
-                color: CupertinoColors.placeholderText,
+              hintStyle: TextStyle(
+                color: CupertinoColors.placeholderText.resolveFrom(context),
                 fontSize: 14,
               ),
               border: OutlineInputBorder(
@@ -717,8 +738,8 @@ class _PantallaAgregarDireccionState extends State<PantallaAgregarDireccion> {
             ),
             decoration: InputDecoration(
               hintText: 'Número de teléfono',
-              hintStyle: const TextStyle(
-                color: CupertinoColors.placeholderText,
+              hintStyle: TextStyle(
+                color: CupertinoColors.placeholderText.resolveFrom(context),
                 fontSize: 14,
               ),
               border: OutlineInputBorder(

@@ -44,7 +44,10 @@ class NotificationHandler {
 
   void _handleForegroundMessage(RemoteMessage message) {
     if (!_coincideRol(message)) {
-      developer.log('Notificación descartada por rol distinto', name: 'NotificationHandler');
+      developer.log(
+        'Notificación descartada por rol distinto',
+        name: 'NotificationHandler',
+      );
       return;
     }
 
@@ -58,7 +61,11 @@ class NotificationHandler {
       try {
         _context!.read<NotificacionesProvider>().agregarDesdePush(message);
       } catch (e) {
-        developer.log('No se pudo guardar notificación en inbox', name: 'NotificationHandler', error: e);
+        developer.log(
+          'No se pudo guardar notificación en inbox',
+          name: 'NotificationHandler',
+          error: e,
+        );
       }
     }
 
@@ -70,12 +77,18 @@ class NotificationHandler {
 
   void _handleNotificationTap(RemoteMessage message) {
     if (_context == null) {
-      developer.log('Context no disponible para navegar', name: 'NotificationHandler');
+      developer.log(
+        'Context no disponible para navegar',
+        name: 'NotificationHandler',
+      );
       return;
     }
 
     if (!_coincideRol(message)) {
-      developer.log('Notificación tocada descartada por rol distinto', name: 'NotificationHandler');
+      developer.log(
+        'Notificación tocada descartada por rol distinto',
+        name: 'NotificationHandler',
+      );
       return;
     }
 
@@ -87,7 +100,11 @@ class NotificationHandler {
         _context!.read<NotificacionesProvider>().marcarComoLeida(id.toString());
       }
     } catch (e) {
-      developer.log('No se pudo actualizar inbox al tocar notificación', name: 'NotificationHandler', error: e);
+      developer.log(
+        'No se pudo actualizar inbox al tocar notificación',
+        name: 'NotificationHandler',
+        error: e,
+      );
     }
 
     final data = message.data;
@@ -112,7 +129,10 @@ class NotificationHandler {
         _navegarACalificar(data);
         break;
       default:
-        developer.log('Acción desconocida: $accion', name: 'NotificationHandler');
+        developer.log(
+          'Acción desconocida: $accion',
+          name: 'NotificationHandler',
+        );
     }
   }
 
@@ -128,12 +148,14 @@ class NotificationHandler {
     // Importar dinámicamente para evitar dependencias circulares
     // Navegar a la pantalla de ver comprobante
     try {
-      Navigator.of(_context!).pushNamed(
-        '/delivery/ver-comprobante',
-        arguments: {'pagoId': pagoId},
-      );
+      Navigator.of(
+        _context!,
+      ).pushNamed('/delivery/ver-comprobante', arguments: {'pagoId': pagoId});
     } catch (e) {
-      developer.log('Error navegando a ver comprobante: $e', name: 'NotificationHandler');
+      developer.log(
+        'Error navegando a ver comprobante: $e',
+        name: 'NotificationHandler',
+      );
     }
   }
 
@@ -144,7 +166,10 @@ class NotificationHandler {
       // Navegar a la pantalla de pedidos disponibles (tab de disponibles)
       Navigator.of(_context!).pushNamed('/delivery/home');
     } catch (e) {
-      developer.log('Error navegando a pedidos disponibles: $e', name: 'NotificationHandler');
+      developer.log(
+        'Error navegando a pedidos disponibles: $e',
+        name: 'NotificationHandler',
+      );
     }
   }
 
@@ -155,12 +180,14 @@ class NotificationHandler {
     if (pedidoId == null || pedidoId == 0) return;
 
     try {
-      Navigator.of(_context!).pushNamed(
-        '/user/pedido-detalle',
-        arguments: {'pedidoId': pedidoId},
-      );
+      Navigator.of(
+        _context!,
+      ).pushNamed('/user/pedido-detalle', arguments: {'pedidoId': pedidoId});
     } catch (e) {
-      developer.log('Error navegando a calificación: $e', name: 'NotificationHandler');
+      developer.log(
+        'Error navegando a calificación: $e',
+        name: 'NotificationHandler',
+      );
     }
   }
 
@@ -169,17 +196,33 @@ class NotificationHandler {
 
     final pedidoId = int.tryParse(data['pedido_id'] ?? '0');
     if (pedidoId == null || pedidoId == 0) {
-      developer.log('PedidoId inválido en subir_comprobante', name: 'NotificationHandler');
+      developer.log(
+        'PedidoId inválido en subir_comprobante',
+        name: 'NotificationHandler',
+      );
       return;
     }
 
+    final tipo = data['tipo']?.toString().toLowerCase() ?? '';
+    final esCourier =
+        tipo == 'courier' || tipo == 'mandado' || tipo == 'directo';
+
     try {
-      Navigator.of(_context!).pushNamed(
-        '/user/pedido-detalle',
-        arguments: {'pedidoId': pedidoId},
-      );
+      if (esCourier) {
+        Navigator.of(_context!).pushNamed(
+          '/pedido-courier-detalle',
+          arguments: {'pedidoId': pedidoId},
+        );
+      } else {
+        Navigator.of(
+          _context!,
+        ).pushNamed('/user/pedido-detalle', arguments: {'pedidoId': pedidoId});
+      }
     } catch (e) {
-      developer.log('Error navegando a subir comprobante: $e', name: 'NotificationHandler');
+      developer.log(
+        'Error navegando a subir comprobante: $e',
+        name: 'NotificationHandler',
+      );
     }
   }
 

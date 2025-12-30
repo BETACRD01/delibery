@@ -158,6 +158,7 @@ class ApiConfig {
   static String carritoRemoverItem(int id) => '$_products/carrito/item/$id/';
 
   static String get enviosCotizar => '$apiUrl/envios/cotizar/';
+  static String get enviosCrearCourier => '$apiUrl/envios/crear-courier/';
 
   // ============================================================================
   // 8. ENDPOINTS: PROVEEDORES
@@ -422,6 +423,15 @@ class ApiConfig {
   static String superProveedoresPorCategoria(String categoriaId) =>
       '$_super/proveedores/por_categoria/?categoria=$categoriaId';
   static String superProductoDetalle(int id) => '$_super/productos/$id/';
+
+  // ============================================================================
+  // 14.5 ENDPOINTS: SUPER (PEDIDOS / LISTAS)
+  // ============================================================================
+
+  static String get _supermercado => '$apiUrl/v1/supermercado';
+
+  static String get superCrearLista => '$_supermercado/crear-lista/';
+  static String get superMisOrdenes => '$_supermercado/mis-ordenes/';
 
   // ============================================================================
   // 15. CONSTANTES DEL SISTEMA

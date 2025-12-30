@@ -28,23 +28,40 @@ class CalculadoraEnvioService:
     1. Detecta la ciudad (Baños o Tena).
     2. Calcula distancia real (Google Maps).
     3. Aplica recargos (Distancia y Horario Nocturno).
+    3. Aplica recargos (Distancia y Horario Nocturno).
     4. Valida cobertura máxima.
     """
 
-    @classmethod
-    def cotizar_envio(cls, lat_destino, lng_destino, tipo_servicio="delivery"):
-        """
-        Proceso maestro de cotización.
-        Usa Google Maps API como fuente principal de cálculo de distancia.
-        Fallback matemático solo se usa en caso de error de la API.
-        """
-        # 1. Detectar ciudad de origen más cercana
-        hub_origen = cls._detectar_hub_mas_cercano(lat_destino, lng_destino)
+    # Constantes para Courier (Podrían ir en DB en el futuro)
+    COURIER_TARIFA_BASE = Decimal("1.50")
+    COURIER_PRECIO_KM = Decimal("0.50") 
+    COURIER_TARIFA_MINIMA = Decimal("2.00")
 
-        lat_origen = hub_origen["lat"]
-        lng_origen = hub_origen["lng"]
-        ciudad_nombre = hub_origen["nombre"]
-        radio_cobertura = hub_origen["radio_max_cobertura_km"]
+    @classmethod
+    def cotizar_envio(cls, lat_destino, lng_destino, lat_origen=None, lng_origen=None, tipo_servicio="delivery"):
+        """
+        Lógica Híbrida:
+        1. Delivery (Comida): Calcula desde Hub (Baños/Tena) -> Cliente.
+        2. Courier (Paquete): Calcula desde Cliente A -> Cliente B.
+        """
+        
+        # 1. DEFINICIÓN DE PUNTOS A y B
+        es_courier = (tipo_servicio == 'courier')
+        
+        if es_courier and lat_origen is not None and lng_origen is not None:
+            # MODO COURIER: El origen lo define el usuario
+            origen_lat = lat_origen
+            origen_lng = lng_origen
+            ciudad_nombre = "Ubicación Personalizada"
+            radio_cobertura = 50.0 # Cobertura amplia para envíos
+        else:
+            # MODO DELIVERY: El origen es el Hub más cercano
+            hub_origen = cls._detectar_hub_mas_cercano(lat_destino, lng_destino)
+            origen_lat = hub_origen["lat"]
+            origen_lng = hub_origen["lng"]
+            ciudad_nombre = hub_origen["nombre"]
+            radio_cobertura = hub_origen["radio_max_cobertura_km"]
+
         config_envios = cls._obtener_configuracion()
 
         distancia_km = Decimal("0.0")
@@ -62,7 +79,7 @@ class CalculadoraEnvioService:
             gmaps = googlemaps.Client(key=api_key)
 
             resultado = gmaps.distance_matrix(
-                origins=[(lat_origen, lng_origen)],
+                origins=[(origen_lat, origen_lng)],
                 destinations=[(lat_destino, lng_destino)],
                 mode="driving",
                 language="es",
@@ -90,27 +107,37 @@ class CalculadoraEnvioService:
             )
             # Fallback matemático SOLO en caso de error
             distancia_km = cls._calcular_fallback_haversine(
-                lat_origen, lng_origen, lat_destino, lng_destino
+                origen_lat, origen_lng, lat_destino, lng_destino
             )
             tiempo_mins = int(distancia_km * 5) + 5
             metodo_calculo = f"Estimación Matemática ({ciudad_nombre})"
 
-        # 3. Determinar Zona Tarifaria
-        distancia_km = distancia_km.quantize(Decimal("0.01"))
-        zona_actual = cls._determinar_zona(distancia_km)
+        if es_courier:
+            # --- FÓRMULA LINEAL PARA COURIER ---
+            # Precio = Base + (Km * Precio)
+            tarifa_base = cls.COURIER_TARIFA_BASE
+            costo_extra_km = distancia_km * cls.COURIER_PRECIO_KM
+            
+            calculado = tarifa_base + costo_extra_km
+            # Aplicar tarifa mínima
+            costo_total = max(calculado, cls.COURIER_TARIFA_MINIMA)
+            
+            zona_actual = {"codigo": "courier", "nombre_display": "Tarifa por Distancia"}
+            
+        else:
+            # 4. Calcular Costos Base + Distancia (según zona) - MODO DELIVERY
+            zona_actual = cls._determinar_zona(distancia_km)
+            tarifa_base = zona_actual["tarifa_base"]
+            km_incluidos = zona_actual["km_incluidos"]
+            precio_km_extra = zona_actual["precio_km_extra"]
 
-        # 4. Calcular Costos Base + Distancia (según zona)
-        tarifa_base = zona_actual["tarifa_base"]
-        km_incluidos = zona_actual["km_incluidos"]
-        precio_km_extra = zona_actual["precio_km_extra"]
+            costo_total = tarifa_base
+            costo_extra_km = Decimal("0.00")
 
-        costo_total = tarifa_base
-        costo_extra_km = Decimal("0.00")
-
-        if distancia_km > km_incluidos:
-            kms_adicionales = distancia_km - km_incluidos
-            costo_extra_km = kms_adicionales * precio_km_extra
-            costo_total += costo_extra_km
+            if distancia_km > km_incluidos:
+                kms_adicionales = distancia_km - km_incluidos
+                costo_extra_km = kms_adicionales * precio_km_extra
+                costo_total += costo_extra_km
 
         # 5. Aplicar Recargo Nocturno
         es_noche = cls._es_horario_nocturno(config_envios)
@@ -130,10 +157,13 @@ class CalculadoraEnvioService:
             "total_envio": float(round(costo_total, 2)),
             "origen_referencia": f"Centro de {ciudad_nombre}",
             "ciudad_origen": ciudad_nombre,
-            "zona_destino": zona_actual["codigo"],
-            "zona_nombre": zona_actual["nombre_display"],
+            "zona_destino": zona_actual.get("codigo", "courier"),
+            "zona_nombre": zona_actual.get("nombre_display", "Tarifa por Distancia"),
             "es_horario_nocturno": es_noche,
             "metodo_calculo": metodo_calculo,
+            "tipo_servicio": tipo_servicio,
+            "ganancia_repartidor_estimada": float(round(costo_total, 2)), # Por ahora 100%
+            "comision_app_estimada": 0.0,
             "usa_google_maps": not usa_fallback,  # True si usó Google Maps correctamente
         }
 

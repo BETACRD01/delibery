@@ -774,3 +774,153 @@ def cerrar_sesion_dispositivo(request, dispositivo_id):
             {"error": "Error al cerrar sesión"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+# ==========================================
+# GOOGLE OAUTH 2.0 LOGIN
+# ==========================================
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def google_login(request):
+    """
+    Login/Registro con Google OAuth 2.0
+    
+    Request body:
+        {
+            "access_token": "token_de_google"
+        }
+    
+    El access_token se obtiene desde la app Flutter usando google_sign_in.
+    Este endpoint valida el token con Google, crea o autentica al usuario,
+    y devuelve tokens JWT.
+    """
+    try:
+        access_token = request.data.get("access_token")
+        
+        if not access_token:
+            return Response(
+                {"error": "access_token es requerido"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        # Validar token con Google
+        import requests as http_requests
+        
+        google_url = f"https://www.googleapis.com/oauth2/v3/userinfo"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        google_response = http_requests.get(google_url, headers=headers, timeout=10)
+        
+        if google_response.status_code != 200:
+            logger.warning(f"Token de Google inválido: {google_response.status_code}")
+            return Response(
+                {"error": "Token de Google inválido o expirado"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        
+        google_data = google_response.json()
+        
+        # Extraer datos del usuario de Google
+        email = google_data.get("email")
+        nombre = google_data.get("given_name", "")
+        apellido = google_data.get("family_name", "")
+        foto_url = google_data.get("picture", "")
+        google_id = google_data.get("sub")
+        email_verified = google_data.get("email_verified", False)
+        
+        if not email:
+            return Response(
+                {"error": "No se pudo obtener el email de Google"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        if not email_verified:
+            return Response(
+                {"error": "El email de Google no está verificado"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        # Buscar o crear usuario
+        user, created = User.objects.get_or_create(
+            email=email.lower(),
+            defaults={
+                "username": email.split("@")[0][:30],
+                "first_name": nombre[:30] if nombre else "",
+                "last_name": apellido[:30] if apellido else "",
+                "is_active": True,
+            }
+        )
+        
+        if created:
+            # Usuario nuevo - generar contraseña aleatoria (no la usará)
+            import secrets
+            user.set_password(secrets.token_urlsafe(32))
+            user.save()
+            
+            logger.info(f"Usuario creado via Google: {email}")
+            
+            # Crear perfil si existe el modelo
+            try:
+                from usuarios.models import Perfil
+                Perfil.objects.get_or_create(user=user)
+                logger.info(f"📋 Perfil creado para usuario Google: {email}")
+            except Exception as e:
+                logger.warning(f"No se pudo crear perfil: {e}")
+            
+            # Enviar email de bienvenida
+            try:
+                from .email_utils import enviar_email_bienvenida
+                enviar_email_bienvenida(user)
+            except Exception as e:
+                logger.warning(f"Error enviando email bienvenida: {e}")
+        else:
+            # Usuario existente - actualizar datos si están vacíos
+            updated = False
+            if not user.first_name and nombre:
+                user.first_name = nombre[:30]
+                updated = True
+            if not user.last_name and apellido:
+                user.last_name = apellido[:30]
+                updated = True
+            if updated:
+                user.save()
+            
+            logger.info(f"Usuario autenticado via Google: {email}")
+        
+        # Verificar que el usuario esté activo
+        if not user.is_active:
+            return Response(
+                {"error": "Tu cuenta está desactivada"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        
+        # Registrar login y generar tokens
+        ip_address = get_client_ip(request)
+        user.registrar_login_exitoso(ip_address)
+        
+        tokens = get_tokens_for_user(user)
+        usuario_data = UserSerializer(user).data
+        
+        logger.info(f"[OK] Login Google exitoso: {email}")
+        
+        return Response(
+            {
+                "mensaje": "Login con Google exitoso",
+                "usuario": usuario_data,
+                "tokens": tokens,
+                "nuevo_usuario": created,
+            },
+            status=status.HTTP_200_OK,
+        )
+        
+    except Exception as e:
+        logger.error(f"[ERROR] Error en login Google: {e}", exc_info=True)
+        return Response(
+            {
+                "error": "Error al autenticar con Google",
+                "detalle": str(e) if settings.DEBUG else None,
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

@@ -28,7 +28,7 @@ class CarritoService {
       final response = await _client.get(
         '${ApiConfig.apiUrl}/productos/carrito/',
       );
-      
+
       return response;
     } on ApiException {
       rethrow;
@@ -49,12 +49,9 @@ class CarritoService {
     try {
       final response = await _client.post(
         '${ApiConfig.apiUrl}/productos/carrito/agregar/',
-        {
-          'producto_id': int.parse(productoId),
-          'cantidad': cantidad,
-        },
+        {'producto_id': int.parse(productoId), 'cantidad': cantidad},
       );
-      
+
       return response;
     } on ApiException {
       rethrow;
@@ -75,11 +72,9 @@ class CarritoService {
     try {
       final response = await _client.put(
         '${ApiConfig.apiUrl}/productos/carrito/item/$itemId/cantidad/',
-        {
-          'cantidad': cantidad,
-        },
+        {'cantidad': cantidad},
       );
-      
+
       return response;
     } on ApiException {
       rethrow;
@@ -98,7 +93,7 @@ class CarritoService {
       final response = await _client.delete(
         '${ApiConfig.apiUrl}/productos/carrito/item/$itemId/',
       );
-      
+
       return response;
     } on ApiException {
       rethrow;
@@ -117,7 +112,7 @@ class CarritoService {
       final response = await _client.delete(
         '${ApiConfig.apiUrl}/productos/carrito/limpiar/',
       );
-      
+
       return response;
     } on ApiException {
       rethrow;
@@ -128,6 +123,25 @@ class CarritoService {
         errors: {'error': e.toString()},
       );
     }
+  }
+
+  /// Normaliza los valores numéricos de datos_envio a 2 decimales
+  Map<String, dynamic> _normalizarDatosEnvio(Map<String, dynamic> datos) {
+    final normalizado = <String, dynamic>{};
+    for (final entry in datos.entries) {
+      final value = entry.value;
+      if (value is double) {
+        // Redondear a 2 decimales
+        normalizado[entry.key] = double.parse(value.toStringAsFixed(2));
+      } else if (value is num) {
+        normalizado[entry.key] = double.parse(
+          value.toDouble().toStringAsFixed(2),
+        );
+      } else {
+        normalizado[entry.key] = value;
+      }
+    }
+    return normalizado;
   }
 
   /// Realiza el checkout del carrito
@@ -147,7 +161,10 @@ class CarritoService {
       };
       if (latitudDestino != null) body['latitud_destino'] = latitudDestino;
       if (longitudDestino != null) body['longitud_destino'] = longitudDestino;
-      if (datosEnvio != null) body['datos_envio'] = datosEnvio;
+      // Normalizar datos_envio para evitar error de decimales
+      if (datosEnvio != null) {
+        body['datos_envio'] = _normalizarDatosEnvio(datosEnvio);
+      }
       if (direccionId != null) body['direccion_id'] = direccionId;
       if (instruccionesEntrega != null && instruccionesEntrega.isNotEmpty) {
         body['instrucciones_entrega'] = instruccionesEntrega;

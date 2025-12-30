@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/theme/app_colors_primary.dart';
 import 'package:mobile/theme/app_colors_secondary.dart';
-import 'package:mobile/theme/app_colors_support.dart';
 import 'package:mobile/theme/app_theme.dart';
 
 import '../../../../../models/producto_model.dart';
@@ -29,27 +28,27 @@ class SeccionDestacados extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(),
+        _buildHeader(context),
         const SizedBox(height: 12),
         if (loading)
           _buildLoadingState()
         else if (productos.isEmpty)
-          _buildEmptyState()
+          _buildEmptyState(context)
         else
           _buildProductosList(),
       ],
     );
   }
 
-  Widget _buildHeader() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Text(
         'Más Populares',
         style: TextStyle(
           fontSize: 20, // Slightly larger for iOS feel
           fontWeight: FontWeight.bold,
-          color: AppColorsSupport.textPrimary,
+          color: CupertinoColors.label.resolveFrom(context),
           letterSpacing: -0.5,
         ),
       ),
@@ -98,13 +97,15 @@ class SeccionDestacados extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+  Widget _buildEmptyState(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: Center(
         child: Text(
           'No hay productos destacados',
-          style: TextStyle(color: AppColorsSupport.textSecondary),
+          style: TextStyle(
+            color: CupertinoColors.secondaryLabel.resolveFrom(context),
+          ),
         ),
       ),
     );
@@ -129,7 +130,9 @@ class _ProductoCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+            context,
+          ),
           borderRadius: BorderRadius.circular(AppConstants.radiusCard),
           boxShadow: AppConstants.cardShadow(context), // iOS-style shadow
         ),
@@ -138,7 +141,7 @@ class _ProductoCard extends StatelessWidget {
           child: Row(
             children: [
               // Imagen del producto (OPTIMIZADA)
-              _buildProductImage(),
+              _buildProductImage(context),
               const SizedBox(width: 16),
 
               // Información del producto
@@ -148,23 +151,25 @@ class _ProductoCard extends StatelessWidget {
                   children: [
                     Text(
                       producto.nombre,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
-                        color: AppColorsSupport.textPrimary,
+                        color: CupertinoColors.label.resolveFrom(context),
                         letterSpacing: -0.3,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    _buildProveedorBadge(),
+                    _buildProveedorBadge(context),
                     const SizedBox(height: 6),
                     Text(
                       producto.descripcion,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColorsSupport.textSecondary,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
                         height: 1.3,
                       ),
                       maxLines:
@@ -177,10 +182,12 @@ class _ProductoCard extends StatelessWidget {
                       children: [
                         Text(
                           producto.precioFormateado,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            color: AppColorsSupport.price, // Soft red for price
+                            color: CupertinoColors.label.resolveFrom(
+                              context,
+                            ), // Adaptive price
                           ),
                         ),
                         // Rating removed to clean up UI or moved, let's keep it minimal
@@ -193,10 +200,12 @@ class _ProductoCard extends StatelessWidget {
                             ),
                             Text(
                               ' ${producto.ratingFormateado}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: AppColorsSupport.textPrimary,
+                                color: CupertinoColors.label.resolveFrom(
+                                  context,
+                                ),
                               ),
                             ),
                           ],
@@ -240,7 +249,7 @@ class _ProductoCard extends StatelessWidget {
   }
 
   // ✅ MÉTODO ACTUALIZADO Y OPTIMIZADO
-  Widget _buildProductImage() {
+  Widget _buildProductImage(BuildContext context) {
     if (producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty) {
       return Hero(
         tag: 'product_image_${producto.id}',
@@ -256,10 +265,11 @@ class _ProductoCard extends StatelessWidget {
               return Container(
                 width: 90,
                 height: 90,
-                color: AppColorsSupport.background,
-                child: const Icon(
+                color: CupertinoColors.secondarySystemGroupedBackground
+                    .resolveFrom(context),
+                child: Icon(
                   Icons.broken_image_outlined,
-                  color: AppColorsSupport.textHint,
+                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   size: 24,
                 ),
               );
@@ -274,18 +284,20 @@ class _ProductoCard extends StatelessWidget {
       width: 90,
       height: 90,
       decoration: BoxDecoration(
-        color: AppColorsSupport.background,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.fastfood_outlined,
-        color: AppColorsSupport.textHint,
+        color: CupertinoColors.secondaryLabel.resolveFrom(context),
         size: 32,
       ),
     );
   }
 
-  Widget _buildProveedorBadge() {
+  Widget _buildProveedorBadge(BuildContext context) {
     final tieneLogo =
         producto.proveedorLogoUrl != null &&
         producto.proveedorLogoUrl!.isNotEmpty;
@@ -324,7 +336,7 @@ class _ProductoCard extends StatelessWidget {
               producto.proveedorNombre!,
               style: TextStyle(
                 fontSize: 12,
-                color: AppColorsSupport.textSecondary,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 1,

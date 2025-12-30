@@ -137,8 +137,9 @@ INSTALLED_APPS = [
     "administradores.apps.AdministradoresConfig",
     "reportes.apps.ReportesConfig",
     "calificaciones.apps.CalificacionesConfig",
-    "super_categorias.apps.SuperCategoriasConfig",
+    # "super_categorias.apps.SuperCategoriasConfig",  # TODO: Módulo pendiente de crear
     "legal.apps.LegalConfig",
+    # "supermercado.apps.SupermercadoConfig",  # TODO: Módulo pendiente de crear
 ]
 
 SITE_ID = 1

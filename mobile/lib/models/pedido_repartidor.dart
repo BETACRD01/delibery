@@ -20,6 +20,19 @@ class PedidoDisponible {
   final double distanciaKm;
   final int tiempoEstimadoMin;
 
+  // Datos de envío para calcular total con recargo nocturno
+  final double? costoEnvio;
+  final double? recargoNocturno;
+  final bool recargoNocturnoAplicado;
+
+  /// Total calculado incluyendo recargo nocturno si aplica
+  double get totalConRecargo {
+    if (recargoNocturno != null && recargoNocturno! > 0.01) {
+      return total + recargoNocturno!;
+    }
+    return total;
+  }
+
   PedidoDisponible({
     required this.id,
     required this.numeroPedido,
@@ -38,6 +51,9 @@ class PedidoDisponible {
     this.creadoEn,
     required this.distanciaKm,
     required this.tiempoEstimadoMin,
+    this.costoEnvio,
+    this.recargoNocturno,
+    this.recargoNocturnoAplicado = false,
   });
 
   /// Factory para crear desde JSON del backend (RESUMIDO)
@@ -48,6 +64,22 @@ class PedidoDisponible {
       if (value is num) return value.toDouble();
       if (value is String) return double.tryParse(value) ?? defaultValue;
       return defaultValue;
+    }
+
+    // Parsear datos_envio si existe
+    double? recargoNocturno;
+    double? costoEnvio;
+    bool recargoNocturnoAplicado = false;
+
+    if (json['datos_envio'] is Map<String, dynamic>) {
+      final datosEnvio = json['datos_envio'] as Map<String, dynamic>;
+      recargoNocturnoAplicado = datosEnvio['recargo_nocturno_aplicado'] == true;
+      if (datosEnvio['recargo_nocturno'] != null) {
+        recargoNocturno = parseDouble(datosEnvio['recargo_nocturno']);
+      }
+      if (datosEnvio['costo_envio'] != null) {
+        costoEnvio = parseDouble(datosEnvio['costo_envio']);
+      }
     }
 
     return PedidoDisponible(
@@ -76,6 +108,9 @@ class PedidoDisponible {
           : null,
       distanciaKm: parseDouble(json['distancia_km']),
       tiempoEstimadoMin: _asInt(json['tiempo_estimado_min']),
+      costoEnvio: costoEnvio,
+      recargoNocturno: recargoNocturno,
+      recargoNocturnoAplicado: recargoNocturnoAplicado,
     );
   }
 
@@ -175,9 +210,13 @@ class PedidosDisponiblesResponse {
   factory PedidosDisponiblesResponse.fromJson(Map<String, dynamic> json) {
     return PedidosDisponiblesResponse(
       repartidorUbicacion: json['repartidor_ubicacion'] is Map<String, dynamic>
-          ? UbicacionRepartidor.fromJson(json['repartidor_ubicacion'] as Map<String, dynamic>)
+          ? UbicacionRepartidor.fromJson(
+              json['repartidor_ubicacion'] as Map<String, dynamic>,
+            )
           : UbicacionRepartidor(latitud: 0, longitud: 0),
-      radioKm: (json['radio_km'] is num) ? (json['radio_km'] as num).toDouble() : 0,
+      radioKm: (json['radio_km'] is num)
+          ? (json['radio_km'] as num).toDouble()
+          : 0,
       totalPedidos: _asInt(json['total_pedidos']),
       pedidos: (json['pedidos'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
@@ -259,7 +298,8 @@ class PedidoDetalladoRepartidor {
   final double? descuentoAplicado;
   final String? descripcion;
 
-  // Dirección COMPLETA (solo disponible después de aceptar)
+  // Dirección COMPLETA
+  final String? direccionOrigen;
   final String direccionEntrega;
   final double? latitudDestino;
   final double? longitudDestino;
@@ -294,6 +334,7 @@ class PedidoDetalladoRepartidor {
     this.costoEnvioCalculado,
     this.descuentoAplicado,
     this.descripcion,
+    this.direccionOrigen,
     required this.direccionEntrega,
     this.latitudDestino,
     this.longitudDestino,
@@ -319,7 +360,10 @@ class PedidoDetalladoRepartidor {
 
     // Prioridad 3: Calcular como la diferencia entre el total y el subtotal de items
     if (items != null && items!.isNotEmpty) {
-      final subtotalItems = items!.fold(0.0, (sum, item) => sum + item.subtotal);
+      final subtotalItems = items!.fold(
+        0.0,
+        (sum, item) => sum + item.subtotal,
+      );
       final envio = total - subtotalItems;
       return envio > 0 ? envio : 0.0;
     }
@@ -329,6 +373,15 @@ class PedidoDetalladoRepartidor {
   }
 
   double? get descuento => descuentoAplicado;
+
+  /// Total incluyendo recargo nocturno si aplica
+  /// NOTA: El backend ya envía el campo 'total' con el recargo incluido,
+  /// por lo que simplemente retornamos el total directamente.
+  /// Este getter existe por compatibilidad con PedidoListItem.
+  double get totalConRecargo {
+    // El backend ya incluye el recargo en el total, retornamos directo
+    return total;
+  }
 
   factory PedidoDetalladoRepartidor.fromJson(Map<String, dynamic> json) {
     // Helpers de parseo defensivo
@@ -364,7 +417,8 @@ class PedidoDetalladoRepartidor {
       estadoDisplay: (json['estado_display'] ?? '').toString(),
       pagoId: json['pago_id'] != null ? _asInt(json['pago_id']) : null,
       estadoPagoActual: json['estado_pago_actual']?.toString(),
-      transferenciaComprobanteUrl: json['transferencia_comprobante_url']?.toString(),
+      transferenciaComprobanteUrl: json['transferencia_comprobante_url']
+          ?.toString(),
       instruccionesEntrega: json['instrucciones_entrega']?.toString(),
       cliente: ClienteDetalle.fromJson(
         asMap(json['cliente']) ?? const <String, dynamic>{},
@@ -384,6 +438,7 @@ class PedidoDetalladoRepartidor {
           ? parseDouble(json['descuento'])
           : null,
       descripcion: json['descripcion'] as String?,
+      direccionOrigen: json['direccion_origen'] as String?,
       direccionEntrega: json['direccion_entrega'] as String? ?? '',
       latitudDestino: json['latitud_destino'] != null
           ? parseDouble(json['latitud_destino'])
@@ -392,14 +447,14 @@ class PedidoDetalladoRepartidor {
           ? parseDouble(json['longitud_destino'])
           : null,
       items: json['items'] != null
-          ? asMapList(json['items'])
-              .map((i) => ItemPedido.fromJson(i))
-              .toList()
+          ? asMapList(json['items']).map((i) => ItemPedido.fromJson(i)).toList()
           : null,
       datosEnvio: asMap(json['datos_envio']) != null
           ? DatosEnvio.fromJson(asMap(json['datos_envio'])!)
           : null,
-      creadoEn: DateTime.tryParse(json['creado_en'] as String? ?? '') ?? DateTime.now(),
+      creadoEn:
+          DateTime.tryParse(json['creado_en'] as String? ?? '') ??
+          DateTime.now(),
       confirmadoEn: json['confirmado_en'] != null
           ? DateTime.tryParse(json['confirmado_en'] as String)
           : null,
@@ -472,7 +527,8 @@ class ProveedorDetalle {
     );
   }
 
-  factory ProveedorDetalle.vacio() => ProveedorDetalle(id: 0, nombre: 'Proveedor');
+  factory ProveedorDetalle.vacio() =>
+      ProveedorDetalle(id: 0, nombre: 'Proveedor');
 }
 
 /// Item individual del pedido
@@ -560,7 +616,8 @@ class DatosEnvio {
       recargoNocturno: parseDouble(json['recargo_nocturno']),
       costoTotal: parseDouble(json['costo_envio']),
       enCamino: json['en_camino'] as bool? ?? false,
-      recargoNocturnoAplicado: json['recargo_nocturno_aplicado'] as bool? ?? false,
+      recargoNocturnoAplicado:
+          json['recargo_nocturno_aplicado'] as bool? ?? false,
     );
   }
 

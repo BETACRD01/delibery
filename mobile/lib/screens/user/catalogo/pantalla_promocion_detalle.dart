@@ -11,6 +11,7 @@ import '../../../../../config/rutas.dart';
 import '../../../../../providers/proveedor_carrito.dart';
 import '../../../../../services/productos/productos_service.dart';
 import '../../../../../theme/app_colors_secondary.dart';
+import '../../../../../theme/app_colors_primary.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/producto_model.dart';
 import '../../../models/promocion_model.dart';
@@ -22,7 +23,8 @@ class PantallaPromocionDetalle extends StatefulWidget {
   const PantallaPromocionDetalle({super.key});
 
   @override
-  State<PantallaPromocionDetalle> createState() => _PantallaPromocionDetalleState();
+  State<PantallaPromocionDetalle> createState() =>
+      _PantallaPromocionDetalleState();
 }
 
 class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
@@ -91,12 +93,17 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
       // 1) Productos asociados específicos (múltiples)
       if (promocion.productosAsociadosIds.isNotEmpty) {
+        debugPrint(
+          '🔍 Cargando ${promocion.productosAsociadosIds.length} productos asociados...',
+        );
         for (final productoId in promocion.productosAsociadosIds) {
           try {
+            debugPrint('  → Cargando producto ID: $productoId');
             final prod = await productosService.obtenerProducto(productoId);
             productosReales.add(prod);
+            debugPrint('  ✓ Producto cargado: ${prod.nombre}');
           } catch (e) {
-            // Error silenciado
+            debugPrint('  ✗ Error cargando producto $productoId: $e');
           }
         }
       }
@@ -149,7 +156,9 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
     }
 
     return Scaffold(
-      backgroundColor: JPColors.background,
+      backgroundColor: CupertinoColors.systemGroupedBackground.resolveFrom(
+        context,
+      ),
       body: Stack(
         children: [
           CustomScrollView(
@@ -177,9 +186,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
           Positioned(
             top: 8,
             right: 8,
-            child: SafeArea(
-              child: _CarritoCircularButton(),
-            ),
+            child: SafeArea(child: _CarritoCircularButton()),
           ),
         ],
       ),
@@ -216,10 +223,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        promoColor.withValues(alpha: 0.8),
-                        promoColor,
-                      ],
+                      colors: [promoColor.withValues(alpha: 0.8), promoColor],
                     ),
                   ),
                 ),
@@ -230,10 +234,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      promoColor.withValues(alpha: 0.8),
-                      promoColor,
-                    ],
+                    colors: [promoColor.withValues(alpha: 0.8), promoColor],
                   ),
                 ),
               ),
@@ -257,7 +258,10 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
               bottom: 24,
               left: 20,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: CupertinoColors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -272,11 +276,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      CupertinoIcons.tag_fill,
-                      color: promoColor,
-                      size: 20,
-                    ),
+                    Icon(CupertinoIcons.tag_fill, color: promoColor, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       promocion.descuento,
@@ -318,13 +318,17 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                 Icon(
                   promocion.esVigente ? Icons.check_circle : Icons.cancel,
                   size: 16,
-                  color: promocion.esVigente ? JPColors.success : JPColors.error,
+                  color: promocion.esVigente
+                      ? JPColors.success
+                      : JPColors.error,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   promocion.esVigente ? 'ACTIVA' : 'EXPIRADA',
                   style: TextStyle(
-                    color: promocion.esVigente ? JPColors.success : JPColors.error,
+                    color: promocion.esVigente
+                        ? JPColors.success
+                        : JPColors.error,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -337,12 +341,24 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
           // Título
           Text(
             promocion.titulo,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: JPColors.textPrimary, height: 1.1),
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: CupertinoColors.label.resolveFrom(context),
+              height: 1.1,
+            ),
           ),
           const SizedBox(height: 8),
 
           // Subtítulo
-          Text(promocion.descripcion, style: TextStyle(fontSize: 16, color: Colors.grey[600], height: 1.4)),
+          Text(
+            promocion.descripcion,
+            style: TextStyle(
+              fontSize: 16,
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              height: 1.4,
+            ),
+          ),
         ],
       ),
     );
@@ -370,7 +386,10 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                 _tiempoRestante == Duration.zero
                     ? 'La promoción ha expirado'
                     : 'Termina en $dias d $horas h $minutos m',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: JPColors.textPrimary),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: CupertinoColors.label.resolveFrom(context),
+                ),
               ),
             ),
           ],
@@ -385,22 +404,33 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Detalles de la promoción',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: JPColors.textPrimary),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: CupertinoColors.label.resolveFrom(context),
+            ),
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: CupertinoColors.secondarySystemGroupedBackground
+                  .resolveFrom(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[100]!),
+              border: Border.all(
+                color: CupertinoColors.separator.resolveFrom(context),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _InfoRow(icono: Icons.discount_outlined, titulo: 'Descuento', texto: promocion.descuento),
+                _InfoRow(
+                  icono: Icons.discount_outlined,
+                  titulo: 'Descuento',
+                  texto: promocion.descuento,
+                ),
                 const Divider(height: 24),
                 if (promocion.fechaInicio != null)
                   _InfoRow(
@@ -428,18 +458,25 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             'Productos incluidos',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: JPColors.textPrimary),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: CupertinoColors.label.resolveFrom(context),
+            ),
           ),
         ),
         const SizedBox(height: 12),
 
         if (_loading)
           const Center(
-            child: Padding(padding: EdgeInsets.all(32), child: CupertinoActivityIndicator(radius: 14)),
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CupertinoActivityIndicator(radius: 14),
+            ),
           )
         else if (_error.isNotEmpty)
           Center(
@@ -447,14 +484,21 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
               padding: const EdgeInsets.all(32),
               child: Column(
                 children: [
-                  Icon(Icons.error_outline, size: 48, color: JPColors.error.withValues(alpha: 0.5)),
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: JPColors.error.withValues(alpha: 0.5),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     _error,
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: JPColors.textSecondary),
                   ),
-                  TextButton(onPressed: _cargarProductosIncluidos, child: const Text('Reintentar')),
+                  TextButton(
+                    onPressed: _cargarProductosIncluidos,
+                    child: const Text('Reintentar'),
+                  ),
                 ],
               ),
             ),
@@ -483,12 +527,12 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Promoción General',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: JPColors.textPrimary,
+                      color: CupertinoColors.label.resolveFrom(context),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -497,7 +541,9 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: CupertinoColors.secondaryLabel.resolveFrom(
+                        context,
+                      ),
                       height: 1.5,
                     ),
                   ),
@@ -514,7 +560,10 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
             itemBuilder: (context, index) {
               return _ProductoPromoCard(
                 producto: _productosIncluidos[index],
-                onTap: () => Rutas.irAProductoDetalle(context, _productosIncluidos[index]),
+                onTap: () => Rutas.irAProductoDetalle(
+                  context,
+                  _productosIncluidos[index],
+                ),
               );
             },
           ),
@@ -528,25 +577,43 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Términos y condiciones',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: JPColors.textPrimary),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: CupertinoColors.label.resolveFrom(context),
+            ),
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: CupertinoColors.secondarySystemGroupedBackground
+                  .resolveFrom(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[100]!),
+              border: Border.all(
+                color: CupertinoColors.separator.resolveFrom(context),
+              ),
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _TerminoItem(texto: 'Promoción válida solo durante el periodo especificado.'),
-                _TerminoItem(texto: 'Descuento aplicable únicamente a productos incluidos.'),
-                _TerminoItem(texto: 'No acumulable con otras promociones activas.'),
-                _TerminoItem(texto: 'Sujeto a disponibilidad de stock en el momento de la compra.'),
+                _TerminoItem(
+                  texto:
+                      'Promoción válida solo durante el periodo especificado.',
+                ),
+                _TerminoItem(
+                  texto:
+                      'Descuento aplicable únicamente a productos incluidos.',
+                ),
+                _TerminoItem(
+                  texto: 'No acumulable con otras promociones activas.',
+                ),
+                _TerminoItem(
+                  texto:
+                      'Sujeto a disponibilidad de stock en el momento de la compra.',
+                ),
               ],
             ),
           ),
@@ -557,8 +624,14 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
   Widget _buildBottomBar(PromocionModel promocion) {
     // Calculamos totales solo si hay productos específicos
-    final precioTotal = _productosIncluidos.fold<double>(0, (sum, p) => sum + p.precio);
-    final precioAnterior = _productosIncluidos.fold<double>(0, (sum, p) => sum + (p.precioAnterior ?? p.precio));
+    final precioTotal = _productosIncluidos.fold<double>(
+      0,
+      (sum, p) => sum + p.precio,
+    );
+    final precioAnterior = _productosIncluidos.fold<double>(
+      0,
+      (sum, p) => sum + (p.precioAnterior ?? p.precio),
+    );
     final ahorro = (precioAnterior - precioTotal).clamp(0, double.infinity);
 
     // Si no hay productos específicos, mostramos botón simple
@@ -567,9 +640,13 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
+          BoxShadow(
+            color: CupertinoColors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
         ],
       ),
       child: SafeArea(
@@ -585,9 +662,17 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                     children: [
                       if (ahorro > 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 51, 223, 217).withValues(alpha: 0.1),
+                            color: const Color.fromARGB(
+                              255,
+                              51,
+                              223,
+                              217,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -602,7 +687,11 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                       const SizedBox(height: 2),
                       Text(
                         'Total: \$${precioTotal.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.red),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.red,
+                        ),
                       ),
                     ],
                   )
@@ -610,7 +699,11 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                   const Expanded(
                     child: Text(
                       '¡Aprovecha esta oferta!',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: JPColors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: JPColors.textSecondary,
+                      ),
                     ),
                   ),
 
@@ -618,17 +711,30 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: promocion.esVigente ? _agregarPromocionAlCarrito : null,
+                    onPressed: promocion.esVigente
+                        ? _agregarPromocionAlCarrito
+                        : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: promocion.esVigente ? AppColorsSecondary.main : Colors.grey,
+                      backgroundColor: promocion.esVigente
+                          ? AppColorsSecondary.main
+                          : Colors.grey,
                       foregroundColor: Colors.white,
                       elevation: promocion.esVigente ? 4 : 0,
-                      shadowColor: AppColorsSecondary.main.withValues(alpha: 0.4),
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shadowColor: AppColorsSecondary.main.withValues(
+                        alpha: 0.4,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                     icon: Icon(
-                      mostrarTotales ? Icons.shopping_cart_rounded : Icons.explore_rounded,
+                      mostrarTotales
+                          ? Icons.shopping_cart_rounded
+                          : Icons.explore_rounded,
                       size: 22,
                     ),
                     label: Text(
@@ -663,7 +769,10 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
 
     // Si hay productos específicos, agregamos la promoción completa
     if (_productosIncluidos.isNotEmpty) {
-      final success = await carrito.agregarPromocion(promocion, _productosIncluidos);
+      final success = await carrito.agregarPromocion(
+        promocion,
+        _productosIncluidos,
+      );
 
       if (!mounted) return;
 
@@ -684,7 +793,10 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
         });
       } else {
         if (!context.mounted) return;
-        ToastService().showError(context, carrito.error ?? 'Error al agregar promoción');
+        ToastService().showError(
+          context,
+          carrito.error ?? 'Error al agregar promoción',
+        );
       }
     } else {
       // Promo general: ir al home/catalogo
@@ -706,7 +818,11 @@ class _InfoRow extends StatelessWidget {
   final String titulo;
   final String texto;
 
-  const _InfoRow({required this.icono, required this.titulo, required this.texto});
+  const _InfoRow({
+    required this.icono,
+    required this.titulo,
+    required this.texto,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -714,17 +830,30 @@ class _InfoRow extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: JPColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-          child: Icon(icono, size: 20, color: JPColors.primary),
+          decoration: BoxDecoration(
+            color: AppColorsPrimary.main.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icono, size: 20, color: AppColorsPrimary.main),
         ),
         const SizedBox(width: 16),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(titulo, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text(
+              titulo,
+              style: TextStyle(
+                fontSize: 12,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              ),
+            ),
             Text(
               texto,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: JPColors.textPrimary),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: CupertinoColors.label.resolveFrom(context),
+              ),
             ),
           ],
         ),
@@ -746,14 +875,16 @@ class _ProductoPromoCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: CupertinoColors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 2),
-          )
+          ),
         ],
       ),
       child: InkWell(
@@ -771,18 +902,31 @@ class _ProductoPromoCard extends StatelessWidget {
                     child: Container(
                       width: 90,
                       height: 90,
-                      color: Colors.grey[100],
-                      child: producto.imagenUrl != null && producto.imagenUrl!.isNotEmpty
+                      color: CupertinoColors.tertiarySystemGroupedBackground
+                          .resolveFrom(context),
+                      child:
+                          producto.imagenUrl != null &&
+                              producto.imagenUrl!.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: producto.imagenUrl!,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => const Center(
                                 child: CupertinoActivityIndicator(radius: 14),
                               ),
-                              errorWidget: (context, url, error) =>
-                                  Icon(Icons.fastfood_outlined, size: 30, color: Colors.grey[400]),
+                              errorWidget: (context, url, error) => Icon(
+                                Icons.fastfood_outlined,
+                                size: 30,
+                                color: CupertinoColors.secondaryLabel
+                                    .resolveFrom(context),
+                              ),
                             )
-                          : Icon(Icons.fastfood_outlined, size: 30, color: Colors.grey[400]),
+                          : Icon(
+                              Icons.fastfood_outlined,
+                              size: 30,
+                              color: CupertinoColors.secondaryLabel.resolveFrom(
+                                context,
+                              ),
+                            ),
                     ),
                   ),
                   if (tieneDescuento)
@@ -790,7 +934,10 @@ class _ProductoPromoCard extends StatelessWidget {
                       top: 4,
                       right: 4,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red,
                           borderRadius: BorderRadius.circular(8),
@@ -798,7 +945,7 @@ class _ProductoPromoCard extends StatelessWidget {
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 4,
-                            )
+                            ),
                           ],
                         ),
                         child: const Icon(
@@ -819,10 +966,10 @@ class _ProductoPromoCard extends StatelessWidget {
                   children: [
                     Text(
                       producto.nombre,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
-                        color: JPColors.textPrimary,
+                        color: CupertinoColors.label.resolveFrom(context),
                         height: 1.2,
                       ),
                       maxLines: 2,
@@ -831,7 +978,12 @@ class _ProductoPromoCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       producto.descripcion,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -844,7 +996,9 @@ class _ProductoPromoCard extends StatelessWidget {
                             '\$${producto.precioAnterior!.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[500],
+                              color: CupertinoColors.tertiaryLabel.resolveFrom(
+                                context,
+                              ),
                               decoration: TextDecoration.lineThrough,
                               decorationThickness: 2,
                             ),
@@ -852,7 +1006,10 @@ class _ProductoPromoCard extends StatelessWidget {
                           const SizedBox(width: 8),
                         ],
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
@@ -895,11 +1052,11 @@ class _CarritoCircularButton extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: CupertinoColors.systemBackground.resolveFrom(context),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: CupertinoColors.black.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -965,7 +1122,14 @@ class _TerminoItem extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(texto, style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.4)),
+            child: Text(
+              texto,
+              style: TextStyle(
+                fontSize: 14,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                height: 1.4,
+              ),
+            ),
           ),
         ],
       ),

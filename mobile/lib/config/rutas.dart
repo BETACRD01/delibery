@@ -38,9 +38,8 @@ import '../screens/user/catalogo/pantalla_promocion_detalle.dart';
 import '../screens/user/catalogo/pantalla_todas_categorias.dart';
 import '../screens/user/pantalla_inicio.dart';
 import '../screens/user/pedidos/pantalla_mis_pedidos.dart';
+import '../screens/user/pedidos/pantalla_detalle_courier.dart';
 import '../screens/user/pedidos/pedido_detalle_screen.dart';
-import '../screens/user/super/pantalla_detalle_restaurante.dart';
-import '../screens/user/super/pantalla_super.dart';
 
 class Rutas {
   Rutas._();
@@ -93,7 +92,7 @@ class Rutas {
   static const inicio = '/inicio';
   static const perfil = '/perfil';
   static const configuracion = '/configuracion';
-  static const super_ = '/super';
+  // static const super_ = '/super'; // DEPRECATED
   static const restauranteDetalle = '/restaurante-detalle';
   static const categoriaDetalle = '/categoria-detalle';
   static const productoDetalle = '/producto-detalle';
@@ -105,6 +104,7 @@ class Rutas {
   static const ofertas = '/ofertas';
   static const misPedidos = '/mis-pedidos';
   static const pedidoDetalle = '/pedido-detalle';
+  static const pedidoCourierDetalle = '/pedido-courier-detalle';
   static const subirComprobante = '/user/subir-comprobante';
   static const ratingsMisCalificaciones = '/ratings/mis-calificaciones';
   static const ratingsEntidad = '/ratings/entidad';
@@ -170,8 +170,6 @@ class Rutas {
 
     // Usuario
     inicio: (_) => const PantallaInicio(),
-    super_: (_) => const PantallaSuper(),
-    restauranteDetalle: (_) => const PantallaDetalleRestaurante(),
     categoriaDetalle: (_) => const PantallaCategoriaDetalle(),
     productoDetalle: (_) => const PantallaProductoDetalle(),
     promocionDetalle: (_) => const PantallaPromocionDetalle(),
@@ -194,6 +192,16 @@ class Rutas {
         entityId: id,
         entityNombre: nombre,
       );
+    },
+    pedidoCourierDetalle: (context) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      final pedidoId = args?['pedidoId'] as int?;
+      if (pedidoId == null) {
+        return const Scaffold(
+          body: Center(child: Text('Error: ID no provided')),
+        );
+      }
+      return PantallaDetalleCourier(pedidoId: pedidoId);
     },
 
     // Repartidor
@@ -323,7 +331,7 @@ class Rutas {
   static Future<void> irANotificaciones(BuildContext context) =>
       irA(context, notificaciones);
   static Future<void> irAOfertas(BuildContext context) => irA(context, ofertas);
-  static Future<void> irASuper(BuildContext context) => irA(context, super_);
+  // static Future<void> irASuper(BuildContext context) => irA(context, super_); // REMOVED
   static Future<void> irAMisPedidos(BuildContext context) =>
       irA(context, misPedidos);
 
@@ -336,7 +344,7 @@ class Rutas {
   ///
   /// Tab indices:
   /// - 0: Inicio
-  /// - 1: Super
+  /// - 1: Envíos (antes Super)
   /// - 2: Pedidos
   /// - 3: Perfil
   static Future<void> irAInicioConTab(BuildContext context, int tabIndex) =>
@@ -352,8 +360,8 @@ class Rutas {
   static Future<void> irATabInicio(BuildContext context) =>
       irAInicioConTab(context, 0);
 
-  /// Navega a la pestaña Super (tab 1)
-  static Future<void> irATabSuper(BuildContext context) =>
+  /// Navega a la pestaña Envíos (tab 1) - Antes Super
+  static Future<void> irATabEnvios(BuildContext context) =>
       irAInicioConTab(context, 1);
 
   /// Navega a la pestaña Pedidos (tab 2)
@@ -584,7 +592,7 @@ class Rutas {
       inicio,
       perfil,
       configuracion,
-      super_,
+      // super_, // REMOVED
       categoriaDetalle,
       productoDetalle,
       promocionDetalle,

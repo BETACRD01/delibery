@@ -16,33 +16,33 @@ class Pedido {
   final int? pagoId;
   final String? transferenciaComprobanteUrl;
   final String? instruccionesEntrega;
-  
+
   final ClienteInfo? cliente;
   final ProveedorInfo? proveedor;
   final List<ProveedorInfo> proveedores;
   final RepartidorInfo? repartidor;
-  
+
   final List<ItemPedido> items;
-  
+
   final String? direccionOrigen;
   final double? latitudOrigen;
   final double? longitudOrigen;
   final String direccionEntrega;
   final double? latitudDestino;
   final double? longitudDestino;
-  
+
   final String? imagenEvidencia;
-  
+
   final double comisionRepartidor;
   final double comisionProveedor;
   final double gananciaApp;
   final double tarifaServicio;
-  
+
   final bool aceptadoPorRepartidor;
   final bool confirmadoPorProveedor;
   final String? canceladoPor;
   final String? motivoCancelacion;
-  
+
   final String tiempoTranscurrido;
   final bool esPedidoActivo;
   final bool puedeSerCancelado;
@@ -115,10 +115,12 @@ class Pedido {
   });
 
   factory Pedido.fromJson(Map<String, dynamic> json) {
-    String asString(dynamic v, [String fallback = '']) => (v ?? fallback).toString();
+    String asString(dynamic v, [String fallback = '']) =>
+        (v ?? fallback).toString();
     double asDouble(dynamic v) => double.tryParse(v?.toString() ?? '0') ?? 0;
-    DateTime asDate(dynamic v) =>
-        v != null ? DateTime.tryParse(v.toString()) ?? DateTime.now() : DateTime.now();
+    DateTime asDate(dynamic v) => v != null
+        ? DateTime.tryParse(v.toString()) ?? DateTime.now()
+        : DateTime.now();
 
     final proveedorRaw = json['proveedor'];
     ProveedorInfo? proveedor;
@@ -152,33 +154,38 @@ class Pedido {
       total: asDouble(json['total']),
       metodoPago: asString(json['metodo_pago']),
       metodoPagoDisplay: asString(json['metodo_pago_display']),
-      pagoId: json['pago_id'] is int ? json['pago_id'] : int.tryParse(json['pago_id']?.toString() ?? ''),
-      transferenciaComprobanteUrl: json['transferencia_comprobante_url']?.toString(),
+      pagoId: json['pago_id'] is int
+          ? json['pago_id']
+          : int.tryParse(json['pago_id']?.toString() ?? ''),
+      transferenciaComprobanteUrl: json['transferencia_comprobante_url']
+          ?.toString(),
       instruccionesEntrega: json['instrucciones_entrega']?.toString(),
-      cliente: json['cliente'] != null 
-          ? ClienteInfo.fromJson(json['cliente']) 
+      cliente: json['cliente'] != null
+          ? ClienteInfo.fromJson(json['cliente'])
           : null,
       proveedor: proveedor,
       proveedores: proveedores,
-      repartidor: json['repartidor'] != null 
-          ? RepartidorInfo.fromJson(json['repartidor']) 
+      repartidor: json['repartidor'] != null
+          ? RepartidorInfo.fromJson(json['repartidor'])
           : null,
-      items: (json['items'] as List<dynamic>?)
-          ?.map((item) => ItemPedido.fromJson(item))
-          .toList() ?? [],
+      items:
+          (json['items'] as List<dynamic>?)
+              ?.map((item) => ItemPedido.fromJson(item))
+              .toList() ??
+          [],
       direccionOrigen: json['direccion_origen']?.toString(),
-      latitudOrigen: json['latitud_origen'] != null 
-          ? double.tryParse(json['latitud_origen'].toString()) 
+      latitudOrigen: json['latitud_origen'] != null
+          ? double.tryParse(json['latitud_origen'].toString())
           : null,
-      longitudOrigen: json['longitud_origen'] != null 
-          ? double.tryParse(json['longitud_origen'].toString()) 
+      longitudOrigen: json['longitud_origen'] != null
+          ? double.tryParse(json['longitud_origen'].toString())
           : null,
       direccionEntrega: asString(json['direccion_entrega']),
-      latitudDestino: json['latitud_destino'] != null 
-          ? double.tryParse(json['latitud_destino'].toString()) 
+      latitudDestino: json['latitud_destino'] != null
+          ? double.tryParse(json['latitud_destino'].toString())
           : null,
-      longitudDestino: json['longitud_destino'] != null 
-          ? double.tryParse(json['longitud_destino'].toString()) 
+      longitudDestino: json['longitud_destino'] != null
+          ? double.tryParse(json['longitud_destino'].toString())
           : null,
       imagenEvidencia: json['imagen_evidencia'],
       comisionRepartidor: asDouble(json['comision_repartidor']),
@@ -198,29 +205,31 @@ class Pedido {
       puedeCalificarRepartidor: json['puede_calificar_repartidor'] ?? false,
       calificacionRepartidor: json['calificacion_repartidor'] is Map
           ? double.tryParse(
-                  (json['calificacion_repartidor']['estrellas'] ?? '').toString())
+              (json['calificacion_repartidor']['estrellas'] ?? '').toString(),
+            )
           : double.tryParse((json['calificacion_repartidor'] ?? '').toString()),
       puedeCalificarProveedor: json['puede_calificar_proveedor'] ?? false,
       calificacionProveedor: json['calificacion_proveedor'] is Map
           ? double.tryParse(
-                  (json['calificacion_proveedor']['estrellas'] ?? '').toString())
+              (json['calificacion_proveedor']['estrellas'] ?? '').toString(),
+            )
           : double.tryParse((json['calificacion_proveedor'] ?? '').toString()),
       creadoEn: asDate(json['creado_en']),
       actualizadoEn: asDate(json['actualizado_en']),
-      fechaConfirmado: json['fecha_confirmado'] != null 
-          ? DateTime.tryParse(json['fecha_confirmado'].toString()) 
+      fechaConfirmado: json['fecha_confirmado'] != null
+          ? DateTime.tryParse(json['fecha_confirmado'].toString())
           : null,
-      fechaEnPreparacion: json['fecha_en_preparacion'] != null 
-          ? DateTime.tryParse(json['fecha_en_preparacion'].toString()) 
+      fechaEnPreparacion: json['fecha_en_preparacion'] != null
+          ? DateTime.tryParse(json['fecha_en_preparacion'].toString())
           : null,
-      fechaEnRuta: json['fecha_en_ruta'] != null 
-          ? DateTime.tryParse(json['fecha_en_ruta'].toString()) 
+      fechaEnRuta: json['fecha_en_ruta'] != null
+          ? DateTime.tryParse(json['fecha_en_ruta'].toString())
           : null,
-      fechaEntregado: json['fecha_entregado'] != null 
-          ? DateTime.tryParse(json['fecha_entregado'].toString()) 
+      fechaEntregado: json['fecha_entregado'] != null
+          ? DateTime.tryParse(json['fecha_entregado'].toString())
           : null,
-      fechaCancelado: json['fecha_cancelado'] != null 
-          ? DateTime.tryParse(json['fecha_cancelado'].toString()) 
+      fechaCancelado: json['fecha_cancelado'] != null
+          ? DateTime.tryParse(json['fecha_cancelado'].toString())
           : null,
     );
   }
@@ -353,10 +362,9 @@ class RepartidorInfo {
 
     Map<String, int>? mapaDesglose;
     if (json['desglose_calificaciones'] is Map) {
-      mapaDesglose = Map<String, dynamic>.from(json['desglose_calificaciones'])
-          .map(
-            (key, value) => MapEntry(key.toString(), parseInt(value)),
-          );
+      mapaDesglose = Map<String, dynamic>.from(
+        json['desglose_calificaciones'],
+      ).map((key, value) => MapEntry(key.toString(), parseInt(value)));
     }
 
     return RepartidorInfo(
@@ -488,6 +496,10 @@ class PedidoListItem {
   final String? primerProductoImagen;
   final DateTime creadoEn;
   final DateTime actualizadoEn;
+  // Campos opcionales para recargo nocturno
+  final double? recargoNocturno;
+  final bool recargoNocturnoAplicado;
+  final double? costoEnvio; // Costo base del envío (sin recargo)
 
   PedidoListItem({
     required this.id,
@@ -509,9 +521,61 @@ class PedidoListItem {
     this.primerProductoImagen,
     required this.creadoEn,
     required this.actualizadoEn,
+    this.recargoNocturno,
+    this.recargoNocturnoAplicado = false,
+    this.costoEnvio,
   });
 
+  /// Total calculado incluyendo recargo nocturno si aplica
+  /// Replica la lógica de PantallaDetalleCourier: Base + Recargo
+  /// Total calculado incluyendo recargo nocturno si aplica
+  double get totalConRecargo {
+    try {
+      // Lógica específica para ENCARGOS (Courier/Directo)
+      // En estos casos, el total base a veces es solo el costo de envío base y necesitamos sumar el recargo explícitamente.
+      final esEncargo =
+          tipo.toLowerCase() == 'directo' || tipo.toLowerCase() == 'courier';
+
+      if (recargoNocturno != null && recargoNocturno! > 0.01) {
+        if (esEncargo) {
+          // Encargo: La base es el costo de envío (si está disponible) o el total
+          final base = costoEnvio ?? total;
+          return base + recargoNocturno!;
+        } else {
+          // Pedido Normal: La base es el TOTAL (Productos + Envío Base).
+          // El recargo nocturno se suma a este total.
+          return total + recargoNocturno!;
+        }
+      }
+
+      return total;
+    } catch (_) {
+      // Si ocurre un error de memoria (hot reload), retornamos total simple
+      return total;
+    }
+  }
+
   factory PedidoListItem.fromJson(Map<String, dynamic> json) {
+    // Parsear datos_envio si existe
+    double? recargoNocturno;
+    double? costoEnvio;
+    bool recargoNocturnoAplicado = false;
+
+    if (json['datos_envio'] is Map<String, dynamic>) {
+      final datosEnvio = json['datos_envio'] as Map<String, dynamic>;
+      recargoNocturnoAplicado = datosEnvio['recargo_nocturno_aplicado'] == true;
+
+      if (datosEnvio['recargo_nocturno'] != null) {
+        recargoNocturno = double.tryParse(
+          datosEnvio['recargo_nocturno'].toString(),
+        );
+      }
+
+      if (datosEnvio['costo_envio'] != null) {
+        costoEnvio = double.tryParse(datosEnvio['costo_envio'].toString());
+      }
+    }
+
     return PedidoListItem(
       id: json['id'],
       numeroPedido: (json['numero_pedido'] ?? '').toString(),
@@ -528,11 +592,19 @@ class PedidoListItem {
       metodoPago: (json['metodo_pago'] ?? '').toString(),
       direccionEntrega: (json['direccion_entrega'] ?? '').toString(),
       tiempoTranscurrido: (json['tiempo_transcurrido'] ?? '').toString(),
-      cantidadItems: int.tryParse(json['cantidad_items']?.toString() ?? '') ?? 0,
+      cantidadItems:
+          int.tryParse(json['cantidad_items']?.toString() ?? '') ?? 0,
       primerProductoImagen: json['primer_producto_imagen']?.toString(),
       creadoEn: DateTime.parse(json['creado_en']),
       actualizadoEn: DateTime.parse(json['actualizado_en']),
+      recargoNocturno: recargoNocturno,
+      recargoNocturnoAplicado: recargoNocturnoAplicado,
+      costoEnvio: costoEnvio,
     );
+  }
+  @override
+  String toString() {
+    return 'PedidoListItem(id: $id, total: $total, recargo: $recargoNocturno, costoEnvio: $costoEnvio)';
   }
 }
 
@@ -622,7 +694,8 @@ class DatosEnvio {
   });
 
   factory DatosEnvio.fromJson(Map<String, dynamic> json) {
-    double? asDouble(dynamic v) => v == null ? null : double.tryParse(v.toString());
+    double? asDouble(dynamic v) =>
+        v == null ? null : double.tryParse(v.toString());
     int? asInt(dynamic v) => v == null ? null : int.tryParse(v.toString());
     return DatosEnvio(
       distanciaKm: asDouble(json['distancia_km']),

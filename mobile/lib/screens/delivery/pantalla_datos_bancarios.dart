@@ -105,6 +105,44 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
     return mensajeError;
   }
 
+  /// Valida una cédula ecuatoriana con el algoritmo del módulo 10
+  /// Retorna null si es válida, o un mensaje de error si es inválida
+  String? _validarCedulaEcuatoriana(String cedula) {
+    if (cedula.length != 10) return 'La cédula debe tener 10 dígitos';
+
+    // El tercer dígito no puede ser mayor a 6 para cédulas de persona natural
+    final tercerDigito = int.parse(cedula[2]);
+    if (tercerDigito > 6) {
+      return 'Cédula inválida (tercer dígito incorrecto)';
+    }
+
+    // Los primeros dos dígitos corresponden a la provincia (01-24)
+    final provincia = int.parse(cedula.substring(0, 2));
+    if (provincia < 1 || provincia > 24) {
+      return 'Cédula inválida (código de provincia incorrecto)';
+    }
+
+    // Algoritmo de validación módulo 10
+    final coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+    int suma = 0;
+
+    for (int i = 0; i < 9; i++) {
+      int valor = int.parse(cedula[i]) * coeficientes[i];
+      if (valor > 9) valor -= 9;
+      suma += valor;
+    }
+
+    final digitoVerificador = int.parse(cedula[9]);
+    final modulo = suma % 10;
+    final digitoCalculado = modulo == 0 ? 0 : 10 - modulo;
+
+    if (digitoVerificador != digitoCalculado) {
+      return 'Cédula inválida (dígito verificador incorrecto)';
+    }
+
+    return null; // Cédula válida
+  }
+
   Future<void> _guardarDatos() async {
     if (!_formKey.currentState!.validate()) return;
     if (_tipoCuentaSeleccionada == null) {
@@ -363,15 +401,22 @@ class _PantallaDatosBancariosState extends State<PantallaDatosBancarios> {
                   CupertinoIcons.person_badge_plus_fill,
                   color: CupertinoColors.systemGrey,
                 ),
-                placeholder: 'Cédula / Documento',
+                placeholder: 'Cédula / Documento (10 dígitos)',
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(10),
                 ],
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Requerido';
-                  if (value.length != 10) return 'Debe tener 10 dígitos';
+                  if (value == null || value.isEmpty) {
+                    return 'La cédula es obligatoria';
+                  }
+                  if (value.length != 10) {
+                    return 'La cédula debe tener 10 dígitos';
+                  }
+                  // Validar algoritmo de cédula ecuatoriana (módulo 10)
+                  final error = _validarCedulaEcuatoriana(value);
+                  if (error != null) return error;
                   return null;
                 },
               ),
