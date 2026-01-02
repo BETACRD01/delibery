@@ -2,9 +2,9 @@
 
 import 'dart:io';
 import 'dart:developer' as developer;
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../config/network/api_config.dart';
-import '../helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 class UsuariosApi {
   // ---------------------------------------------------------------------------

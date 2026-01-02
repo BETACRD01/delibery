@@ -9,7 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../apis/admin/rifas_admin_api.dart';
 import '../../../config/network/api_config.dart';
 import '../../../providers/core/theme_provider.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import '../dashboard/constants/dashboard_colors.dart';
 
 class PantallaRifaDetalle extends StatefulWidget {

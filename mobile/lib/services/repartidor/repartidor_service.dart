@@ -2,8 +2,8 @@
 
 import 'dart:io';
 import 'dart:developer' as developer;
-import '../../apis/subapis/http_client.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/http_client.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../config/network/api_config.dart';
 import '../../models/entities/repartidor.dart';
 import '../../models/orders/pedido_repartidor.dart';

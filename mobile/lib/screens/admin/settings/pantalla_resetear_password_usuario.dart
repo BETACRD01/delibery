@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
 import '../../../../apis/admin/usuarios_admin_api.dart';
-import '../../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../../config/network/api_config.dart';
 import '../dashboard/constants/dashboard_colors.dart';
 

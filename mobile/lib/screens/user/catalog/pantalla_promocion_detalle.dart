@@ -10,12 +10,11 @@ import 'package:provider/provider.dart';
 import '../../../../../config/routing/rutas.dart';
 import '../../../../../providers/cart/proveedor_carrito.dart';
 import '../../../../../services/productos/productos_service.dart';
-import '../../../../../theme/app_colors_secondary.dart';
-
+import '../../../../../theme/primary_colors.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/products/producto_model.dart';
 import '../../../models/products/promocion_model.dart';
-import '../../../services/core/toast_service.dart';
+import '../../../services/core/ui/toast_service.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 
 /// Pantalla de detalle de una promoción
@@ -484,7 +483,7 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                   Icon(
                     CupertinoIcons.sparkles,
                     size: 24,
-                    color: AppColorsSecondary.main,
+                    color: PrimaryColors.main,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -715,13 +714,11 @@ class _PantallaPromocionDetalleState extends State<PantallaPromocionDetalle> {
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: promocion.esVigente
-                          ? AppColorsSecondary.main
+                          ? PrimaryColors.main
                           : Colors.grey,
                       foregroundColor: Colors.white,
                       elevation: promocion.esVigente ? 4 : 0,
-                      shadowColor: AppColorsSecondary.main.withValues(
-                        alpha: 0.4,
-                      ),
+                      shadowColor: PrimaryColors.main.withValues(alpha: 0.4),
                       padding: const EdgeInsets.symmetric(
                         vertical: 16,
                         horizontal: 20,
@@ -1013,7 +1010,7 @@ class _CarritoCircularButton extends StatelessWidget {
               children: [
                 Icon(
                   Icons.shopping_cart_rounded,
-                  color: AppColorsSecondary.main,
+                  color: PrimaryColors.main,
                   size: 28,
                 ),
                 if (cantidad > 0)

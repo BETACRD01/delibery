@@ -12,7 +12,7 @@ import '../../../config/network/api_config.dart';
 import '../../../config/routing/rutas.dart';
 import '../../../controllers/supplier/supplier_controller.dart';
 import '../../../services/auth/session_cleanup.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import '../../../widgets/ratings/rating_summary_card.dart';
 import '../../../widgets/role/role_selector_modal.dart';
 import 'screens/pantalla_ayuda_proveedor.dart';

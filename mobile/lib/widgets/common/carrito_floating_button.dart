@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/routing/rutas.dart';
 import '../../providers/cart/proveedor_carrito.dart';
-import '../../theme/app_colors_primary.dart';
+import '../../theme/primary_colors.dart';
 
 /// FAB del Carrito estilo iOS
 ///

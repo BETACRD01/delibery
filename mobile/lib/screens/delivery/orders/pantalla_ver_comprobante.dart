@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../services/pago/pago_service.dart';
 import '../../../models/payments/pago_model.dart';
 

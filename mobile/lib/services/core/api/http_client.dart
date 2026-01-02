@@ -1,4 +1,4 @@
-// lib/apis/subapis/http_client.dart
+// lib/services/core/api/http_client.dart
 
 import 'dart:async';
 import 'dart:convert';
@@ -9,8 +9,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
-import '../../config/network/api_config.dart';
-import '../helpers/api_exception.dart';
+import 'package:mobile/config/network/api_config.dart';
+import 'api_exception.dart';
 
 // ============================================================================
 // API CLIENT (OPTIMIZADO PARA NGROK/PRODUCCIÓN)

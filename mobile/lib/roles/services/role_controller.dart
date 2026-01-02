@@ -1,7 +1,7 @@
 // lib/role_switch/services/role_controller.dart
 
 import 'package:flutter/foundation.dart';
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../services/roles/roles_service.dart';
 import '../models/roles.dart';
 import 'role_storage.dart';

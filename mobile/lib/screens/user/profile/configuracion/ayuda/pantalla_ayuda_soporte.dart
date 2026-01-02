@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:ui';
 
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 
 class PantallaAyudaSoporte extends StatefulWidget {
   const PantallaAyudaSoporte({super.key});

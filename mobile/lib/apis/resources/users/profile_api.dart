@@ -1,9 +1,9 @@
 // lib/apis/resources/users/profile_api.dart
 
-import '../../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../client/base_api.dart';
-import '../../dtos/user/responses/profile_response.dart';
-import '../../dtos/user/requests/update_profile_request.dart';
+import '../../../models/dto/user/responses/profile_response.dart';
+import '../../../models/dto/user/requests/update_profile_request.dart';
 import '../../../config/network/api_config.dart';
 
 /// API para gestionar el perfil de usuario.

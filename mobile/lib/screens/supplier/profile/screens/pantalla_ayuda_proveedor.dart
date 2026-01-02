@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 
 /// Pantalla de ayuda y soporte del proveedor - Estilo iOS nativo
 class PantallaAyudaProveedor extends StatelessWidget {

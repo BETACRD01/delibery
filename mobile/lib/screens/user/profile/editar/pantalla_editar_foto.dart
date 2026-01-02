@@ -6,7 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../theme/jp_theme.dart';
 import '../../../../services/usuarios/usuarios_service.dart';
-import '../../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../../widgets/util/image_orientation_fixer.dart';
 
 /// 📸 Pantalla para cambiar foto de perfil

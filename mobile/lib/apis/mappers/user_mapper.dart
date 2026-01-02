@@ -3,14 +3,14 @@
 import '../../models/users/address.dart';
 import '../../models/users/payment_method.dart';
 import '../../models/users/profile.dart';
-import '../dtos/user/requests/create_address_request.dart';
-import '../dtos/user/requests/create_payment_method_request.dart';
-import '../dtos/user/requests/update_address_request.dart';
-import '../dtos/user/requests/update_payment_method_request.dart';
-import '../dtos/user/requests/update_profile_request.dart';
-import '../dtos/user/responses/address_response.dart';
-import '../dtos/user/responses/payment_method_response.dart';
-import '../dtos/user/responses/profile_response.dart';
+import '../../models/dto/user/requests/create_address_request.dart';
+import '../../models/dto/user/requests/create_payment_method_request.dart';
+import '../../models/dto/user/requests/update_address_request.dart';
+import '../../models/dto/user/requests/update_payment_method_request.dart';
+import '../../models/dto/user/requests/update_profile_request.dart';
+import '../../models/dto/user/responses/address_response.dart';
+import '../../models/dto/user/responses/payment_method_response.dart';
+import '../../models/dto/user/responses/profile_response.dart';
 
 /// Mapper para convertir entre DTOs y Models del dominio de usuarios.
 ///

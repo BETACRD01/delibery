@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../../config/routing/rutas.dart';
 import '../../../controllers/admin/dashboard_controller.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import '../../../providers/core/theme_provider.dart';
 import 'tabs/actividad_tab.dart';
 import 'tabs/resumen_tab.dart';

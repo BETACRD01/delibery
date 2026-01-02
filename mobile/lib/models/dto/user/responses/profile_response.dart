@@ -1,4 +1,4 @@
-// lib/apis/dtos/user/responses/profile_response.dart
+// lib/models/dto/user/responses/profile_response.dart
 
 import 'package:json_annotation/json_annotation.dart';
 

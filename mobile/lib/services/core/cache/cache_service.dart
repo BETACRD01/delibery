@@ -1,4 +1,4 @@
-// lib/services/core/cache_service.dart
+// lib/services/core/cache/cache_service.dart
 // Servicio de caché en memoria para optimizar carga de datos
 
 import 'dart:async';

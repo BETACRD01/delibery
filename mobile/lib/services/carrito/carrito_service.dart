@@ -1,8 +1,8 @@
 // lib/services/carrito/carrito_service.dart
 
 import '../../config/network/api_config.dart';
-import '../../apis/subapis/http_client.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/http_client.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 /// Servicio para gestionar el carrito de compras
 class CarritoService {

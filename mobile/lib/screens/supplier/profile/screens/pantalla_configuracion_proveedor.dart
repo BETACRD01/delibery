@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../controllers/supplier/supplier_controller.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 
 /// Pantalla de configuración del proveedor - Estilo iOS nativo
 class PantallaConfiguracionProveedor extends StatefulWidget {

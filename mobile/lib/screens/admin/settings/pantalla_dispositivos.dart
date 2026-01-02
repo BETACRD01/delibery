@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../apis/auth/dispositivos_api.dart';
 import '../../../../providers/core/theme_provider.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 
 class PantallaDispositivosConectados extends StatefulWidget {
   const PantallaDispositivosConectados({super.key});

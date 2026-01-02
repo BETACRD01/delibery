@@ -5,7 +5,7 @@ import 'dart:developer' as developer;
 
 import 'package:geolocator/geolocator.dart';
 
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../repartidor/repartidor_service.dart';
 
 /// Servicio de Ubicación para Repartidores

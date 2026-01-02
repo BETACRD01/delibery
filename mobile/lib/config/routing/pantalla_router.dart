@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/roles/roles_service.dart';
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../screens/user/home/pantalla_inicio.dart';
 import '../../screens/admin/dashboard/pantalla_dashboard.dart';
 

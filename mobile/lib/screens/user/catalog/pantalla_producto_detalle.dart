@@ -8,12 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../../config/routing/rutas.dart';
 import '../../../../../providers/cart/proveedor_carrito.dart';
-import '../../../../../theme/app_colors_primary.dart';
-import '../../../../../theme/app_colors_support.dart';
+import '../../../../../theme/primary_colors.dart';
+import '../../../../../theme/secondary_colors.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/products/producto_model.dart';
 import '../../../services/productos/productos_service.dart';
-import '../../../services/core/toast_service.dart';
+import '../../../services/core/ui/toast_service.dart';
 import '../../../widgets/ratings/star_rating_display.dart';
 import '../../../widgets/util/add_to_cart_debounce.dart';
 

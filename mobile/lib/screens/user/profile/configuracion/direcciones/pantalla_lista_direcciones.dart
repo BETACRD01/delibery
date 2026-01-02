@@ -4,9 +4,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../models/auth/usuario.dart';
-import '../../../../../services/core/toast_service.dart';
+import '../../../../../services/core/ui/toast_service.dart';
 import '../../../../../services/usuarios/usuarios_service.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../../../../../theme/jp_theme.dart';
 import 'pantalla_mis_direcciones.dart';
 

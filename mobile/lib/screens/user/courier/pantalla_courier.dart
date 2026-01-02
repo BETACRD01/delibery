@@ -7,8 +7,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../../../services/envios/envios_service.dart';
-import '../../../../services/core/toast_service.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../services/core/ui/toast_service.dart';
+import '../../../../theme/primary_colors.dart';
 import '../../../../widgets/maps/map_location_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
@@ -57,8 +57,7 @@ class _PantallaCourierState extends State<PantallaCourier> {
   ];
 
   // API Key para Directions (usa la misma de Google Maps)
-  static const String _googleApiKey =
-      'AIzaSyBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'; // Tu API key
+  static const String _googleApiKey = 'AIzaSyAVomIe-K4kpGMrQTc-bZaNcBvJtkK-KBA';
 
   @override
   void initState() {

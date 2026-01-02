@@ -1,4 +1,4 @@
-// lib/apis/dtos/user/requests/update_profile_request.dart
+// lib/models/dto/user/requests/update_profile_request.dart
 
 import 'package:json_annotation/json_annotation.dart';
 

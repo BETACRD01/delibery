@@ -1,14 +1,12 @@
 // lib/screens/user/pantalla_inicio.dart
 
 import 'dart:developer' as developer;
-
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-
 import '../../../config/routing/rutas.dart';
 import '../../../providers/orders/proveedor_pedido.dart';
-import '../../../services/core/toast_service.dart';
+import '../../../services/core/ui/toast_service.dart';
 import '../../../theme/jp_theme.dart';
 import '../courier/pantalla_courier.dart';
 import 'pantalla_home.dart';
@@ -28,12 +26,10 @@ class _PantallaInicioState extends State<PantallaInicio> {
   /// Índice de la pantalla actualmente seleccionada
   late int _indiceActual;
 
-  /// Lista de pantallas que se mantienen en memoria
+  /// Lista de zantallas que se mantienen en memoria
   final List<Widget> _pantallas = const [
-    // ✅ CORREGIDO: Usamos PantallaHome (el contenido) en lugar de PantallaInicio (el contenedor)
     PantallaHome(),
-
-    PantallaCourier(), // <-- REEMPLAZO: Envios en lugar de Super
+    PantallaCourier(),
     PantallaMisPedidos(),
     PantallaPerfil(),
   ];

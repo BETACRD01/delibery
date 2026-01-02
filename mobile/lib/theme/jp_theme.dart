@@ -3,10 +3,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
-import 'app_colors_primary.dart';
-import 'app_colors_secondary.dart';
-import 'app_colors_support.dart';
+import 'primary_colors.dart';
+import 'secondary_colors.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 🎨 COLORES JP EXPRESS
@@ -14,25 +12,26 @@ import 'app_colors_support.dart';
 
 class JPColors {
   // ✅ MARCA PRINCIPAL
-  static const primary = AppColorsPrimary.main; // Azul Principal
-  static const primaryLight = AppColorsPrimary.light; // Azul claro
-  static const secondary = AppColorsSecondary.main; // Naranja Acción
+  static const primary = PrimaryColors.brandPrimary; // Azul Principal
+  static const primaryLight = PrimaryColors.brandPrimaryLight; // Azul claro
+  static const secondary = PrimaryColors.brandSecondary; // Naranja Corporativo
+  static const accent = PrimaryColors.brandAccent; // Naranja Acción
 
   // FONDOS NEUTROS
-  static const background = AppColorsSupport.background; // Gris muy claro
-  static const surface = AppColorsSupport.surface; // Blanco puro
-  static const inputBg = AppColorsSupport.inputBg; // Fondo inputs
+  static const background = PrimaryColors.background; // Gris muy claro
+  static const surface = PrimaryColors.surface; // Blanco puro
+  static const inputBg = PrimaryColors.inputBackground; // Fondo inputs
 
   // TEXTOS
-  static const textPrimary = AppColorsSupport.textPrimary;
-  static const textSecondary = AppColorsSupport.textSecondary;
-  static const textHint = AppColorsSupport.textHint;
+  static const textPrimary = SecondaryColors.textPrimary;
+  static const textSecondary = SecondaryColors.textSecondary;
+  static const textHint = SecondaryColors.textHint;
 
   // ESTADOS
-  static const success = AppColorsSupport.success;
-  static const warning = AppColorsSupport.warning;
-  static const error = AppColorsSupport.error;
-  static const info = AppColorsSupport.info;
+  static const success = SecondaryColors.success;
+  static const warning = SecondaryColors.warning;
+  static const error = SecondaryColors.error;
+  static const info = SecondaryColors.info;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -154,6 +153,81 @@ class JPTheme {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: JPColors.primary),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: JPColors.error),
+        ),
+      ),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: JPColors.primary,
+        brightness: Brightness.dark,
+        primary: JPColors.primary,
+        secondary: JPColors.secondary,
+        surface: const Color(0xFF1C1C1E),
+        error: JPColors.error,
+      ),
+
+      scaffoldBackgroundColor: const Color(0xFF000000),
+
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1C1C1E),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: Colors.white),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+        scrolledUnderElevation: 0,
+      ),
+
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1C1C1E),
+        elevation: 0,
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF38383A), width: 1),
+        ),
+      ),
+
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: JPColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          textStyle: JPTextStyles.button,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF2C2C2E),
+        contentPadding: const EdgeInsets.all(16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF38383A)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -504,3 +578,13 @@ class JPCupertinoColors {
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ALIASES (compatibilidad con código existente)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// @deprecated Use JPTheme instead
+typedef AppTheme = JPTheme;
+
+/// @deprecated Use JPConstants instead
+typedef AppConstants = JPConstants;

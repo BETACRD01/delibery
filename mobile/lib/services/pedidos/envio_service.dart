@@ -1,8 +1,8 @@
 // lib/services/pedidos/envio_service.dart
 
 import '../../config/network/api_config.dart';
-import '../../apis/subapis/http_client.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/http_client.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 class EnvioService {
   final _client = ApiClient();

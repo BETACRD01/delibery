@@ -2,7 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import '../../../theme/jp_theme.dart';
 import 'registro_usuario_form.dart';
 

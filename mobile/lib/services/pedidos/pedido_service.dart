@@ -4,7 +4,7 @@ import 'dart:io';
 
 import '../../apis/pedidos/pedidos_api.dart';
 import '../../models/orders/pedido_model.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 /// Servicio para gestión de pedidos
 /// Delegación: Usa PedidosApi para llamadas HTTP

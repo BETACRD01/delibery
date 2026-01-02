@@ -4,8 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import '../../apis/dtos/user/requests/update_profile_request.dart';
-import '../../apis/helpers/api_exception.dart';
+import '../../models/dto/user/requests/update_profile_request.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../apis/resources/users/profile_api.dart';
 import '../../models/products/producto_model.dart';
 import '../../models/products/promocion_model.dart';

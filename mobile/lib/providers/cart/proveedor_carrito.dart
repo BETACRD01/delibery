@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../models/products/producto_model.dart';
 import '../../models/products/promocion_model.dart';
 import '../../services/carrito/carrito_service.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 /// Item del carrito
 class ItemCarrito {

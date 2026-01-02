@@ -5,7 +5,7 @@ import '../../../providers/orders/proveedor_pedido.dart';
 import '../../../widgets/cards/jp_order_card.dart';
 import '../../../widgets/common/jp_empty_state.dart';
 import '../../../widgets/common/jp_cupertino_button.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../../../theme/jp_theme.dart';
 import 'pedido_detalle_screen.dart';
 import '../../../widgets/cards/jp_courier_card.dart';

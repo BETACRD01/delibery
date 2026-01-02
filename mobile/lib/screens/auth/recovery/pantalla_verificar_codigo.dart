@@ -6,9 +6,9 @@ import 'package:flutter/services.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../config/routing/rutas.dart';
 import '../../../config/network/api_config.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../theme/jp_theme.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 
 /// Pantalla para verificar el código de 6 dígitos
 /// ✅ Maneja rate limiting y bloqueos

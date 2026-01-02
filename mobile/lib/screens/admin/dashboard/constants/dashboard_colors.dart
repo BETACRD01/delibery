@@ -1,12 +1,27 @@
-import 'package:flutter/material.dart';
+// lib/screens/admin/dashboard/constants/dashboard_colors.dart
+// ══════════════════════════════════════════════════════════════════════════════
+// COLORES DEL DASHBOARD - Aliases hacia el sistema centralizado
+// ══════════════════════════════════════════════════════════════════════════════
 
+import '../../../../theme/primary_colors.dart';
+import '../../../../theme/secondary_colors.dart';
+
+/// Colores específicos del Dashboard Admin
+/// Todos los colores son aliases hacia el sistema centralizado en theme/
 class DashboardColors {
-  static const Color morado = Color.fromARGB(255, 10, 204, 222);
-  static const Color moradoOscuro = Color.fromARGB(255, 21, 156, 219);
-  static const Color verde = Color(0xFF4CAF50);
-  static const Color azul = Color(0xFF2196F3);
-  static const Color naranja = Color.fromARGB(166, 255, 153, 0);
-  static const Color rojo = Color(0xFFF44336);
-  static const Color gris = Color(0xFF757575);
-  static const Color grisClaro = Color(0xFFE0E0E0);
+  DashboardColors._();
+
+  // MARCA
+  static const morado = PrimaryColors.brandPrimary;
+  static const moradoOscuro = PrimaryColors.brandPrimary;
+
+  // ESTADOS
+  static const verde = SecondaryColors.success;
+  static const azul = SecondaryColors.info;
+  static const naranja = SecondaryColors.warning;
+  static const rojo = SecondaryColors.error;
+
+  // NEUTRALES
+  static const gris = SecondaryColors.grayMedium;
+  static const grisClaro = SecondaryColors.grayLight;
 }

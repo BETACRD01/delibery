@@ -2,8 +2,7 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:mobile/theme/app_colors_primary.dart';
-import 'package:mobile/theme/app_colors_secondary.dart';
+import 'package:mobile/theme/primary_colors.dart';
 // unused import
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -237,7 +236,7 @@ class _JPProductCardState extends State<JPProductCard>
         text = 'NUEVO';
         break;
       case 'popular':
-        bgColor = AppColorsSecondary.main; // Orange
+        bgColor = PrimaryColors.main; // Orange
         textColor = CupertinoColors.white;
         text = 'POPULAR';
         break;

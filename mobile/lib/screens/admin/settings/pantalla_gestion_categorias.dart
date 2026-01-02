@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../../../apis/productos/categorias_api.dart';
 import '../../../providers/core/theme_provider.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 
 class PantallaGestionCategorias extends StatefulWidget {
   const PantallaGestionCategorias({super.key});

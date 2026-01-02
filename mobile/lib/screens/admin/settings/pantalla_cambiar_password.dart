@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import '../../../../config/routing/rutas.dart';
 import '../../../../services/auth/auth_service.dart';
 import '../dashboard/constants/dashboard_colors.dart';
-import '../../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 class PantallaCambiarPasswordAdmin extends StatefulWidget {
   const PantallaCambiarPasswordAdmin({super.key});

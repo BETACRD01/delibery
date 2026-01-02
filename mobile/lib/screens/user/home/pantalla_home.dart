@@ -3,7 +3,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile/theme/app_colors_primary.dart';
+import 'package:mobile/theme/primary_colors.dart';
 
 import 'package:provider/provider.dart';
 
@@ -16,7 +16,7 @@ import '../../../providers/core/notificaciones_provider.dart';
 import '../../../providers/cart/proveedor_carrito.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../services/auth/session_cleanup.dart';
-import '../../../services/core/toast_service.dart';
+import '../../../services/core/ui/toast_service.dart';
 import '../../../widgets/cards/jp_product_card.dart';
 import '../../../widgets/common/carrito_floating_button.dart';
 import '../../../widgets/common/jp_shimmer.dart';

@@ -16,11 +16,11 @@ import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
-import '../../../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../../../models/auth/usuario.dart';
-import '../../../../../services/core/toast_service.dart';
+import '../../../../../services/core/ui/toast_service.dart';
 import '../../../../../services/usuarios/usuarios_service.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../../../widgets/maps/map_location_picker.dart';
 

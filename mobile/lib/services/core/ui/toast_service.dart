@@ -1,7 +1,7 @@
-// lib/services/core/toast_service.dart
+// lib/services/core/ui/toast_service.dart
 
 import 'package:flutter/cupertino.dart';
-import '../../widgets/common/app_toast.dart';
+import 'package:mobile/widgets/common/app_toast.dart';
 
 enum ToastType { success, error, info, warning }
 

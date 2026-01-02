@@ -2,7 +2,7 @@
 
 import 'dart:developer' as developer;
 import 'dart:io';
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../config/network/api_config.dart';
 
 /// API para autenticación (login, registro, logout)

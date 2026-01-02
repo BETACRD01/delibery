@@ -3,7 +3,7 @@
 import 'dart:developer' as developer;
 import '../../../apis/user/rifas_api.dart';
 import '../../../apis/user/rifas_usuarios_api.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 /// Servicio dedicado para gestión de rifas/sorteos del usuario
 class RaffleService {

@@ -7,8 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../models/products/categoria_model.dart';
 import '../../../models/products/producto_model.dart';
 import '../../../services/productos/productos_service.dart';
-import '../../../theme/app_colors_primary.dart';
-import '../../../theme/app_colors_support.dart';
+import '../../../theme/primary_colors.dart';
+import '../../../theme/secondary_colors.dart';
 
 class ProductEditSheet extends StatefulWidget {
   final ProductoModel? producto;

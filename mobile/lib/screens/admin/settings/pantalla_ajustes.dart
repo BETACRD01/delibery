@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/core/theme_provider.dart';
 import '../../../../providers/core/preferencias_provider.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 import '../../../config/routing/rutas.dart';
 
 class PantallaAjustesAdmin extends StatefulWidget {

@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/core/theme_provider.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 
 class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TabController tabController;

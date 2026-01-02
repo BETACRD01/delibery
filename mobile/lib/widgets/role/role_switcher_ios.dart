@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../theme/app_colors_primary.dart';
+import '../../theme/primary_colors.dart';
 
 class RoleSwitcherIOS extends StatefulWidget {
   final Map<String, String> opciones;

@@ -6,8 +6,8 @@ import 'package:flutter/material.dart'
     show Material, MaterialType, Curves, KeyedSubtree, Scaffold;
 import '../../../../../config/routing/rutas.dart';
 import '../../../../../services/productos/productos_service.dart';
-import '../../../../../theme/app_colors_primary.dart';
-import '../../../../../theme/app_colors_support.dart';
+import '../../../../../theme/primary_colors.dart';
+import '../../../../../theme/secondary_colors.dart';
 import '../../../../../theme/jp_theme.dart';
 import '../../../models/products/categoria_model.dart';
 import '../../../widgets/common/carrito_floating_button.dart';

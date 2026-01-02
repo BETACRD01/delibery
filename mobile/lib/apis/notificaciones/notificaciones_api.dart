@@ -1,5 +1,5 @@
 import '../../config/network/api_config.dart';
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 
 class NotificacionesApi {
   static final NotificacionesApi _instance = NotificacionesApi._internal();

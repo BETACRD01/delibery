@@ -4,7 +4,7 @@ import 'dart:developer' as developer;
 
 import 'package:google_sign_in/google_sign_in.dart';
 
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import 'auth_service.dart';
 
 /// Servicio para autenticación con Google OAuth 2.0

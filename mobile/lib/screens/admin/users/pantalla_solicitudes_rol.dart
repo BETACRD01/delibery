@@ -5,7 +5,7 @@ import '../../../apis/admin/solicitudes_api.dart';
 import '../../../models/auth/solicitud_cambio_rol.dart';
 import '../dashboard/widgets/detalle_solicitud_modal.dart';
 import '../../../../providers/core/theme_provider.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 import '../dashboard/constants/dashboard_colors.dart';
 
 class PantallaSolicitudesRol extends StatefulWidget {

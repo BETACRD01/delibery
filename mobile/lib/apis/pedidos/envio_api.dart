@@ -1,7 +1,7 @@
 // lib/apis/pedidos/envio_api.dart
 
 import '../../config/network/api_config.dart';
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 
 /// API para cotización y creación de envíos
 class EnvioApi {

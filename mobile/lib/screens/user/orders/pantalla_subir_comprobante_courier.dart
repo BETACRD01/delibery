@@ -3,11 +3,11 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../../../theme/jp_theme.dart';
 import '../../../services/pago/pago_service.dart';
 import '../../../models/payments/datos_bancarios.dart';
-import '../../../services/core/toast_service.dart';
+import '../../../services/core/ui/toast_service.dart';
 
 /// Pantalla para subir el comprobante de transferencia - Específica para Encargos (Courier)
 class PantallaSubirComprobanteCourier extends StatefulWidget {

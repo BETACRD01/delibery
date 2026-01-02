@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Divider;
 import '../../../models/auth/usuario.dart';
 import '../../../providers/cart/proveedor_carrito.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../../../theme/jp_theme.dart';
 import 'carrito_direccion_card.dart';
 import 'carrito_resumen_row.dart';

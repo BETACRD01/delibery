@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../apis/admin/usuarios_admin_api.dart';
 import '../../../../providers/core/theme_provider.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 
 class PantallaAdminUsuarios extends StatefulWidget {
   const PantallaAdminUsuarios({super.key});

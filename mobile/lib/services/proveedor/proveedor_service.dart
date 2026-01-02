@@ -4,7 +4,7 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import '../../apis/proveedor/proveedor_api.dart';
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../config/network/api_config.dart';
 import '../../models/entities/proveedor.dart';
 

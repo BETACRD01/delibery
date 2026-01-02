@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import '../../models/entities/documento_legal_model.dart';
 import '../../services/legal/legal_service.dart';
-import '../../theme/app_colors_primary.dart';
+import '../../theme/primary_colors.dart';
 import '../../theme/jp_theme.dart';
 
 /// Pantalla para mostrar documentos legales estilo iPhone

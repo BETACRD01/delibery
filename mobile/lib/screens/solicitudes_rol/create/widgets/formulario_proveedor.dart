@@ -16,7 +16,7 @@ import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 import '../../../../../services/solicitudes/solicitudes_service.dart';
 import '../../../../../services/auth/auth_service.dart';
-import '../../../../../services/core/toast_service.dart';
+import '../../../../../services/core/ui/toast_service.dart';
 import '../../../../../models/auth/solicitud_cambio_rol.dart';
 import '../../../../../widgets/maps/map_location_picker.dart';
 

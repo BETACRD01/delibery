@@ -3,10 +3,10 @@
 import 'package:flutter/cupertino.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../config/routing/rutas.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../services/core/validation/validators.dart';
 import '../../../theme/jp_theme.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 
 /// Pantalla para establecer nueva contraseña
 /// ✅ Última etapa del flujo de recuperación

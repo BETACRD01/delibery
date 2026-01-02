@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:developer' as developer;
 import '../../models/auth/usuario.dart';
 import '../../services/usuarios/usuarios_service.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 /// Controlador de Perfil: Maneja la logica de negocio y estado de la pantalla de perfil.
 class PerfilController extends ChangeNotifier {

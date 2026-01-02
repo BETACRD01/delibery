@@ -8,9 +8,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import '../../../apis/admin/rifas_admin_api.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../providers/core/theme_provider.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import '../dashboard/constants/dashboard_colors.dart';
 
 enum _AccionConflictoRifa { cancelar, finalizar, descartar }

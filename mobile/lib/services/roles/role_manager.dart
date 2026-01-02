@@ -3,10 +3,10 @@
 // Reemplaza ProveedorRoles y RoleController para eliminar duplicación
 
 import 'package:flutter/foundation.dart';
-import '../../switch/models/roles.dart';
-import '../../switch/services/role_storage.dart';
+import '../../roles/models/roles.dart';
+import '../../roles/services/role_storage.dart';
 import 'roles_service.dart';
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 
 // Importar RolUsuario para type checking
 export 'roles_service.dart' show RolUsuario;

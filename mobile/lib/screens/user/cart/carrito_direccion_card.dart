@@ -1,7 +1,7 @@
 // lib/screens/user/carrito/carrito_direccion_card.dart
 
 import 'package:flutter/cupertino.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../../../theme/jp_theme.dart';
 
 class CarritoDireccionCard extends StatelessWidget {

@@ -4,8 +4,8 @@
 
 import 'package:flutter/cupertino.dart';
 
-import '../../theme/app_colors_primary.dart';
-import '../../theme/app_colors_support.dart';
+import '../../theme/primary_colors.dart';
+import '../../theme/secondary_colors.dart';
 import '../../theme/jp_theme.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════

@@ -2,9 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../../../services/usuarios/usuarios_service.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../config/network/api_config.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import '../details/pantalla_rifa_detalle_usuario.dart';
 
 class PantallaRifaActiva extends StatefulWidget {

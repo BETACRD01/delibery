@@ -1,6 +1,6 @@
 // lib/services/pedidos/pedido_grupo_service.dart
 
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../config/network/api_config.dart';
 import '../../models/orders/pedido_grupo.dart';
 import 'dart:developer' as developer;

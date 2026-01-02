@@ -5,11 +5,11 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../config/routing/rutas.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../services/auth/google_auth_service.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import '../../../theme/jp_theme.dart';
 import '../recovery/pantalla_recuperar_password.dart';
 import '../register/pantalla_registro.dart';

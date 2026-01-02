@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import '../../../services/auth/auth_service.dart';
 import '../../../config/routing/rutas.dart';
 import '../../../config/network/api_config.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../services/core/validation/validators.dart';
 import '../../../theme/jp_theme.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 
 class PantallaRecuperarPassword extends StatefulWidget {
   const PantallaRecuperarPassword({super.key});

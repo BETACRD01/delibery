@@ -1,5 +1,3 @@
-// lib/apis/helpers/api_exception.dart
-
 class ApiException implements Exception {
   final int statusCode;
   final String message;
@@ -167,7 +165,7 @@ class ApiException implements Exception {
       'banco_tipo_cuenta',
       'banco_numero_cuenta',
       'banco_titular',
-      'banco_cedula_titular'
+      'banco_cedula_titular',
     ];
 
     for (final field in bancarioFields) {

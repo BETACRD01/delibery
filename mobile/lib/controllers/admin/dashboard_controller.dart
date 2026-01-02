@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth/auth_service.dart';
 import '../../apis/admin/solicitudes_api.dart';
 import '../../apis/admin/dashboard_admin_api.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../models/auth/solicitud_cambio_rol.dart';
 
 class DashboardController extends ChangeNotifier {

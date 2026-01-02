@@ -6,7 +6,7 @@ import 'dart:developer' as developer;
 import '../../widgets/common/notificacion_in_app.dart';
 import 'package:provider/provider.dart';
 import '../../providers/core/notificaciones_provider.dart';
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 
 /// Servicio para manejar las notificaciones push y navegar a las pantallas correctas
 class NotificationHandler {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:ui';
 import '../../../../../controllers/user/perfil_controller.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 
 class PantallaNotificaciones extends StatefulWidget {
   const PantallaNotificaciones({super.key});

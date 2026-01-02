@@ -3,7 +3,7 @@
 import 'dart:developer' as developer;
 import '../../../apis/resources/users/addresses_api.dart';
 import '../../../apis/mappers/user_mapper.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../models/users/address.dart';
 import '../../core/cache/cache_manager.dart';
 import '../../core/validation/validators.dart';

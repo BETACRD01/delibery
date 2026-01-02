@@ -1,6 +1,6 @@
 // lib/services/repartidor/repartidor_datos_bancarios_service.dart
 
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../config/network/api_config.dart';
 import '../../models/payments/datos_bancarios.dart';
 import 'dart:developer' as developer;

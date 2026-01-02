@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../controllers/supplier/supplier_controller.dart';
 import '../../../models/products/producto_model.dart';
 import '../../../services/productos/productos_service.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import 'product_edit_sheet.dart';
 import 'product_reviews_screen.dart';
 

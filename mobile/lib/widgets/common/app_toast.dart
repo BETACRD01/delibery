@@ -3,9 +3,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Material, MaterialType;
 
-import '../../services/core/toast_service.dart';
-import '../../theme/app_colors_primary.dart';
-import '../../theme/app_colors_secondary.dart';
+import '../../services/core/ui/toast_service.dart';
+import '../../theme/primary_colors.dart';
 import '../../theme/jp_theme.dart';
 
 /// Widget de toast unificado estilo iOS
@@ -79,7 +78,7 @@ class _AppToastState extends State<AppToast>
       case ToastType.error:
         return JPCupertinoColors.systemRed(context);
       case ToastType.warning:
-        return AppColorsSecondary.main;
+        return PrimaryColors.main;
       case ToastType.info:
         return JPCupertinoColors.systemBlue(context);
     }

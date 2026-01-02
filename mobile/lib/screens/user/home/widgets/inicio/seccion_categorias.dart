@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:mobile/theme/app_colors_primary.dart';
+import 'package:mobile/theme/primary_colors.dart';
 
 import '../../../../../models/products/categoria_model.dart';
 

@@ -3,7 +3,7 @@
 import 'dart:io';
 
 import '../../config/network/api_config.dart';
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 
 /// API para gestión de proveedores
 class ProveedorApi {

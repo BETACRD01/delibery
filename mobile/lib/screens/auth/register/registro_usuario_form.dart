@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../services/auth/auth_service.dart';
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../widgets/legal/pantalla_documento_legal.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import '../../../theme/jp_theme.dart';
 
 class RegistroUsuarioForm extends StatefulWidget {

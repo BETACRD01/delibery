@@ -1,7 +1,7 @@
 // lib/services/pago/pago_service.dart
 
 import 'dart:io';
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../config/network/api_config.dart';
 import '../../models/payments/pago_model.dart';
 import '../../models/payments/datos_bancarios.dart';

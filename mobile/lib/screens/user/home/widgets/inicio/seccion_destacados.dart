@@ -2,9 +2,8 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile/theme/app_colors_primary.dart';
-import 'package:mobile/theme/app_colors_secondary.dart';
-import 'package:mobile/theme/app_theme.dart';
+import 'package:mobile/theme/primary_colors.dart';
+import 'package:mobile/theme/jp_theme.dart';
 
 import '../../../../../models/products/producto_model.dart';
 
@@ -196,7 +195,7 @@ class _ProductoCard extends StatelessWidget {
                             const Icon(
                               Icons.star_rounded,
                               size: 18,
-                              color: AppColorsSecondary.main, // Orange
+                              color: PrimaryColors.main, // Orange
                             ),
                             Text(
                               ' ${producto.ratingFormateado}',

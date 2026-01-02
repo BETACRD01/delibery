@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../apis/admin/repartidores_admin_api.dart';
 import '../../../../providers/core/theme_provider.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 import '../dashboard/constants/dashboard_colors.dart';
 
 class PantallaAdminRepartidores extends StatefulWidget {

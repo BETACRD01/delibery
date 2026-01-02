@@ -6,7 +6,7 @@ import 'dart:developer' as developer;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import '../../apis/helpers/api_exception.dart'; // Importar ApiException
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../apis/user/usuarios_api.dart';
 
 class NotificationService {

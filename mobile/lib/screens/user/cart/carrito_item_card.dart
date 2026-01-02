@@ -6,8 +6,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../models/products/producto_model.dart';
 import '../../../models/products/promocion_model.dart';
 import '../../../providers/cart/proveedor_carrito.dart';
-import '../../../services/core/toast_service.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../services/core/ui/toast_service.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../../../theme/jp_theme.dart';
 
 class ItemCarritoCard extends StatefulWidget {

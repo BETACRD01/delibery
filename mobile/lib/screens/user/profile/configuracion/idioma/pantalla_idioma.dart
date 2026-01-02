@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'dart:ui';
 import '../../../../../providers/core/locale_provider.dart';
 import '../../../../../l10n/app_localizations.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 
 class PantallaIdioma extends StatefulWidget {
   const PantallaIdioma({super.key});

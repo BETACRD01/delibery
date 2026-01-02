@@ -1,10 +1,10 @@
 // lib/apis/resources/users/addresses_api.dart
 
-import '../../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../client/base_api.dart';
-import '../../dtos/user/responses/address_response.dart';
-import '../../dtos/user/requests/create_address_request.dart';
-import '../../dtos/user/requests/update_address_request.dart';
+import '../../../models/dto/user/responses/address_response.dart';
+import '../../../models/dto/user/requests/create_address_request.dart';
+import '../../../models/dto/user/requests/update_address_request.dart';
 import '../../../config/network/api_config.dart';
 
 /// API para gestionar direcciones de usuario.

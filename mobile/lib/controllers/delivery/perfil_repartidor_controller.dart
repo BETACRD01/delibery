@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/repartidor/repartidor_service.dart';
 import '../../models/entities/repartidor.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import 'dart:developer' as developer;
 
 /// 🎯 Controller para la pantalla de perfil del repartidor

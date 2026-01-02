@@ -9,10 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
-import '../../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../../models/auth/usuario.dart';
 import '../../../../services/usuarios/usuarios_service.dart';
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 import '../../../../theme/jp_theme.dart';
 import '../../../../widgets/util/phone_normalizer.dart';
 import '../../../../widgets/util/image_orientation_fixer.dart';

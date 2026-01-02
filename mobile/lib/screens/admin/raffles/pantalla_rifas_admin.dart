@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../apis/admin/rifas_admin_api.dart';
 import '../../../config/network/api_config.dart';
 import '../../../providers/core/theme_provider.dart';
-import '../../../theme/app_colors_primary.dart';
+import '../../../theme/primary_colors.dart';
 import 'pantalla_crear_rifa.dart';
 import 'pantalla_rifa_detalle.dart';
 

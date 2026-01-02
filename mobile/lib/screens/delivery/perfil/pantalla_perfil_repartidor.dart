@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
-import '../../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 import '../../../models/payments/datos_bancarios.dart';
 import '../../../models/entities/repartidor.dart';
 import '../../../services/repartidor/repartidor_datos_bancarios_service.dart';

@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../../../../theme/jp_theme.dart' hide JPSnackbar;
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../../../../../services/auth/auth_service.dart';
 import '../../../../../widgets/common/jp_snackbar.dart';
 

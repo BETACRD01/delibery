@@ -1,7 +1,7 @@
 // lib/apis/rifas_api.dart
 
 import 'dart:developer' as developer;
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../config/network/api_config.dart';
 
 class RifasApi {

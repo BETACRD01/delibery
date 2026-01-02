@@ -3,7 +3,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../theme/app_colors_primary.dart';
+import '../../../../theme/primary_colors.dart';
 import '../list/pantalla_mis_solicitudes.dart';
 import 'widgets/formulario_proveedor.dart';
 import 'widgets/formulario_repartidor.dart';

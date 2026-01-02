@@ -1,7 +1,7 @@
 // lib/services/supplier/supplier_products_service.dart
 
 import 'dart:io';
-import '../../apis/subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../config/network/api_config.dart';
 import '../../models/products/categoria_model.dart';
 import '../../models/products/producto_model.dart';

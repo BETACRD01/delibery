@@ -6,7 +6,7 @@ import '../../apis/user/usuarios_api.dart';
 import '../../apis/user/rifas_api.dart';
 import '../../apis/user/rifas_usuarios_api.dart';
 import '../../models/auth/usuario.dart';
-import '../../apis/helpers/api_exception.dart';
+import 'package:mobile/services/core/api/api_exception.dart';
 
 /// Servicio de Usuario: Capa de logica de negocio para la gestion de usuarios.
 /// Conecta la API con la UI, maneja modelos, cache y errores.

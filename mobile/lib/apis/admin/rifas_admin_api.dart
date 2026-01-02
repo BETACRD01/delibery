@@ -4,7 +4,7 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import '../../config/network/api_config.dart';
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 
 class RifasAdminApi {
   final ApiClient _client = ApiClient();

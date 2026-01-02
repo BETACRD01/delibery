@@ -1,10 +1,10 @@
 // lib/apis/resources/users/payment_methods_api.dart
 
-import '../../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 import '../../client/base_api.dart';
-import '../../dtos/user/responses/payment_method_response.dart';
-import '../../dtos/user/requests/create_payment_method_request.dart';
-import '../../dtos/user/requests/update_payment_method_request.dart';
+import '../../../models/dto/user/responses/payment_method_response.dart';
+import '../../../models/dto/user/requests/create_payment_method_request.dart';
+import '../../../models/dto/user/requests/update_payment_method_request.dart';
 import '../../../config/network/api_config.dart';
 
 /// API para gestionar métodos de pago de usuario.

@@ -1,7 +1,7 @@
 // lib/apis/repartidor/datos_bancarios_api.dart
 
 import '../../config/network/api_config.dart';
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 
 /// API para gestión de datos bancarios de repartidores
 class DatosBancariosApi {

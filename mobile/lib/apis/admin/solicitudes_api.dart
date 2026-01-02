@@ -2,7 +2,7 @@
 
 import 'dart:developer' as developer;
 import '../../config/network/api_config.dart';
-import '../subapis/http_client.dart';
+import 'package:mobile/services/core/api/http_client.dart';
 
 /// API Service para gestión de Solicitudes de Cambio de Rol (Admin)
 class SolicitudesAdminAPI {

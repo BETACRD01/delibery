@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../models/auth/solicitud_cambio_rol.dart';
 import '../../../../../services/solicitudes/solicitudes_service.dart';
-import '../../../../../theme/app_colors_primary.dart';
+import '../../../../../theme/primary_colors.dart';
 import '../create/pantalla_solicitar_rol.dart';
 
 /// 📋 PANTALLA DE MIS SOLICITUDES
