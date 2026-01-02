@@ -3,8 +3,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../models/producto_model.dart';
-import '../../models/categoria_model.dart';
+import '../../models/products/producto_model.dart';
+import '../../models/products/categoria_model.dart';
 import '../../services/productos/productos_service.dart';
 
 class BusquedaController extends ChangeNotifier {

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../config/api_config.dart';
-import '../../models/documento_legal_model.dart';
+import '../../config/network/api_config.dart';
+import '../../models/entities/documento_legal_model.dart';
 
 class LegalService {
   /// Obtiene los términos y condiciones desde el backend

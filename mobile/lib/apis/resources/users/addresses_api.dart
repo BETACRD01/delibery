@@ -5,7 +5,7 @@ import '../../client/base_api.dart';
 import '../../dtos/user/responses/address_response.dart';
 import '../../dtos/user/requests/create_address_request.dart';
 import '../../dtos/user/requests/update_address_request.dart';
-import '../../../config/api_config.dart';
+import '../../../config/network/api_config.dart';
 
 /// API para gestionar direcciones de usuario.
 ///

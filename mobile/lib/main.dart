@@ -9,19 +9,20 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../controllers/user/perfil_controller.dart';
 import './apis/subapis/http_client.dart';
-import './config/api_config.dart';
-import './config/performance_config.dart';
-import './config/rutas.dart';
+import './config/network/api_config.dart';
+import './config/performance/performance_config.dart';
+import './config/routing/rutas.dart';
 import './controllers/delivery/repartidor_controller.dart';
 import './controllers/supplier/supplier_controller.dart';
 import './l10n/app_localizations.dart';
-import './providers/locale_provider.dart';
-import './providers/notificaciones_provider.dart';
-import './providers/proveedor_carrito.dart';
-import './providers/proveedor_pedido.dart';
-import './providers/theme_provider.dart';
-import 'providers/preferencias_provider.dart';
-import './screens/delivery/pantalla_ver_comprobante.dart';
+import './providers/core/locale_provider.dart';
+import './providers/core/notificaciones_provider.dart';
+import './providers/cart/proveedor_carrito.dart';
+import './providers/orders/proveedor_pedido.dart';
+import './providers/core/theme_provider.dart';
+import 'providers/core/preferencias_provider.dart';
+import 'providers/products/productos_provider.dart';
+import './screens/delivery/orders/pantalla_ver_comprobante.dart';
 import './services/auth/auth_service.dart';
 import './services/notifications/notification_handler.dart';
 import './services/pedidos/pedido_service.dart';
@@ -131,6 +132,7 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => PreferenciasProvider()),
+        ChangeNotifierProvider(create: (_) => ProductosProvider()),
       ],
       child: Consumer2<LocaleProvider, ThemeProvider>(
         builder: (context, localeProvider, themeProvider, _) => MaterialApp(

@@ -4,7 +4,7 @@ import '../../../../apis/admin/acciones_admin_api.dart';
 import '../constants/dashboard_colors.dart';
 
 import 'package:provider/provider.dart';
-import '../../../../providers/theme_provider.dart';
+import '../../../../providers/core/theme_provider.dart';
 import '../../../../theme/app_colors_primary.dart';
 
 class ActividadTab extends StatefulWidget {

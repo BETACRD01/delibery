@@ -1,10 +1,10 @@
 // lib/screens/admin/dashboard/widgets/tarjeta_solicitud.dart
 import 'package:flutter/material.dart';
-import '../../../../models/solicitud_cambio_rol.dart';
+import '../../../../models/auth/solicitud_cambio_rol.dart';
 import '../constants/dashboard_colors.dart';
 
 import 'package:provider/provider.dart';
-import '../../../../providers/theme_provider.dart';
+import '../../../../providers/core/theme_provider.dart';
 
 class TarjetaSolicitud extends StatelessWidget {
   final SolicitudCambioRol solicitud;

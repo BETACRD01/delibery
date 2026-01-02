@@ -1,6 +1,6 @@
 // lib/services/carrito/carrito_service.dart
 
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 import '../../apis/subapis/http_client.dart';
 import '../../apis/helpers/api_exception.dart';
 

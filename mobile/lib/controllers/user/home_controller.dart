@@ -1,9 +1,9 @@
 // lib/controllers/user/home_controller.dart
 
 import 'package:flutter/material.dart';
-import '../../models/categoria_model.dart';
-import '../../models/promocion_model.dart';
-import '../../models/producto_model.dart';
+import '../../models/products/categoria_model.dart';
+import '../../models/products/promocion_model.dart';
+import '../../models/products/producto_model.dart';
 import '../../services/productos/productos_service.dart';
 import '../../services/usuarios/usuarios_service.dart';
 

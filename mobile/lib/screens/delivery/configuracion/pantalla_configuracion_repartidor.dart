@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/theme_provider.dart';
+import '../../../providers/core/theme_provider.dart';
 import '../../../services/usuarios/usuarios_service.dart';
 
 /// ⚙️ Pantalla de Configuración del Repartidor con lenguaje visual iOS.

@@ -3,7 +3,7 @@
 import 'dart:developer' as developer;
 
 import '../subapis/http_client.dart';
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 
 class RifasUsuariosApi {
   final _client = ApiClient();

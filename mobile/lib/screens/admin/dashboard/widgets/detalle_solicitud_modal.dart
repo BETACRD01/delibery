@@ -1,6 +1,6 @@
 // lib/screens/admin/dashboard/widgets/detalle_solicitud_modal.dart
 import 'package:flutter/material.dart';
-import '../../../../models/solicitud_cambio_rol.dart';
+import '../../../../models/auth/solicitud_cambio_rol.dart';
 import '../constants/dashboard_colors.dart';
 
 class DetalleSolicitudModal {

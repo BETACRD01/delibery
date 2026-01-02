@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'dart:developer' as developer;
-import '../../models/usuario.dart';
+import '../../models/auth/usuario.dart';
 import '../../services/usuarios/usuarios_service.dart';
 import '../../apis/helpers/api_exception.dart';
 

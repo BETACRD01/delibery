@@ -2,9 +2,9 @@
 
 import 'dart:io';
 import '../../apis/subapis/http_client.dart';
-import '../../config/api_config.dart';
-import '../../models/categoria_model.dart';
-import '../../models/producto_model.dart';
+import '../../config/network/api_config.dart';
+import '../../models/products/categoria_model.dart';
+import '../../models/products/producto_model.dart';
 
 /// Servicio dedicado para gestión de productos del proveedor autenticado
 /// Separado de ProductosService que maneja productos globales

@@ -1,8 +1,8 @@
 // lib/services/calificaciones/calificaciones_service.dart
 
 import '../../apis/subapis/http_client.dart';
-import '../../config/api_config.dart';
-import '../../models/resena_model.dart';
+import '../../config/network/api_config.dart';
+import '../../models/social/resena_model.dart';
 
 /// Servicio centralizado para calificaciones y reseñas.
 class CalificacionesService {

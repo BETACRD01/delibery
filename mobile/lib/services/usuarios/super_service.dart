@@ -1,8 +1,8 @@
 // lib/services/usuarios/super_service.dart
 
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 import '../../apis/subapis/http_client.dart';
-import '../../models/categoria_super_model.dart';
+import '../../models/products/categoria_super_model.dart';
 
 /// Servicio para gestionar las categorías del Super
 class SuperService {

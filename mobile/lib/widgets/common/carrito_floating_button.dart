@@ -4,8 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Material, MaterialType;
 import 'package:provider/provider.dart';
 
-import '../../config/rutas.dart';
-import '../../providers/proveedor_carrito.dart';
+import '../../config/routing/rutas.dart';
+import '../../providers/cart/proveedor_carrito.dart';
 import '../../theme/app_colors_primary.dart';
 
 /// FAB del Carrito estilo iOS

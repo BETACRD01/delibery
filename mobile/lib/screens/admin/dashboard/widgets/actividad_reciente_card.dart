@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../apis/admin/acciones_admin_api.dart';
-import '../../../../providers/theme_provider.dart';
+import '../../../../providers/core/theme_provider.dart';
 import '../../../../theme/app_colors_primary.dart';
 import '../constants/dashboard_colors.dart';
 

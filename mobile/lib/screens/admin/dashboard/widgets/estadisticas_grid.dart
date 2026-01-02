@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import '../../../../controllers/admin/dashboard_controller.dart';
 import '../constants/dashboard_colors.dart';
-import '../../../../config/rutas.dart';
+import '../../../../config/routing/rutas.dart';
 
 import 'package:provider/provider.dart';
-import '../../../../providers/theme_provider.dart';
+import '../../../../providers/core/theme_provider.dart';
 
 class EstadisticasGrid extends StatelessWidget {
   final DashboardController controller;

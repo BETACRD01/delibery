@@ -2,7 +2,7 @@
 
 import 'dart:io';
 
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 import '../subapis/http_client.dart';
 
 /// API para productos del catálogo
@@ -27,6 +27,8 @@ class ProductosApi {
     String? proveedorId,
     String? busqueda,
     bool soloOfertas = false,
+    int? page,
+    int? pageSize,
   }) async {
     String url = ApiConfig.productosLista;
 
@@ -37,6 +39,8 @@ class ProductosApi {
     if (busqueda != null && busqueda.isNotEmpty) {
       params.add('search=${Uri.encodeComponent(busqueda)}');
     }
+    if (page != null) params.add('page=$page');
+    if (pageSize != null) params.add('page_size=$pageSize');
 
     if (params.isNotEmpty) {
       url += '?${params.join('&')}';

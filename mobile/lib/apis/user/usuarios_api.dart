@@ -3,7 +3,7 @@
 import 'dart:io';
 import 'dart:developer' as developer;
 import '../subapis/http_client.dart';
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 import '../helpers/api_exception.dart';
 
 class UsuariosApi {

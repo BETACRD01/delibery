@@ -2,9 +2,9 @@
 
 import 'dart:io';
 import '../../apis/subapis/http_client.dart';
-import '../../config/api_config.dart';
-import '../../models/pago_model.dart';
-import '../../models/datos_bancarios.dart';
+import '../../config/network/api_config.dart';
+import '../../models/payments/pago_model.dart';
+import '../../models/payments/datos_bancarios.dart';
 import 'dart:developer' as developer;
 
 class PagoService {

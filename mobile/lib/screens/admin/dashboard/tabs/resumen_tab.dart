@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../controllers/admin/dashboard_controller.dart';
-import '../../../../providers/theme_provider.dart';
+import '../../../../providers/core/theme_provider.dart';
 import '../../../../theme/app_colors_primary.dart';
 import '../widgets/estadisticas_grid.dart';
 import '../widgets/solicitudes_section.dart';

@@ -4,9 +4,9 @@ import 'dart:io';
 import 'dart:developer' as developer;
 import '../../apis/subapis/http_client.dart';
 import '../../apis/helpers/api_exception.dart';
-import '../../config/api_config.dart';
-import '../../models/repartidor.dart';
-import '../../models/pedido_repartidor.dart';
+import '../../config/network/api_config.dart';
+import '../../models/entities/repartidor.dart';
+import '../../models/orders/pedido_repartidor.dart';
 
 class RepartidorService {
   // Singleton

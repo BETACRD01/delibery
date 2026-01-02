@@ -1,5 +1,6 @@
 # productos/views.py
 from rest_framework import viewsets, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
@@ -27,6 +28,13 @@ import logging
 
 logger = logging.getLogger('productos')
 
+logger = logging.getLogger('productos')
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.filter(activo=True)
     serializer_class = CategoriaSerializer
@@ -36,7 +44,8 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         serializer.save(activo=True)
 
 class ProductoViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [AllowAny]  
+    permission_classes = [AllowAny]
+    pagination_class = StandardResultsSetPagination  
     
     def get_queryset(self):
         queryset = Producto.objects.filter(disponible=True)

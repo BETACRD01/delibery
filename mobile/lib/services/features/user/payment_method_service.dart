@@ -2,7 +2,7 @@
 
 import '../../../apis/resources/users/payment_methods_api.dart';
 import '../../../apis/mappers/user_mapper.dart';
-import '../../../models/user/payment_method.dart';
+import '../../../models/users/payment_method.dart';
 import '../../core/cache/cache_manager.dart';
 import 'dart:developer' as developer;
 

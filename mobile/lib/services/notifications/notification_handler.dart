@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:developer' as developer;
-import '../../widgets/notificacion_in_app.dart';
+import '../../widgets/common/notificacion_in_app.dart';
 import 'package:provider/provider.dart';
-import '../../providers/notificaciones_provider.dart';
+import '../../providers/core/notificaciones_provider.dart';
 import '../../apis/subapis/http_client.dart';
 
 /// Servicio para manejar las notificaciones push y navegar a las pantallas correctas

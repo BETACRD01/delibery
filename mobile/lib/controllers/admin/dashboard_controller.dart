@@ -4,7 +4,7 @@ import '../../services/auth/auth_service.dart';
 import '../../apis/admin/solicitudes_api.dart';
 import '../../apis/admin/dashboard_admin_api.dart';
 import '../../apis/helpers/api_exception.dart';
-import '../../models/solicitud_cambio_rol.dart';
+import '../../models/auth/solicitud_cambio_rol.dart';
 
 class DashboardController extends ChangeNotifier {
   // Servicios

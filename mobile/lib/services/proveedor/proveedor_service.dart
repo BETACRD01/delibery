@@ -5,8 +5,8 @@ import 'dart:io';
 
 import '../../apis/proveedor/proveedor_api.dart';
 import '../../apis/subapis/http_client.dart';
-import '../../config/api_config.dart';
-import '../../models/proveedor.dart';
+import '../../config/network/api_config.dart';
+import '../../models/entities/proveedor.dart';
 
 /// Servicio para gestionar proveedores
 /// Delegación: Usa ProveedorApi para llamadas HTTP

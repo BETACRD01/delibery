@@ -9,11 +9,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
 import '../../../apis/helpers/api_exception.dart';
-import '../../../models/datos_bancarios.dart';
-import '../../../models/repartidor.dart';
+import '../../../models/payments/datos_bancarios.dart';
+import '../../../models/entities/repartidor.dart';
 import '../../../services/repartidor/repartidor_datos_bancarios_service.dart';
 import '../../../services/repartidor/repartidor_service.dart';
-import '../pantalla_datos_bancarios.dart';
+import '../ganancias/pantalla_datos_bancarios.dart';
 
 /// Pantalla de Edición de Perfil del Repartidor (Estilo iOS)
 class PantallaEditarPerfilRepartidor extends StatefulWidget {

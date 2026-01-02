@@ -1,5 +1,5 @@
 import '../subapis/http_client.dart';
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 
 class DispositivosApi {
   final _client = ApiClient();

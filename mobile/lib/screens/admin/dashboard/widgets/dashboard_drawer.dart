@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../providers/theme_provider.dart';
+import '../../../../providers/core/theme_provider.dart';
 import '../../../../theme/app_colors_primary.dart';
-import '../../../../config/rutas.dart';
-import '../../../../config/api_config.dart';
+import '../../../../config/routing/rutas.dart';
+import '../../../../config/network/api_config.dart';
 
 class DashboardDrawer extends StatelessWidget {
   final Map<String, dynamic>? usuario;

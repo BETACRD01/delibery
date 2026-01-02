@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../providers/theme_provider.dart';
+import '../../../../providers/core/theme_provider.dart';
 import '../../../../theme/app_colors_primary.dart';
 
 class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {

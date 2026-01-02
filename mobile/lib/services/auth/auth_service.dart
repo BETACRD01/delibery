@@ -10,7 +10,7 @@ import '../../apis/auth/roles_api.dart';
 import '../../apis/helpers/api_exception.dart';
 import '../../apis/subapis/http_client.dart';
 import '../../controllers/user/home_controller.dart';
-import '../../models/user_info.dart';
+import '../../models/auth/user_info.dart';
 import '../core/cache/cache_manager.dart';
 import '../repartidor/repartidor_service.dart';
 import '../roles/role_manager.dart';

@@ -1,8 +1,8 @@
 // lib/apis/mappers/user_mapper.dart
 
-import '../../models/user/address.dart';
-import '../../models/user/payment_method.dart';
-import '../../models/user/profile.dart';
+import '../../models/users/address.dart';
+import '../../models/users/payment_method.dart';
+import '../../models/users/profile.dart';
 import '../dtos/user/requests/create_address_request.dart';
 import '../dtos/user/requests/create_payment_method_request.dart';
 import '../dtos/user/requests/update_address_request.dart';

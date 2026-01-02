@@ -3,7 +3,7 @@
 import 'dart:developer' as developer;
 import '../../../apis/resources/users/profile_api.dart';
 import '../../../apis/mappers/user_mapper.dart';
-import '../../../models/user/profile.dart';
+import '../../../models/users/profile.dart';
 import '../../core/cache/cache_manager.dart';
 import '../../core/validation/validators.dart';
 

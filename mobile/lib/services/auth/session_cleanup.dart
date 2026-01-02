@@ -5,9 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../controllers/delivery/repartidor_controller.dart';
 import '../../controllers/supplier/supplier_controller.dart';
 import '../../controllers/user/perfil_controller.dart';
-import '../../providers/notificaciones_provider.dart';
-import '../../providers/proveedor_carrito.dart';
-import '../../providers/proveedor_pedido.dart';
+import '../../providers/core/notificaciones_provider.dart';
+import '../../providers/cart/proveedor_carrito.dart';
+import '../../providers/orders/proveedor_pedido.dart';
 
 class SessionCleanup {
   static Future<void> clearProviders(BuildContext context) async {
@@ -24,6 +24,5 @@ class SessionCleanup {
   static Future<void> clearLocalStorage() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('historial_busqueda');
-    await prefs.remove(NotificacionesProvider.storageKey);
   }
 }

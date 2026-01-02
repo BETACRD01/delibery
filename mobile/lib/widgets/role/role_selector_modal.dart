@@ -6,9 +6,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Colors, Material, MaterialType;
 import 'package:provider/provider.dart';
 import '../../services/roles/role_manager.dart';
-import '../../switch/roles.dart';
+import '../../switch/models/roles.dart';
 import '../../theme/jp_theme.dart';
-import '../../config/rutas.dart';
+import '../../config/routing/rutas.dart';
 
 /// Muestra un modal iOS-style para seleccionar roles
 /// Integra con RoleManager para mostrar estados y cambiar roles

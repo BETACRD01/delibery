@@ -3,7 +3,7 @@
 import 'dart:io';
 
 import '../../apis/pedidos/pedidos_api.dart';
-import '../../models/pedido_model.dart';
+import '../../models/orders/pedido_model.dart';
 import '../../apis/helpers/api_exception.dart';
 
 /// Servicio para gestión de pedidos

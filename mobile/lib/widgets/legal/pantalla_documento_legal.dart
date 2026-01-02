@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import '../../models/documento_legal_model.dart';
+import '../../models/entities/documento_legal_model.dart';
 import '../../services/legal/legal_service.dart';
 import '../../theme/app_colors_primary.dart';
 import '../../theme/jp_theme.dart';

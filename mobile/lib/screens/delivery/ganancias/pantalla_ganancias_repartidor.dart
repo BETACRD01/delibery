@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile/models/entrega_historial.dart';
+import 'package:mobile/models/orders/entrega_historial.dart';
 import 'package:mobile/services/repartidor/repartidor_service.dart';
 import 'package:mobile/screens/delivery/historial/pantalla_detalle_entrega.dart';
 

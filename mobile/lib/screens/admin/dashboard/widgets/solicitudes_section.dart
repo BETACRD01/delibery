@@ -3,12 +3,12 @@ import 'package:flutter/cupertino.dart'; // Added Cupertino
 import 'package:flutter/material.dart';
 import '../../../../controllers/admin/dashboard_controller.dart';
 import '../constants/dashboard_colors.dart';
-import '../../../../config/rutas.dart';
-import '../../../../models/solicitud_cambio_rol.dart';
+import '../../../../config/routing/rutas.dart';
+import '../../../../models/auth/solicitud_cambio_rol.dart';
 import 'tarjeta_solicitud.dart';
 import 'detalle_solicitud_modal.dart';
 import 'package:provider/provider.dart';
-import '../../../../providers/theme_provider.dart';
+import '../../../../providers/core/theme_provider.dart';
 
 class SolicitudesSection extends StatelessWidget {
   final DashboardController controller;

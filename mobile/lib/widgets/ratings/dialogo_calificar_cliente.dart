@@ -3,7 +3,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../apis/subapis/http_client.dart';
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 import 'star_rating_input.dart';
 
 /// Diálogo para que el repartidor califique al cliente

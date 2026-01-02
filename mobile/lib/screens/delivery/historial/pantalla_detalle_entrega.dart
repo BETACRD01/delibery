@@ -2,7 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile/models/entrega_historial.dart';
+import 'package:mobile/models/orders/entrega_historial.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Pantalla de detalle completo de una entrega del historial

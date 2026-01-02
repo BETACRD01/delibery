@@ -19,6 +19,7 @@ from notificaciones.serializers import (
     MarcarLeidaSerializer,
     EstadisticasNotificacionesSerializer
 )
+from utils.pagination import StandardResultsSetPagination
 
 logger = logging.getLogger('notificaciones.views')
 
@@ -29,6 +30,7 @@ class NotificacionViewSet(viewsets.ReadOnlyModelViewSet):
     No permite crear ni borrar individualmente (solo lectura y acciones de estado).
     """
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
     
     def get_queryset(self):
         """

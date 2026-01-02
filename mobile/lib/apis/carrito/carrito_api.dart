@@ -1,6 +1,6 @@
 // lib/apis/carrito/carrito_api.dart
 
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 import '../subapis/http_client.dart';
 
 /// API para gestión del carrito de compras

@@ -3,7 +3,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../../models/pedido_repartidor.dart';
+import '../../../models/orders/pedido_repartidor.dart';
 
 /// Card para encargos (courier) disponibles
 /// Diseño distintivo con icono naranja y flujo de dos destinos

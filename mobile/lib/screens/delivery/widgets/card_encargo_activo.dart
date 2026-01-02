@@ -3,7 +3,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../../models/pedido_repartidor.dart';
+import '../../../models/orders/pedido_repartidor.dart';
 
 /// Card expandido para encargos (courier) en curso
 /// Muestra flujo de dos etapas: Recoger → Entregar

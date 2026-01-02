@@ -1,7 +1,7 @@
 // lib/services/roles/roles_service.dart
 import 'dart:developer' as developer;
 import '../../apis/subapis/http_client.dart';
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 
 // ============================================================================
 // ROL USUARIO MODEL

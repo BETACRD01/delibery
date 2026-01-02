@@ -6,9 +6,9 @@ import 'dart:io';
 import '../../apis/productos/categorias_api.dart';
 import '../../apis/productos/productos_api.dart';
 import '../../apis/productos/promociones_api.dart';
-import '../../models/categoria_model.dart';
-import '../../models/producto_model.dart';
-import '../../models/promocion_model.dart';
+import '../../models/products/categoria_model.dart';
+import '../../models/products/producto_model.dart';
+import '../../models/products/promocion_model.dart';
 
 /// Servicio para gestionar productos, categorías y promociones
 /// Delegación: Usa ProductosApi, CategoriasApi y PromocionesApi para llamadas HTTP

@@ -1,7 +1,7 @@
 // lib/services/solicitudes/solicitudes_service.dart
 
 import 'dart:developer' as developer;
-import '../../config/api_config.dart';
+import '../../config/network/api_config.dart';
 import '../../apis/subapis/http_client.dart';
 import '../../apis/helpers/api_exception.dart';
 

@@ -1,5 +1,5 @@
 // lib/services/core/validation/validators.dart
-import '../../../config/api_config.dart';
+import '../../../config/network/api_config.dart';
 
 /// Validadores de negocio para la aplicación
 /// Incluye validaciones de email, passwords, datos Ecuador, etc.
