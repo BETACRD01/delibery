@@ -4,6 +4,7 @@ import 'dart:io';
 
 import '../../apis/pedidos/pedidos_api.dart';
 import '../../models/pedido_model.dart';
+import '../../apis/helpers/api_exception.dart';
 
 /// Servicio para gestión de pedidos
 /// Delegación: Usa PedidosApi para llamadas HTTP
@@ -164,6 +165,8 @@ class PedidoService {
         if (comentario != null && comentario.isNotEmpty)
           'comentario': comentario,
       });
+    } on ApiException catch (e) {
+      throw _unwrapError(e);
     } catch (e) {
       throw Exception('No se pudo enviar la calificación: $e');
     }
@@ -193,7 +196,7 @@ class PedidoService {
     try {
       await _pedidosApi.enviarCalificacion({
         'pedido_id': pedidoId,
-        'proveedor_id': proveedorId,  // ✅ Agregado para pedidos multi-proveedor
+        'proveedor_id': proveedorId,
         'tipo': 'cliente_a_proveedor',
         'estrellas': estrellas,
         if (puntualidad != null && puntualidad > 0) 'puntualidad': puntualidad,
@@ -203,8 +206,19 @@ class PedidoService {
         if (comentario != null && comentario.isNotEmpty)
           'comentario': comentario,
       });
+    } on ApiException catch (e) {
+      throw _unwrapError(e);
     } catch (e) {
       throw Exception('No se pudo enviar la calificación: $e');
     }
+  }
+
+  Exception _unwrapError(ApiException e) {
+    var msg = e.message;
+    // Limpiar formato de lista JSON simple ["Error message"]
+    if (msg.startsWith('["') && msg.endsWith('"]')) {
+      msg = msg.substring(2, msg.length - 2);
+    }
+    return Exception(msg);
   }
 }

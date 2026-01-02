@@ -15,7 +15,7 @@ class RepartidorService {
   RepartidorService._internal();
 
   final _client = ApiClient();
-  
+
   // Cache
   PerfilRepartidorModel? _perfilCache;
   EstadisticasRepartidorModel? _estadisticasCache;
@@ -36,7 +36,9 @@ class RepartidorService {
   // PERFIL
   // ---------------------------------------------------------------------------
 
-  Future<PerfilRepartidorModel> obtenerPerfil({bool forzarRecarga = false}) async {
+  Future<PerfilRepartidorModel> obtenerPerfil({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (!forzarRecarga && _perfilCache != null) {
         return _perfilCache!;
@@ -45,7 +47,7 @@ class RepartidorService {
       final response = await _client.get(ApiConfig.repartidorPerfil);
       final perfil = PerfilRepartidorModel.fromJson(response);
       _perfilCache = perfil;
-      
+
       return perfil;
     } catch (e, stackTrace) {
       if (e is ApiException && e.isNetworkError) {
@@ -66,8 +68,10 @@ class RepartidorService {
 
       if (fotoPerfil != null) {
         final fields = <String, String>{};
-        if (telefono != null && telefono.isNotEmpty) fields['telefono'] = telefono;
-        
+        if (telefono != null && telefono.isNotEmpty) {
+          fields['telefono'] = telefono;
+        }
+
         response = await _client.multipart(
           'PATCH',
           ApiConfig.repartidorPerfilActualizar,
@@ -76,14 +80,19 @@ class RepartidorService {
         );
       } else {
         final data = <String, dynamic>{};
-        if (telefono != null && telefono.isNotEmpty) data['telefono'] = telefono;
-        
-        response = await _client.patch(ApiConfig.repartidorPerfilActualizar, data);
+        if (telefono != null && telefono.isNotEmpty) {
+          data['telefono'] = telefono;
+        }
+
+        response = await _client.patch(
+          ApiConfig.repartidorPerfilActualizar,
+          data,
+        );
       }
 
       final perfil = PerfilRepartidorModel.fromJson(response['perfil']);
       _perfilCache = perfil;
-      
+
       return perfil;
     } catch (e, stackTrace) {
       _log('Error actualizando perfil', error: e, stackTrace: stackTrace);
@@ -91,7 +100,9 @@ class RepartidorService {
     }
   }
 
-  Future<EstadisticasRepartidorModel> obtenerEstadisticas({bool forzarRecarga = false}) async {
+  Future<EstadisticasRepartidorModel> obtenerEstadisticas({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (!forzarRecarga && _estadisticasCache != null) {
         return _estadisticasCache!;
@@ -100,7 +111,7 @@ class RepartidorService {
       final response = await _client.get(ApiConfig.repartidorEstadisticas);
       final estadisticas = EstadisticasRepartidorModel.fromJson(response);
       _estadisticasCache = estadisticas;
-      
+
       return estadisticas;
     } catch (e, stackTrace) {
       _log('Error obteniendo estadisticas', error: e, stackTrace: stackTrace);
@@ -112,18 +123,20 @@ class RepartidorService {
   // GESTIÓN DE ESTADO
   // ---------------------------------------------------------------------------
 
-  Future<CambioEstadoResponse> cambiarEstado(EstadoRepartidor nuevoEstado) async {
+  Future<CambioEstadoResponse> cambiarEstado(
+    EstadoRepartidor nuevoEstado,
+  ) async {
     try {
       final response = await _client.patch(ApiConfig.repartidorEstado, {
         'estado': nuevoEstado.valor,
       });
 
       final cambioEstado = CambioEstadoResponse.fromJson(response);
-      
+
       if (_perfilCache != null) {
         _perfilCache = _perfilCache!.copyWith(estado: nuevoEstado);
       }
-      
+
       return cambioEstado;
     } catch (e, stackTrace) {
       _log('Error cambiando estado', error: e, stackTrace: stackTrace);
@@ -131,7 +144,10 @@ class RepartidorService {
     }
   }
 
-  Future<List<EstadoLogModel>> obtenerHistorialEstados({int page = 1, int pageSize = 20}) async {
+  Future<List<EstadoLogModel>> obtenerHistorialEstados({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     try {
       final url = _buildUrlWithParams(ApiConfig.repartidorEstadoHistorial, {
         'page': page.toString(),
@@ -145,7 +161,11 @@ class RepartidorService {
           .map((log) => EstadoLogModel.fromJson(log))
           .toList();
     } catch (e, stackTrace) {
-      _log('Error obteniendo historial estados', error: e, stackTrace: stackTrace);
+      _log(
+        'Error obteniendo historial estados',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -173,14 +193,14 @@ class RepartidorService {
           ultimaLocalizacion: ubicacion.timestamp,
         );
       }
-      
+
       return ubicacion;
     } catch (e, stackTrace) {
       if (e is ApiException && e.isNetworkError) {
         _log('Sin conexion al actualizar ubicacion, se reintentara luego');
       } else {
         // CORRECCIÓN 1: Se usa stackTrace para evitar 'unused_catch_stack'
-        _log('Error actualizando ubicacion', error: e, stackTrace: stackTrace); 
+        _log('Error actualizando ubicacion', error: e, stackTrace: stackTrace);
       }
       rethrow;
     }
@@ -200,7 +220,10 @@ class RepartidorService {
       if (fechaInicio != null) params['fecha_inicio'] = fechaInicio;
       if (fechaFin != null) params['fecha_fin'] = fechaFin;
 
-      final url = _buildUrlWithParams(ApiConfig.repartidorUbicacionHistorial, params);
+      final url = _buildUrlWithParams(
+        ApiConfig.repartidorUbicacionHistorial,
+        params,
+      );
       final response = await _client.get(url);
       final results = response['results'] ?? response;
 
@@ -229,12 +252,19 @@ class RepartidorService {
         params['longitud'] = longitud.toString();
       }
 
-      final url = _buildUrlWithParams(ApiConfig.repartidorPedidosDisponibles, params);
+      final url = _buildUrlWithParams(
+        ApiConfig.repartidorPedidosDisponibles,
+        params,
+      );
       final response = await _client.get(url);
-      
+
       return PedidosDisponiblesResponse.fromJson(response);
     } catch (e, stackTrace) {
-      _log('Error obteniendo pedidos disponibles', error: e, stackTrace: stackTrace);
+      _log(
+        'Error obteniendo pedidos disponibles',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -244,10 +274,16 @@ class RepartidorService {
   /// que solo están disponibles DESPUÉS de aceptar el pedido
   Future<PedidoDetalladoRepartidor> obtenerDetallePedido(int pedidoId) async {
     try {
-      final response = await _client.get(ApiConfig.repartidorPedidoDetalle(pedidoId));
+      final response = await _client.get(
+        ApiConfig.repartidorPedidoDetalle(pedidoId),
+      );
       return PedidoDetalladoRepartidor.fromJson(response);
     } catch (e, stackTrace) {
-      _log('Error obteniendo detalle pedido $pedidoId', error: e, stackTrace: stackTrace);
+      _log(
+        'Error obteniendo detalle pedido $pedidoId',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -264,29 +300,52 @@ class RepartidorService {
       if (e is ApiException && e.isNetworkError) {
         _log('Sin conexion al obtener pedidos activos');
       } else {
-        _log('Error obteniendo mis pedidos activos', error: e, stackTrace: stackTrace);
+        _log(
+          'Error obteniendo mis pedidos activos',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
       rethrow;
     }
   }
 
-  Future<Map<String, dynamic>> aceptarPedido(int pedidoId) async {
+  Future<PedidoDetalladoRepartidor> aceptarPedido(int pedidoId) async {
     try {
-      return await _client.post(ApiConfig.repartidorPedidoAceptar(pedidoId), {});
+      final response = await _client.post(
+        ApiConfig.repartidorPedidoAceptar(pedidoId),
+        {},
+      );
+      // El backend ahora devuelve el objeto 'pedido' completo
+      if (response['pedido'] != null) {
+        return PedidoDetalladoRepartidor.fromJson(response['pedido']);
+      }
+      // Fallback si el backend no devuelve el pedido (versiones viejas?)
+      return await obtenerDetallePedido(pedidoId);
     } catch (e, stackTrace) {
-      _log('Error aceptando pedido $pedidoId', error: e, stackTrace: stackTrace);
+      _log(
+        'Error aceptando pedido $pedidoId',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
-  Future<Map<String, dynamic>> rechazarPedido(int pedidoId, {String motivo = 'Muy lejos'}) async {
+  Future<Map<String, dynamic>> rechazarPedido(
+    int pedidoId, {
+    String motivo = 'Muy lejos',
+  }) async {
     try {
-      return await _client.post(
-        ApiConfig.repartidorPedidoRechazar(pedidoId),
-        {'motivo': motivo},
-      );
+      return await _client.post(ApiConfig.repartidorPedidoRechazar(pedidoId), {
+        'motivo': motivo,
+      });
     } catch (e, stackTrace) {
-      _log('Error rechazando pedido $pedidoId', error: e, stackTrace: stackTrace);
+      _log(
+        'Error rechazando pedido $pedidoId',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -298,9 +357,14 @@ class RepartidorService {
   }) async {
     try {
       final data = <String, dynamic>{'puntuacion': puntuacion};
-      if (comentario != null && comentario.isNotEmpty) data['comentario'] = comentario;
+      if (comentario != null && comentario.isNotEmpty) {
+        data['comentario'] = comentario;
+      }
 
-      return await _client.post(ApiConfig.repartidorCalificarCliente(pedidoId), data);
+      return await _client.post(
+        ApiConfig.repartidorCalificarCliente(pedidoId),
+        data,
+      );
     } catch (e, stackTrace) {
       _log('Error calificando cliente', error: e, stackTrace: stackTrace);
       rethrow;
@@ -311,7 +375,9 @@ class RepartidorService {
   // VEHÍCULOS
   // ---------------------------------------------------------------------------
 
-  Future<List<VehiculoRepartidorModel>> listarVehiculos({bool forzarRecarga = false}) async {
+  Future<List<VehiculoRepartidorModel>> listarVehiculos({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (!forzarRecarga && _vehiculosCache != null) {
         return _vehiculosCache!;
@@ -320,7 +386,7 @@ class RepartidorService {
       final response = await _client.get(ApiConfig.repartidorVehiculos);
       final vehiculosResponse = VehiculosResponse.fromJson(response);
       _vehiculosCache = vehiculosResponse.vehiculos;
-      
+
       return vehiculosResponse.vehiculos;
     } catch (e, stackTrace) {
       _log('Error listando vehiculos', error: e, stackTrace: stackTrace);
@@ -335,12 +401,17 @@ class RepartidorService {
   }) async {
     try {
       final data = {'tipo': tipo.valor, 'activo': activo};
-      if (placa != null && placa.isNotEmpty) data['placa'] = placa.toUpperCase();
+      if (placa != null && placa.isNotEmpty) {
+        data['placa'] = placa.toUpperCase();
+      }
 
-      final response = await _client.post(ApiConfig.repartidorVehiculosCrear, data);
+      final response = await _client.post(
+        ApiConfig.repartidorVehiculosCrear,
+        data,
+      );
       final vehiculo = VehiculoRepartidorModel.fromJson(response['vehiculo']);
-      _vehiculosCache = null; 
-      
+      _vehiculosCache = null;
+
       return vehiculo;
     } catch (e, stackTrace) {
       _log('Error creando vehiculo', error: e, stackTrace: stackTrace);
@@ -350,10 +421,16 @@ class RepartidorService {
 
   Future<VehiculoRepartidorModel> obtenerVehiculo(int vehiculoId) async {
     try {
-      final response = await _client.get(ApiConfig.repartidorVehiculo(vehiculoId));
+      final response = await _client.get(
+        ApiConfig.repartidorVehiculo(vehiculoId),
+      );
       return VehiculoRepartidorModel.fromJson(response);
     } catch (e, stackTrace) {
-      _log('Error obteniendo vehiculo $vehiculoId', error: e, stackTrace: stackTrace);
+      _log(
+        'Error obteniendo vehiculo $vehiculoId',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -370,33 +447,49 @@ class RepartidorService {
       if (licenciaFoto != null) {
         final fields = <String, String>{};
         if (tipo != null) fields['tipo'] = tipo.valor;
-        if (placa != null && placa.isNotEmpty) fields['placa'] = placa.toUpperCase();
-        
-        response = await _client.multipart('PATCH', endpoint, fields, {'licencia_foto': licenciaFoto});
+        if (placa != null && placa.isNotEmpty) {
+          fields['placa'] = placa.toUpperCase();
+        }
+
+        response = await _client.multipart('PATCH', endpoint, fields, {
+          'licencia_foto': licenciaFoto,
+        });
       } else {
         final data = <String, dynamic>{};
         if (tipo != null) data['tipo'] = tipo.valor;
-        if (placa != null && placa.isNotEmpty) data['placa'] = placa.toUpperCase();
-        
+        if (placa != null && placa.isNotEmpty) {
+          data['placa'] = placa.toUpperCase();
+        }
+
         response = await _client.patch(endpoint, data);
       }
 
       final vehiculo = VehiculoRepartidorModel.fromJson(response['vehiculo']);
       _vehiculosCache = null;
-      
+
       return vehiculo;
     } catch (e, stackTrace) {
-      _log('Error actualizando datos vehiculo', error: e, stackTrace: stackTrace);
+      _log(
+        'Error actualizando datos vehiculo',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
 
-  Future<VehiculoRepartidorModel> actualizarVehiculo(int vehiculoId, Map<String, dynamic> data) async {
+  Future<VehiculoRepartidorModel> actualizarVehiculo(
+    int vehiculoId,
+    Map<String, dynamic> data,
+  ) async {
     try {
-      final response = await _client.patch(ApiConfig.repartidorVehiculo(vehiculoId), data);
+      final response = await _client.patch(
+        ApiConfig.repartidorVehiculo(vehiculoId),
+        data,
+      );
       final vehiculo = VehiculoRepartidorModel.fromJson(response['vehiculo']);
       _vehiculosCache = null;
-      
+
       return vehiculo;
     } catch (e, stackTrace) {
       _log('Error actualizando vehiculo', error: e, stackTrace: stackTrace);
@@ -416,10 +509,13 @@ class RepartidorService {
 
   Future<VehiculoRepartidorModel> activarVehiculo(int vehiculoId) async {
     try {
-      final response = await _client.patch(ApiConfig.repartidorVehiculoActivar(vehiculoId), {});
+      final response = await _client.patch(
+        ApiConfig.repartidorVehiculoActivar(vehiculoId),
+        {},
+      );
       final vehiculo = VehiculoRepartidorModel.fromJson(response['vehiculo']);
       _vehiculosCache = null;
-      
+
       return vehiculo;
     } catch (e, stackTrace) {
       _log('Error activando vehiculo', error: e, stackTrace: stackTrace);
@@ -443,7 +539,10 @@ class RepartidorService {
       };
       if (puntuacion != null) params['puntuacion'] = puntuacion.toString();
 
-      final url = _buildUrlWithParams(ApiConfig.repartidorCalificaciones, params);
+      final url = _buildUrlWithParams(
+        ApiConfig.repartidorCalificaciones,
+        params,
+      );
       final response = await _client.get(url);
       final results = response['results'] ?? response;
 
@@ -464,7 +563,7 @@ class RepartidorService {
       );
       final perfil = PerfilRepartidorModel.fromJson(response['perfil']);
       _perfilCache = perfil;
-      
+
       return perfil;
     } catch (e, stackTrace) {
       _log('Error eliminando foto perfil', error: e, stackTrace: stackTrace);
@@ -476,7 +575,9 @@ class RepartidorService {
   // MI REPARTIDOR & USUARIO
   // ---------------------------------------------------------------------------
 
-  Future<PerfilRepartidorModel> obtenerMiRepartidor({bool forzarRecarga = false}) async {
+  Future<PerfilRepartidorModel> obtenerMiRepartidor({
+    bool forzarRecarga = false,
+  }) async {
     try {
       if (!forzarRecarga && _perfilCache != null) {
         return _perfilCache!;
@@ -485,7 +586,7 @@ class RepartidorService {
       final response = await _client.get(ApiConfig.miRepartidor);
       final perfil = PerfilRepartidorModel.fromJson(response);
       _perfilCache = perfil;
-      
+
       return perfil;
     } catch (e, stackTrace) {
       _log('Error obteniendo mi repartidor', error: e, stackTrace: stackTrace);
@@ -504,16 +605,19 @@ class RepartidorService {
       Map<String, dynamic> response;
 
       if (eliminarFoto) {
-        response = await _client.patch(
-          ApiConfig.miRepartidorEditarPerfil,
-          {'eliminar_foto_perfil': true},
-        );
+        response = await _client.patch(ApiConfig.miRepartidorEditarPerfil, {
+          'eliminar_foto_perfil': true,
+        });
       } else if (fotoPerfil != null) {
         final fields = <String, String>{};
         if (cedula != null && cedula.isNotEmpty) fields['cedula'] = cedula;
-        if (telefono != null && telefono.isNotEmpty) fields['telefono'] = telefono;
-        if (vehiculo != null && vehiculo.isNotEmpty) fields['vehiculo'] = vehiculo;
-        
+        if (telefono != null && telefono.isNotEmpty) {
+          fields['telefono'] = telefono;
+        }
+        if (vehiculo != null && vehiculo.isNotEmpty) {
+          fields['vehiculo'] = vehiculo;
+        }
+
         response = await _client.multipart(
           'PATCH',
           ApiConfig.miRepartidorEditarPerfil,
@@ -523,12 +627,24 @@ class RepartidorService {
       } else {
         final data = <String, dynamic>{};
         if (cedula != null && cedula.isNotEmpty) data['cedula'] = cedula;
-        if (telefono != null && telefono.isNotEmpty) data['telefono'] = telefono;
-        if (vehiculo != null && vehiculo.isNotEmpty) data['vehiculo'] = vehiculo;
-        
-        if (data.isEmpty) throw ApiException(statusCode: 400, message: 'Sin datos para actualizar');
-        
-        response = await _client.patch(ApiConfig.miRepartidorEditarPerfil, data);
+        if (telefono != null && telefono.isNotEmpty) {
+          data['telefono'] = telefono;
+        }
+        if (vehiculo != null && vehiculo.isNotEmpty) {
+          data['vehiculo'] = vehiculo;
+        }
+
+        if (data.isEmpty) {
+          throw ApiException(
+            statusCode: 400,
+            message: 'Sin datos para actualizar',
+          );
+        }
+
+        response = await _client.patch(
+          ApiConfig.miRepartidorEditarPerfil,
+          data,
+        );
       }
 
       PerfilRepartidorModel perfil;
@@ -540,7 +656,7 @@ class RepartidorService {
         perfil = await obtenerMiRepartidor(forzarRecarga: true);
       }
       _perfilCache = perfil;
-      
+
       return perfil;
     } catch (e, stackTrace) {
       _log('Error actualizando mi perfil', error: e, stackTrace: stackTrace);
@@ -555,13 +671,27 @@ class RepartidorService {
   }) async {
     try {
       final data = <String, dynamic>{};
-      if (email != null && email.isNotEmpty) data['email'] = email.trim().toLowerCase();
-      if (firstName != null && firstName.isNotEmpty) data['first_name'] = firstName.trim();
-      if (lastName != null && lastName.isNotEmpty) data['last_name'] = lastName.trim();
+      if (email != null && email.isNotEmpty) {
+        data['email'] = email.trim().toLowerCase();
+      }
+      if (firstName != null && firstName.isNotEmpty) {
+        data['first_name'] = firstName.trim();
+      }
+      if (lastName != null && lastName.isNotEmpty) {
+        data['last_name'] = lastName.trim();
+      }
 
-      if (data.isEmpty) throw ApiException(statusCode: 400, message: 'Sin datos para actualizar');
+      if (data.isEmpty) {
+        throw ApiException(
+          statusCode: 400,
+          message: 'Sin datos para actualizar',
+        );
+      }
 
-      final response = await _client.patch(ApiConfig.miRepartidorEditarContacto, data);
+      final response = await _client.patch(
+        ApiConfig.miRepartidorEditarContacto,
+        data,
+      );
 
       PerfilRepartidorModel perfil;
       if (response.containsKey('repartidor')) {
@@ -572,7 +702,7 @@ class RepartidorService {
         perfil = await obtenerMiRepartidor(forzarRecarga: true);
       }
       _perfilCache = perfil;
-      
+
       return perfil;
     } catch (e, stackTrace) {
       _log('Error actualizando contacto', error: e, stackTrace: stackTrace);
@@ -591,8 +721,12 @@ class RepartidorService {
   }) async {
     try {
       PerfilRepartidorModel? perfilActualizado;
-      final hayDatosPerfil = cedula != null || telefono != null || fotoPerfil != null || eliminarFoto;
-      
+      final hayDatosPerfil =
+          cedula != null ||
+          telefono != null ||
+          fotoPerfil != null ||
+          eliminarFoto;
+
       if (hayDatosPerfil) {
         perfilActualizado = await actualizarMiPerfil(
           cedula: cedula,
@@ -602,7 +736,8 @@ class RepartidorService {
         );
       }
 
-      final hayDatosContacto = email != null || firstName != null || lastName != null;
+      final hayDatosContacto =
+          email != null || firstName != null || lastName != null;
       if (hayDatosContacto) {
         perfilActualizado = await actualizarMiContacto(
           email: email,
@@ -613,10 +748,14 @@ class RepartidorService {
 
       // CORRECCIÓN 2: Uso de asignación condicional (??=)
       perfilActualizado ??= await obtenerMiRepartidor(forzarRecarga: true);
-      
+
       return perfilActualizado;
     } catch (e, stackTrace) {
-      _log('Error actualizando perfil completo', error: e, stackTrace: stackTrace);
+      _log(
+        'Error actualizando perfil completo',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -642,21 +781,30 @@ class RepartidorService {
   EstadisticasRepartidorModel? get estadisticasActuales => _estadisticasCache;
   List<VehiculoRepartidorModel>? get vehiculosActuales => _vehiculosCache;
   bool get tienePerfil => _perfilCache != null;
-  bool get estaDisponible => _perfilCache?.estado == EstadoRepartidor.disponible;
+  bool get estaDisponible =>
+      _perfilCache?.estado == EstadoRepartidor.disponible;
   bool get estaOcupado => _perfilCache?.estado == EstadoRepartidor.ocupado;
   bool get puedeRecibirPedidos => _perfilCache?.puedeRecibirPedidos ?? false;
 
   VehiculoRepartidorModel? get vehiculoActivo {
     return _perfilCache?.vehiculoActivo ??
-        _vehiculosCache?.firstWhere((v) => v.activo, orElse: () => _vehiculosCache!.first);
+        _vehiculosCache?.firstWhere(
+          (v) => v.activo,
+          orElse: () => _vehiculosCache!.first,
+        );
   }
 
   String _buildUrlWithParams(String endpoint, Map<String, String>? params) {
     if (params == null || params.isEmpty) return endpoint;
     final queryString = params.entries
-        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .map(
+          (e) =>
+              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
+        )
         .join('&');
-    return endpoint.contains('?') ? '$endpoint&$queryString' : '$endpoint?$queryString';
+    return endpoint.contains('?')
+        ? '$endpoint&$queryString'
+        : '$endpoint?$queryString';
   }
 
   // ---------------------------------------------------------------------------
@@ -673,14 +821,17 @@ class RepartidorService {
   int get totalCalificaciones => _perfilCache?.totalCalificaciones ?? 0;
   String get nivelExperiencia => _perfilCache?.nivelExperiencia ?? 'Sin datos';
 
-  Future<CambioEstadoResponse> marcarDisponible() async => await cambiarEstado(EstadoRepartidor.disponible);
-  Future<CambioEstadoResponse> marcarOcupado() async => await cambiarEstado(EstadoRepartidor.ocupado);
-  Future<CambioEstadoResponse> marcarFueraServicio() async => await cambiarEstado(EstadoRepartidor.fueraServicio);
+  Future<CambioEstadoResponse> marcarDisponible() async =>
+      await cambiarEstado(EstadoRepartidor.disponible);
+  Future<CambioEstadoResponse> marcarOcupado() async =>
+      await cambiarEstado(EstadoRepartidor.ocupado);
+  Future<CambioEstadoResponse> marcarFueraServicio() async =>
+      await cambiarEstado(EstadoRepartidor.fueraServicio);
 
   Future<CambioEstadoResponse> toggleDisponibilidad() async {
     final estadoActual = _perfilCache?.estado ?? EstadoRepartidor.fueraServicio;
-    return estadoActual == EstadoRepartidor.disponible 
-        ? await marcarFueraServicio() 
+    return estadoActual == EstadoRepartidor.disponible
+        ? await marcarFueraServicio()
         : await marcarDisponible();
   }
 
@@ -698,16 +849,28 @@ class RepartidorService {
   }
 
   void imprimirEstado() {
-    _log('Estado Repartidor: Auth:$estaAutenticado, Perfil:$tienePerfil, Estado:${_perfilCache?.estado.nombre}');
+    _log(
+      'Estado Repartidor: Auth:$estaAutenticado, Perfil:$tienePerfil, Estado:${_perfilCache?.estado.nombre}',
+    );
   }
 
   // CORRECCIÓN 3: Uso de llaves {} en estructuras de control
   bool validarDatosMinimos() {
-    if (!estaAutenticado) { return false; }
-    if (!tienePerfil) { return false; }
-    if (!estaVerificado) { return false; }
-    if (!estaActivo) { return false; }
-    if (vehiculoActivo == null) { return false; }
+    if (!estaAutenticado) {
+      return false;
+    }
+    if (!tienePerfil) {
+      return false;
+    }
+    if (!estaVerificado) {
+      return false;
+    }
+    if (!estaActivo) {
+      return false;
+    }
+    if (vehiculoActivo == null) {
+      return false;
+    }
     return true;
   }
 
@@ -716,11 +879,21 @@ class RepartidorService {
     if (!estaAutenticado) {
       advertencias.add('No autenticado');
     } else {
-      if (!tienePerfil) { advertencias.add('Perfil no cargado'); }
-      if (!estaVerificado) { advertencias.add('Cuenta no verificada'); }
-      if (!estaActivo) { advertencias.add('Cuenta desactivada'); }
-      if (!tieneUbicacion) { advertencias.add('Sin ubicación registrada'); }
-      if (vehiculoActivo == null) { advertencias.add('Sin vehículo activo'); }
+      if (!tienePerfil) {
+        advertencias.add('Perfil no cargado');
+      }
+      if (!estaVerificado) {
+        advertencias.add('Cuenta no verificada');
+      }
+      if (!estaActivo) {
+        advertencias.add('Cuenta desactivada');
+      }
+      if (!tieneUbicacion) {
+        advertencias.add('Sin ubicación registrada');
+      }
+      if (vehiculoActivo == null) {
+        advertencias.add('Sin vehículo activo');
+      }
     }
     return advertencias;
   }
@@ -803,8 +976,8 @@ class RepartidorService {
 
       final url = ApiConfig.repartidorHistorialEntregas;
       final urlWithParams = queryParams.isEmpty
-        ? url
-        : '$url?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+          ? url
+          : '$url?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
 
       final response = await _client.get(urlWithParams);
 

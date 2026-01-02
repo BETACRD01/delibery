@@ -132,8 +132,8 @@ class Pedido {
       proveedores = [prov];
     } else if (proveedorRaw is List) {
       proveedores = proveedorRaw
-          .whereType<Map<String, dynamic>>()
-          .map((p) => ProveedorInfo.fromJson(p))
+          .whereType<Map>()
+          .map((p) => ProveedorInfo.fromJson(Map<String, dynamic>.from(p)))
           .toList();
       if (proveedores.isNotEmpty) {
         proveedor = proveedores.first;

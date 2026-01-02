@@ -496,7 +496,7 @@ class _PantallaDetalleCourierState extends State<PantallaDetalleCourier> {
           _buildSectionTitle('Acciones'),
           const SizedBox(height: 12),
           JPCupertinoButton.filled(
-            text: 'Subir Comprobante',
+            text: 'Datos de Transferencia',
             icon: Icons.upload_file,
             onPressed: () => _abrirSubirComprobante(pedido),
           ),

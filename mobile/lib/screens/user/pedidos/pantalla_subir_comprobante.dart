@@ -195,7 +195,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
         navigationBar: CupertinoNavigationBar(
           backgroundColor: JPCupertinoColors.surface(context),
           middle: const Text(
-            'Subir comprobante',
+            'Datos de Transferencia',
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
           ),
           leading: CupertinoButton(
@@ -460,7 +460,10 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                 ],
               ),
               child: CupertinoButton(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
                 color: CupertinoColors.white,
                 borderRadius: BorderRadius.circular(14),
                 onPressed: _mostrarOpcionesImagen,
@@ -506,119 +509,120 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
-          color: _imagenComprobante != null
-              ? CupertinoColors.transparent
-              : JPCupertinoColors.systemGrey6(context),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
             color: _imagenComprobante != null
-                ? AppColorsPrimary.main.withValues(alpha: 0.4)
-                : JPCupertinoColors.separator(context).withValues(alpha: 0.3),
-            width: _imagenComprobante != null ? 2.5 : 1.5,
+                ? CupertinoColors.transparent
+                : JPCupertinoColors.systemGrey6(context),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _imagenComprobante != null
+                  ? AppColorsPrimary.main.withValues(alpha: 0.4)
+                  : JPCupertinoColors.separator(context).withValues(alpha: 0.3),
+              width: _imagenComprobante != null ? 2.5 : 1.5,
+            ),
+            boxShadow: _imagenComprobante != null
+                ? <BoxShadow>[
+                    BoxShadow(
+                      color: AppColorsPrimary.main.withValues(alpha: 0.1),
+                      blurRadius: 15,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
-          boxShadow: _imagenComprobante != null
-              ? <BoxShadow>[
-                  BoxShadow(
-                    color: AppColorsPrimary.main.withValues(alpha: 0.1),
-                    blurRadius: 15,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: _imagenComprobante != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    Image.file(_imagenComprobante!, fit: BoxFit.cover),
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: <Color>[
-                              JPCupertinoColors.systemGreen(context),
-                              JPCupertinoColors.systemGreen(context)
-                                  .withValues(alpha: 0.85),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+          child: _imagenComprobante != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[
+                      Image.file(_imagenComprobante!, fit: BoxFit.cover),
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
                           ),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: <BoxShadow>[
-                            BoxShadow(
-                              color: CupertinoColors.black.withValues(
-                                alpha: 0.3,
-                              ),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: <Color>[
+                                JPCupertinoColors.systemGreen(context),
+                                JPCupertinoColors.systemGreen(
+                                  context,
+                                ).withValues(alpha: 0.85),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const Icon(
-                              CupertinoIcons.checkmark_alt_circle_fill,
-                              color: CupertinoColors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                'Listo',
-                                style: const TextStyle(
-                                  color: CupertinoColors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(
+                                color: CupertinoColors.black.withValues(
+                                  alpha: 0.3,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              const Icon(
+                                CupertinoIcons.checkmark_alt_circle_fill,
+                                color: CupertinoColors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Listo',
+                                  style: const TextStyle(
+                                    color: CupertinoColors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : Center(
-                child: Container(
-                  padding: const EdgeInsets.all(26),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: <Color>[
-                        AppColorsPrimary.main.withValues(alpha: 0.15),
-                        AppColorsPrimary.main.withValues(alpha: 0.08),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(
-                        color: AppColorsPrimary.main.withValues(alpha: 0.1),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: Icon(
-                    CupertinoIcons.camera_fill,
-                    size: 52,
-                    color: AppColorsPrimary.main,
+                )
+              : Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(26),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: <Color>[
+                          AppColorsPrimary.main.withValues(alpha: 0.15),
+                          AppColorsPrimary.main.withValues(alpha: 0.08),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: AppColorsPrimary.main.withValues(alpha: 0.1),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      CupertinoIcons.camera_fill,
+                      size: 52,
+                      color: AppColorsPrimary.main,
+                    ),
                   ),
                 ),
-              ),
         ),
       ),
     );
@@ -686,7 +690,7 @@ class _PantallaSubirComprobanteState extends State<PantallaSubirComprobante> {
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        'Subir Comprobante',
+                        'Datos de Transferencia',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,

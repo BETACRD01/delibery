@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/models/entrega_historial.dart';
 import 'package:mobile/services/repartidor/repartidor_service.dart';
+import 'package:mobile/screens/delivery/historial/pantalla_detalle_entrega.dart';
 
 /// Pantalla de ganancias vinculada al backend y alineada al diseño tipo iOS.
 class PantallaGananciasRepartidor extends StatefulWidget {
@@ -71,8 +72,15 @@ class _PantallaGananciasRepartidorState
     }
   }
 
+  double _calcularGanancia(EntregaHistorial entrega) {
+    if (entrega.tipo == 'directo') {
+      return entrega.montoTotal;
+    }
+    return entrega.comisionRepartidor;
+  }
+
   double get _gananciaTotal =>
-      _entregas.fold(0.0, (sum, item) => sum + item.montoTotal);
+      _entregas.fold(0.0, (sum, item) => sum + _calcularGanancia(item));
 
   double get _gananciaSemana {
     final ahora = DateTime.now();
@@ -83,7 +91,7 @@ class _PantallaGananciasRepartidorState
             entrega.fechaEntregado,
           ).isAfter(sieteDiasAntes.subtract(const Duration(seconds: 1))),
         )
-        .fold(0.0, (sum, item) => sum + item.montoTotal);
+        .fold(0.0, (sum, item) => sum + _calcularGanancia(item));
   }
 
   double get _gananciaHoy {
@@ -95,7 +103,7 @@ class _PantallaGananciasRepartidorState
               fecha.month == ahora.month &&
               fecha.day == ahora.day;
         })
-        .fold(0.0, (sum, item) => sum + item.montoTotal);
+        .fold(0.0, (sum, item) => sum + _calcularGanancia(item));
   }
 
   DateTime _parseFecha(String valor) {
@@ -261,70 +269,89 @@ class _PantallaGananciasRepartidorState
   Widget _buildEntregaItem(EntregaHistorial entrega) {
     final fecha = _fechaFormat.format(_parseFecha(entrega.fechaEntregado));
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _accent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              entrega.tieneComprobante
-                  ? CupertinoIcons.check_mark_circled_solid
-                  : CupertinoIcons.cube_box_fill,
-              color: _accent,
-              size: 20,
-            ),
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: () {
+        Navigator.of(context).push(
+          CupertinoPageRoute(
+            builder: (context) => PantallaDetalleEntrega(entrega: entrega),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                entrega.tieneComprobante
+                    ? CupertinoIcons.check_mark_circled_solid
+                    : CupertinoIcons.cube_box_fill,
+                color: _accent,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pedido #${entrega.id}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: _textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    fecha,
+                    style: TextStyle(fontSize: 13, color: _textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  entrega.clienteNombre.isEmpty
-                      ? 'Cliente'
-                      : entrega.clienteNombre,
+                  '\$${_calcularGanancia(entrega).toStringAsFixed(2)}',
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     fontSize: 16,
                     color: _textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '$fecha · ${entrega.metodoPago}',
-                  style: TextStyle(fontSize: 13, color: _textSecondary),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Ver más',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _accent,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 12,
+                      color: _accent,
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: _textPrimary,
-                ),
-              ),
-              if (entrega.tieneComprobante)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2.0),
-                  child: Icon(
-                    CupertinoIcons.doc_text,
-                    size: 14,
-                    color: _textSecondary,
-                  ),
-                ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

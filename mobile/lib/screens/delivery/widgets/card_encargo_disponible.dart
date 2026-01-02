@@ -189,7 +189,7 @@ class CardEncargoDisponible extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Ganancia \$${encargo.comisionRepartidor!.toStringAsFixed(2)}',
+                    'Ganancia \$${encargo.gananciaTotal.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: _success,
                       fontWeight: FontWeight.w600,

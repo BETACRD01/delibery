@@ -627,6 +627,7 @@ def historial_entregas(request):
 
             entrega_data = {
                 'id': pedido.id,
+                'tipo': pedido.tipo,
                 'numero_pedido': pedido.numero_pedido,
                 'fecha_entregado': pedido.fecha_entregado.isoformat() if pedido.fecha_entregado else None,
                 'monto_total': float(pedido.total) if pedido.total else 0.0,
@@ -1569,9 +1570,13 @@ def aceptar_pedido(request, pedido_id):
         except Exception as e:
             logger.warning(f"Error enviando notificación al cliente: {e}")
 
+        # Serializar el pedido con detalle completo para devolverlo al repartidor
+        from pedidos.serializers import PedidoRepartidorDetalladoSerializer
+        serializer = PedidoRepartidorDetalladoSerializer(pedido, context={'request': request})
+
         return Response({
             "mensaje": "Pedido aceptado correctamente",
-            "pedido_id": pedido.id,
+            "pedido": serializer.data,
             "estado_repartidor": repartidor.estado,
         }, status=status.HTTP_200_OK)
 

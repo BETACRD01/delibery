@@ -33,6 +33,11 @@ class PedidoDisponible {
     return total;
   }
 
+  /// Ganancia total estimada para el repartidor (Comisión base + Recargos)
+  double get gananciaTotal {
+    return comisionRepartidor ?? 0.0;
+  }
+
   PedidoDisponible({
     required this.id,
     required this.numeroPedido,
@@ -300,6 +305,8 @@ class PedidoDetalladoRepartidor {
 
   // Dirección COMPLETA
   final String? direccionOrigen;
+  final double? latitudOrigen;
+  final double? longitudOrigen;
   final String direccionEntrega;
   final double? latitudDestino;
   final double? longitudDestino;
@@ -335,6 +342,8 @@ class PedidoDetalladoRepartidor {
     this.descuentoAplicado,
     this.descripcion,
     this.direccionOrigen,
+    this.latitudOrigen,
+    this.longitudOrigen,
     required this.direccionEntrega,
     this.latitudDestino,
     this.longitudDestino,
@@ -381,6 +390,11 @@ class PedidoDetalladoRepartidor {
   double get totalConRecargo {
     // El backend ya incluye el recargo en el total, retornamos directo
     return total;
+  }
+
+  /// Ganancia total estimada (Comisión + Recargos)
+  double get gananciaTotal {
+    return comisionRepartidor ?? 0.0;
   }
 
   factory PedidoDetalladoRepartidor.fromJson(Map<String, dynamic> json) {
@@ -439,6 +453,12 @@ class PedidoDetalladoRepartidor {
           : null,
       descripcion: json['descripcion'] as String?,
       direccionOrigen: json['direccion_origen'] as String?,
+      latitudOrigen: json['latitud_origen'] != null
+          ? parseDouble(json['latitud_origen'])
+          : null,
+      longitudOrigen: json['longitud_origen'] != null
+          ? parseDouble(json['longitud_origen'])
+          : null,
       direccionEntrega: json['direccion_entrega'] as String? ?? '',
       latitudDestino: json['latitud_destino'] != null
           ? parseDouble(json['latitud_destino'])

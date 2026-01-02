@@ -137,14 +137,18 @@ def _obtener_plantilla_mensaje(pedido, evento, estado_anterior):
 
     if estado == EstadoPedido.ASIGNADO_REPARTIDOR:
         nombre_repartidor = pedido.repartidor.user.first_name if pedido.repartidor else "Un repartidor"
+        
+        es_courier = pedido.tipo == TipoPedido.DIRECTO
+        tipo_texto = "encargo" if es_courier else "pedido"
+        
         if pedido.metodo_pago == 'transferencia':
             return {
-                'titulo': "Repartidor aceptó tu pedido",
-                'mensaje': f"{nombre_repartidor} aceptó tu pedido #{numero}. Transfiere ${pedido.total} y sube el comprobante."
+                'titulo': f"Repartidor aceptó tu {tipo_texto}",
+                'mensaje': f"{nombre_repartidor} aceptó tu {tipo_texto} #{numero}. Transfiere ${pedido.total} y sube el comprobante."
             }
         return {
             'titulo': "Repartidor Asignado",
-            'mensaje': f"{nombre_repartidor} ha aceptado tu pedido y está en camino a recogerlo."
+            'mensaje': f"{nombre_repartidor} ha aceptado tu {tipo_texto} y está en camino a recogerlo."
         }
 
     elif estado == EstadoPedido.EN_PROCESO:

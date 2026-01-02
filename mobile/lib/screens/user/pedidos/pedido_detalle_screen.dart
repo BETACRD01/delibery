@@ -344,13 +344,35 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Validar ID de proveedor
+              var provId = pedido.proveedor?.id ?? 0;
+              var provNombre = pedido.proveedor?.nombre ?? 'Proveedor';
+              var provFoto = pedido.proveedor?.fotoPerfil;
+
+              // Si no hay proveedor principal, intentar buscar en lista
+              if (provId == 0 && pedido.proveedores.isNotEmpty) {
+                provId = pedido.proveedores.first.id;
+                provNombre = pedido.proveedores.first.nombre;
+                provFoto = pedido.proveedores.first.fotoPerfil;
+              }
+
+              if (provId == 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Error: No se identificó al proveedor'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
               final result = await showCupertinoModalPopup<bool>(
                 context: context,
                 builder: (context) => DialogoCalificarProveedor(
                   pedidoId: pedido.id,
-                  proveedorId: pedido.proveedor?.id ?? 0,
-                  proveedorNombre: pedido.proveedor?.nombre ?? 'Proveedor',
-                  proveedorFoto: pedido.proveedor?.fotoPerfil,
+                  proveedorId: provId,
+                  proveedorNombre: provNombre,
+                  proveedorFoto: provFoto,
                 ),
               );
               if (result == true && mounted) {
@@ -565,19 +587,12 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
     return _buildContactoCard(
       titulo: 'Proveedor',
       nombre: pedido.proveedor!.nombre,
-      detalle:
-          pedido.proveedor!.direccion ??
-          pedido.proveedor!.telefono ??
-          'Sin información',
+      detalle: pedido.proveedor!.direccion ?? 'Sin información',
       icono: Icons.store_mall_directory_rounded,
       color: Colors.orange,
       fotoPerfil: pedido.proveedor!.fotoPerfil,
-      onWhatsapp: pedido.proveedor!.telefono != null
-          ? () => _abrirWhatsapp(pedido.proveedor!.telefono, pedido)
-          : null,
-      onCall: pedido.proveedor!.telefono != null
-          ? () => _llamar(pedido.proveedor!.telefono)
-          : null,
+      onWhatsapp: null,
+      onCall: null,
     );
   }
 
@@ -790,7 +805,7 @@ class _PedidoDetalleScreenState extends State<PedidoDetalleScreen> {
                   ),
                 ),
                 icon: const Icon(Icons.upload_file_rounded),
-                label: const Text('Subir comprobante'),
+                label: const Text('Datos de Transferencia'),
               ),
               const SizedBox(height: 6),
               Text(

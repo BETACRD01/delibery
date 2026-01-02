@@ -342,16 +342,27 @@ class _PantallaVerComprobanteState extends State<PantallaVerComprobante> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: CupertinoColors.systemGroupedBackground,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(24), // Circular
+              image: _comprobante!.clienteFoto != null
+                  ? DecorationImage(
+                      image: CachedNetworkImageProvider(
+                        _comprobante!.clienteFoto!,
+                      ),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: const Icon(
-              CupertinoIcons.person_fill,
-              color: CupertinoColors.black,
-              size: 24,
-            ),
+            child: _comprobante!.clienteFoto == null
+                ? const Icon(
+                    CupertinoIcons.person_fill,
+                    color: CupertinoColors.systemGrey,
+                    size: 24,
+                  )
+                : null,
           ),
           const SizedBox(width: 14),
           Expanded(

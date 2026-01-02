@@ -3,6 +3,7 @@
 /// Modelo para representar una entrega completada en el historial del repartidor
 class EntregaHistorial {
   final int id;
+  final String tipo;
   final String fechaEntregado;
   final double comisionRepartidor;
   final String clienteNombre;
@@ -14,6 +15,7 @@ class EntregaHistorial {
 
   EntregaHistorial({
     required this.id,
+    this.tipo = 'proveedor',
     required this.fechaEntregado,
     required this.comisionRepartidor,
     required this.clienteNombre,
@@ -27,6 +29,7 @@ class EntregaHistorial {
   factory EntregaHistorial.fromJson(Map<String, dynamic> json) {
     return EntregaHistorial(
       id: json['id'] ?? 0,
+      tipo: json['tipo'] ?? 'proveedor',
       fechaEntregado: json['fecha_entregado'] ?? '',
       comisionRepartidor: _parseDouble(json['comision_repartidor']),
       clienteNombre: json['cliente_nombre'] ?? 'Cliente desconocido',
@@ -52,6 +55,7 @@ class EntregaHistorial {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'tipo': tipo,
       'fecha_entregado': fechaEntregado,
       'comision_repartidor': comisionRepartidor,
       'cliente_nombre': clienteNombre,
@@ -74,7 +78,8 @@ class EntregaHistorial {
   }
 
   /// Indica si la entrega tiene comprobante adjunto
-  bool get tieneComprobante => urlComprobante != null && urlComprobante!.isNotEmpty;
+  bool get tieneComprobante =>
+      urlComprobante != null && urlComprobante!.isNotEmpty;
 }
 
 /// Respuesta del endpoint de historial de entregas
@@ -97,7 +102,8 @@ class HistorialEntregasResponse {
 
   factory HistorialEntregasResponse.fromJson(Map<String, dynamic> json) {
     return HistorialEntregasResponse(
-      entregas: (json['results'] as List<dynamic>?)
+      entregas:
+          (json['results'] as List<dynamic>?)
               ?.map((e) => EntregaHistorial.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],

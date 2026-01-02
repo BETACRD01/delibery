@@ -15,6 +15,7 @@ import '../core/cache/cache_manager.dart';
 import '../repartidor/repartidor_service.dart';
 import '../roles/role_manager.dart';
 import '../usuarios/usuarios_service.dart';
+import '../notifications/servicio_notificacion.dart';
 
 // ============================================================================
 // AUTH SERVICE
@@ -318,6 +319,14 @@ class AuthService {
       role: rol,
       userId: tokens['user_id'] as int?,
     );
+
+    // IMPORTANTE: Inicializar notificaciones después del login exitoso
+    // para asegurar que el token FCM se vincule al usuario
+    try {
+      await NotificationService().initialize();
+    } catch (e) {
+      _log('Advertencia: No se pudieron activar notificaciones tras login: $e');
+    }
 
     _log('Auth exitoso - Rol: $rol');
   }

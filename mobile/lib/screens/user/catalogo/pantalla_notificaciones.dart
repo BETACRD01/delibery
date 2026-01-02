@@ -16,7 +16,8 @@ class PantallaNotificaciones extends StatefulWidget {
   State<PantallaNotificaciones> createState() => _PantallaNotificacionesState();
 }
 
-class _PantallaNotificacionesState extends State<PantallaNotificaciones> with SingleTickerProviderStateMixin {
+class _PantallaNotificacionesState extends State<PantallaNotificaciones>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -40,7 +41,8 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
       builder: (context, inbox, _) {
         final noLeidasCount = inbox.noLeidas.length;
         final totalCount = inbox.todas.length;
-        final groupedBackground = CupertinoColors.systemGroupedBackground.resolveFrom(context);
+        final groupedBackground = CupertinoColors.systemGroupedBackground
+            .resolveFrom(context);
 
         return Scaffold(
           backgroundColor: groupedBackground,
@@ -49,7 +51,10 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
             foregroundColor: CupertinoColors.label.resolveFrom(context),
             title: Text(
               'Notificaciones',
-              style: TextStyle(color: CupertinoColors.label.resolveFrom(context), fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: CupertinoColors.label.resolveFrom(context),
+                fontWeight: FontWeight.w600,
+              ),
             ),
             centerTitle: true,
             elevation: 0,
@@ -78,10 +83,14 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
                   ),
                   child: TabBar(
                     controller: _tabController,
-                    indicator: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                    indicator: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     indicatorSize: TabBarIndicatorSize.tab,
                     labelColor: CupertinoColors.label.resolveFrom(context),
-                    unselectedLabelColor: CupertinoColors.secondaryLabel.resolveFrom(context),
+                    unselectedLabelColor: CupertinoColors.secondaryLabel
+                        .resolveFrom(context),
                     tabs: [
                       Tab(text: 'No leídas ($noLeidasCount)'),
                       Tab(text: 'Todas ($totalCount)'),
@@ -109,7 +118,11 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 56, color: JPColors.textHint),
+              const Icon(
+                Icons.error_outline,
+                size: 56,
+                color: JPColors.textHint,
+              ),
               const SizedBox(height: 12),
               Text(
                 inbox.error!,
@@ -117,7 +130,10 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              TextButton(onPressed: inbox.recargar, child: const Text('Reintentar')),
+              TextButton(
+                onPressed: inbox.recargar,
+                child: const Text('Reintentar'),
+              ),
             ],
           ),
         ),
@@ -143,11 +159,20 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(CupertinoIcons.bell_slash, size: 72, color: CupertinoColors.systemGrey3.resolveFrom(context)),
+            Icon(
+              CupertinoIcons.bell_slash,
+              size: 72,
+              color: CupertinoColors.systemGrey3.resolveFrom(context),
+            ),
             const SizedBox(height: 12),
             Text(
-              esNoLeidas ? 'No tienes notificaciones nuevas' : 'No hay notificaciones',
-              style: TextStyle(fontSize: 16, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
+              esNoLeidas
+                  ? 'No tienes notificaciones nuevas'
+                  : 'No hay notificaciones',
+              style: TextStyle(
+                fontSize: 16,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              ),
             ),
           ],
         ),
@@ -173,7 +198,10 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
     );
   }
 
-  void _abrirNotificacion(NotificacionModel notificacion, NotificacionesProvider inbox) {
+  void _abrirNotificacion(
+    NotificacionModel notificacion,
+    NotificacionesProvider inbox,
+  ) {
     if (!notificacion.leida) {
       _marcarComoLeida(notificacion, inbox);
     }
@@ -193,7 +221,7 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
   void _mostrarDetalleNotificacion(NotificacionModel notificacion) {
     showCupertinoDialog(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (dialogContext) => CupertinoAlertDialog(
         title: Column(
           children: [
             Icon(notificacion.icono, color: notificacion.color, size: 32),
@@ -208,16 +236,27 @@ class _PantallaNotificacionesState extends State<PantallaNotificaciones> with Si
             const SizedBox(height: 8),
             Text(
               notificacion.tiempoTranscurrido,
-              style: TextStyle(fontSize: 12, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
+              style: TextStyle(
+                fontSize: 12,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              ),
             ),
           ],
         ),
-        actions: [CupertinoDialogAction(onPressed: () => Navigator.pop(context), child: const Text('Cerrar'))],
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
   }
 
-  void _marcarComoLeida(NotificacionModel notificacion, NotificacionesProvider inbox) {
+  void _marcarComoLeida(
+    NotificacionModel notificacion,
+    NotificacionesProvider inbox,
+  ) {
     inbox.marcarComoLeida(notificacion.id);
   }
 }
@@ -246,7 +285,10 @@ class _NotificacionCard extends StatelessWidget {
       direction: DismissDirection.endToStart,
       background: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(color: JPColors.error, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: JPColors.error,
+          borderRadius: BorderRadius.circular(16),
+        ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.white, size: 28),
@@ -260,10 +302,16 @@ class _NotificacionCard extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6)),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
             ],
             border: Border.all(
-              color: notificacion.leida ? const Color(0xFFE5E5EA) : notificacion.color.withValues(alpha: 0.35),
+              color: notificacion.leida
+                  ? const Color(0xFFE5E5EA)
+                  : notificacion.color.withValues(alpha: 0.35),
             ),
           ),
           child: Row(
@@ -272,10 +320,16 @@ class _NotificacionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: notificacion.leida ? const Color(0xFFF2F2F7) : notificacion.color.withValues(alpha: 0.12),
+                  color: notificacion.leida
+                      ? const Color(0xFFF2F2F7)
+                      : notificacion.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(notificacion.icono, color: notificacion.color, size: 24),
+                child: Icon(
+                  notificacion.icono,
+                  color: notificacion.color,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -288,7 +342,9 @@ class _NotificacionCard extends StatelessWidget {
                           child: Text(
                             notificacion.titulo,
                             style: TextStyle(
-                              fontWeight: notificacion.leida ? FontWeight.w600 : FontWeight.bold,
+                              fontWeight: notificacion.leida
+                                  ? FontWeight.w600
+                                  : FontWeight.bold,
                               fontSize: 15,
                               color: JPColors.textPrimary,
                             ),
@@ -298,14 +354,20 @@ class _NotificacionCard extends StatelessWidget {
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: BoxDecoration(color: notificacion.color, shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                              color: notificacion.color,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
                       notificacion.mensaje,
-                      style: TextStyle(fontSize: 13, color: const Color(0xFF636366)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: const Color(0xFF636366),
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -314,13 +376,19 @@ class _NotificacionCard extends StatelessWidget {
                       children: [
                         Text(
                           notificacion.tiempoTranscurrido,
-                          style: TextStyle(fontSize: 12, color: const Color(0xFF8E8E93)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: const Color(0xFF8E8E93),
+                          ),
                         ),
                         if (!notificacion.leida) ...[
                           const SizedBox(width: 8),
                           TextButton(
                             onPressed: onMarcarLeida,
-                            child: const Text('Marcar leída', style: TextStyle(fontSize: 12)),
+                            child: const Text(
+                              'Marcar leída',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ),
                         ],
                       ],

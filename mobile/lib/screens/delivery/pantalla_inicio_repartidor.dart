@@ -285,9 +285,35 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   }
 
   Future<void> _aceptarPedido(int pedidoId) async {
+    // 1. Mostrar Dialog de Carga
+    unawaited(
+      showCupertinoDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return CupertinoAlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CupertinoActivityIndicator(),
+                SizedBox(height: 10),
+                Text('Asignando pedido...'),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
     try {
       // El controller ahora devuelve el detalle completo del pedido con datos sensibles
       final detallePedido = await _controller.aceptarPedido(pedidoId);
+
+      // 2. Cerrar Dialog de Carga
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
       if (!mounted) return;
 
       final exito = detallePedido != null;
@@ -317,9 +343,18 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
         _mostrarNotificacionError(mensajeError);
       }
     } catch (e) {
+      // 2b. Cerrar Dialog de Carga en caso de error si aún está abierto
+      if (mounted) {
+        // Hacemos check para asegurar que lo que cerramos es el dialog
+        // Pero en try/catch simple asumimos stack correcto.
+        // Como ya cerramos en el bloque try antes del success,
+        // aquí solo llegamos si falló el await del controller.
+        // Así que debemos cerrar el dialog.
+        Navigator.pop(context);
+      }
+
       if (!mounted) return;
-      final mensajeError = _controller.error ?? 'Error aceptando el pedido';
-      _mostrarNotificacionError(mensajeError);
+      _mostrarNotificacionError('Error de conexión: $e');
     }
   }
 
@@ -687,7 +722,15 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   }
 
   /// Abre Google Maps con el destino del pedido
-  Future<void> _abrirNavegacion(PedidoDetalladoRepartidor pedido) async {
+  Future<void> _abrirNavegacion(PedidoDetalladoRepartidor pedidoIn) async {
+    // Asegurar que usamos la versión más reciente del pedido (estado actualizado)
+    final pedido =
+        _controller.pedidosActivos?.firstWhere(
+          (p) => p.id == pedidoIn.id,
+          orElse: () => pedidoIn,
+        ) ??
+        pedidoIn;
+
     Uri? url;
 
     // Determinar destino según estado
@@ -698,8 +741,12 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     if (!irAEntregar) {
       // ESTADO: Yendo a Recoger
       if (esDirecto) {
-        // COURIER: Usar dirección de origen (texto)
-        if (pedido.direccionOrigen != null &&
+        // COURIER: Priorizar coordenadas de origen, luego dirección (texto)
+        if (pedido.latitudOrigen != null && pedido.longitudOrigen != null) {
+          url = Uri.parse(
+            'https://www.google.com/maps/dir/?api=1&destination=${pedido.latitudOrigen},${pedido.longitudOrigen}',
+          );
+        } else if (pedido.direccionOrigen != null &&
             pedido.direccionOrigen!.isNotEmpty) {
           final q = Uri.encodeComponent(pedido.direccionOrigen!);
           url = Uri.parse(
@@ -1243,8 +1290,10 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
   Widget _buildSurfaceCard({
     required Widget child,
     EdgeInsetsGeometry margin = const EdgeInsets.only(bottom: 16),
+    Key? key,
   }) {
     return Container(
+      key: key,
       margin: margin,
       decoration: BoxDecoration(
         color: _cardBg,
@@ -1468,6 +1517,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     // Si es encargo, usar el nuevo widget especializado
     if (esEncargo) {
       return CardEncargoDisponible(
+        key: ValueKey('disp_encargo_${pedido.id}'),
         encargo: pedido,
         onAceptar: () => _aceptarPedido(pedido.id),
         onRechazar: () => _controller.rechazarPedido(pedido.id),
@@ -1480,6 +1530,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     final colorIcono = _accent;
 
     return _buildSurfaceCard(
+      key: ValueKey('disp_pedido_${pedido.id}'),
       margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1562,7 +1613,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                   'Pago: ${pedido.metodoPago}',
                   style: TextStyle(color: _textPrimary),
                 ),
-                if (pedido.comisionRepartidor != null) ...[
+                if (pedido.gananciaTotal > 0) ...[
                   const Spacer(),
                   const Icon(
                     CupertinoIcons.money_dollar_circle_fill,
@@ -1571,7 +1622,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Ganancia \$${pedido.comisionRepartidor!.toStringAsFixed(2)}',
+                    'Ganancia \$${pedido.gananciaTotal.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: _success,
                       fontWeight: FontWeight.w600,
@@ -1692,6 +1743,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     // Si es encargo, usar el nuevo widget especializado con flujo de dos etapas
     if (esEncargo) {
       return CardEncargoActivo(
+        key: ValueKey('encargo_${pedido.id}'),
         encargo: pedido,
         onMarcarRecogido: () => _marcarEnCamino(pedido),
         onMarcarEntregado: () => _mostrarDialogoMarcarEntregado(pedido),
@@ -1720,6 +1772,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
     final colorBadge = _success;
 
     return _buildSurfaceCard(
+      key: ValueKey('pedido_${pedido.id}'),
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
@@ -2186,11 +2239,13 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
       if (!mounted) return;
 
       // Mostrar indicador de carga
-      await showCupertinoDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) =>
-            const Center(child: CupertinoActivityIndicator(radius: 20)),
+      unawaited(
+        showCupertinoDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              const Center(child: CupertinoActivityIndicator(radius: 20)),
+        ),
       );
 
       // Marcar como en camino
@@ -2345,13 +2400,23 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                 ],
               ),
             ),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            actionsAlignment: MainAxisAlignment.end,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             actions: [
               TextButton(
                 onPressed: isSubmitting
                     ? null
                     : () => Navigator.pop(dialogContext),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[600],
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
                 child: const Text('Cancelar'),
               ),
+              const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: isSubmitting
                     ? null
@@ -2375,13 +2440,31 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                         if (!mounted || !dialogContext.mounted) return;
                         Navigator.pop(dialogContext, exito);
                       },
-                style: ElevatedButton.styleFrom(backgroundColor: _success),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _success,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
                 child: isSubmitting
-                    ? const CupertinoActivityIndicator(
-                        color: Colors.white,
-                        radius: 10,
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
                       )
-                    : const Text('Confirmar Entrega'),
+                    : const Text(
+                        'Confirmar Entrega',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
               ),
             ],
           ),
@@ -2507,7 +2590,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
               _buildEstadisticaHistorial(
                 Icons.payments,
                 'Comisiones',
-                'Bs ${_controller.totalComisionesHistorial.toStringAsFixed(2)}',
+                '\$${_controller.totalComisionesHistorial.toStringAsFixed(2)}',
                 _success,
               ),
             ],
@@ -2669,7 +2752,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
+                          '\$${entrega.montoTotal.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -2698,7 +2781,7 @@ class _PantallaInicioRepartidorState extends State<PantallaInicioRepartidor> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            'Bs ${entrega.comisionRepartidor.toStringAsFixed(2)}',
+                            '\$${entrega.comisionRepartidor.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

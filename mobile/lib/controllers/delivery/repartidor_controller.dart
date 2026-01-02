@@ -359,17 +359,45 @@ class RepartidorController extends ChangeNotifier {
     try {
       developer.log('Aceptando pedido $pedidoId', name: 'RepartidorController');
 
-      // 1. Aceptar el pedido
-      await _repartidorService.aceptarPedido(pedidoId);
+      // 1. Aceptar el pedido y obtener detalle directamente (AHORRA 1 REQUEST)
+      final detalle = await _repartidorService.aceptarPedido(pedidoId);
 
-      // 2. Obtener el detalle COMPLETO del pedido (con datos sensibles)
-      final detalle = await _repartidorService.obtenerDetallePedido(pedidoId);
+      // 2. Actualización Optimista del Estado Local
+      // Remover de pendientes
+      _pendientes?.removeWhere((p) => p.id == pedidoId);
 
-      // 3. Recargar datos del perfil para actualizar estado
-      await cargarDatos(forzarRecarga: true);
+      // Agregar a activos (si ya existe la lista)
+      if (_pedidosActivos != null) {
+        _pedidosActivos!.insert(0, detalle);
+      } else {
+        _pedidosActivos = [detalle];
+      }
 
-      // 4. Cargar pedidos activos para mostrar en la UI
-      await cargarPedidosActivos();
+      // Actualizar estado del perfil a ocupado (si no lo estaba)
+      if (_perfil != null && _perfil!.estado == EstadoRepartidor.disponible) {
+        _perfil = _perfil!.copyWith(estado: EstadoRepartidor.ocupado);
+      }
+
+      _notifySafely();
+
+      // 3. Recarga en segundo plano (NO BLOQUEANTE para la UI)
+      // Esto hace que la UI responda inmediatamente con éxito
+      unawaited(
+        Future.wait([cargarDatos(forzarRecarga: true), cargarPedidosActivos()])
+            .then((_) {
+              developer.log(
+                'Datos actualizados en segundo plano tras aceptar pedido',
+                name: 'RepartidorController',
+              );
+            })
+            .catchError((e) {
+              developer.log(
+                'Error en recarga background (no crítico)',
+                error: e,
+                name: 'RepartidorController',
+              );
+            }),
+      );
 
       return detalle;
     } on ApiException catch (e) {
@@ -567,8 +595,9 @@ class RepartidorController extends ChangeNotifier {
 
       await _repartidorService.marcarPedidoEnCamino(pedidoId);
 
-      // Recargar listas de pedidos en paralelo
-      await Future.wait([cargarPedidosActivos(), cargarPedidosDisponibles()]);
+      // Recargar solo pedidos activos (necesario para actualizar estado)
+      // La lista de disponibles no debería cambiar por esta acción
+      await cargarPedidosActivos();
 
       developer.log(
         'Pedido #$pedidoId marcado como en camino exitosamente',
@@ -576,6 +605,14 @@ class RepartidorController extends ChangeNotifier {
       );
 
       return true;
+    } on ApiException catch (e) {
+      developer.log(
+        'Error API marcando pedido en camino',
+        name: 'RepartidorController',
+        error: e,
+      );
+      _setError(e.getUserFriendlyMessage());
+      return false;
     } catch (e, stackTrace) {
       developer.log(
         'Error al marcar pedido como en camino',
@@ -632,8 +669,21 @@ class RepartidorController extends ChangeNotifier {
         imagenEvidencia: imagenEvidencia,
       );
 
-      // Recargar listas de pedidos en paralelo
-      await Future.wait([cargarPedidosActivos(), cargarPedidosDisponibles()]);
+      // Recargar listas de pedidos en paralelo (Segundo plano para no bloquear UI)
+      // No usamos await aquí para que el diálogo se cierre inmediatamente
+      unawaited(
+        Future.wait([
+          cargarPedidosActivos(),
+          cargarPedidosDisponibles(actualizarUbicacionBackend: false),
+        ]).catchError((e) {
+          developer.log(
+            'Error recargando listas tras entrega (no crítico)',
+            name: 'RepartidorController',
+            error: e,
+          );
+          return <void>[];
+        }),
+      );
 
       developer.log(
         'Pedido #$pedidoId marcado como entregado exitosamente',

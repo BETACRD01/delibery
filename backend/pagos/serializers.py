@@ -416,6 +416,7 @@ class ComprobanteVerRepartidorSerializer(serializers.ModelSerializer):
     Incluye información del cliente y del pedido.
     """
     cliente_nombre = serializers.SerializerMethodField()
+    cliente_foto = serializers.SerializerMethodField()
     pedido_numero = serializers.CharField(source='pedido.numero_pedido', read_only=True)
     comprobante_url = serializers.SerializerMethodField()
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
@@ -427,6 +428,7 @@ class ComprobanteVerRepartidorSerializer(serializers.ModelSerializer):
             'referencia',
             'pedido_numero',
             'cliente_nombre',
+            'cliente_foto',
             'monto',
             'estado',
             'estado_display',
@@ -445,6 +447,15 @@ class ComprobanteVerRepartidorSerializer(serializers.ModelSerializer):
         if obj.pedido and obj.pedido.cliente and obj.pedido.cliente.user:
             return obj.pedido.cliente.user.get_full_name()
         return "Cliente"
+
+    def get_cliente_foto(self, obj):
+        """Retorna foto del cliente"""
+        if obj.pedido and obj.pedido.cliente and obj.pedido.cliente.foto:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.pedido.cliente.foto.url)
+            return obj.pedido.cliente.foto.url
+        return None
 
     def get_comprobante_url(self, obj):
         """Construye URL completa del comprobante"""

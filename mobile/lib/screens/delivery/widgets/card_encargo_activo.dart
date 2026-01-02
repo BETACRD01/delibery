@@ -96,15 +96,9 @@ class CardEncargoActivo extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // Info del cliente/destinatario
-            _buildInfoDestinatario(context, textPrimary, textSecondary),
-
-            // Descripción si existe
-            if (encargo.descripcion != null &&
-                encargo.descripcion!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _buildDescripcion(context, textSecondary),
-            ],
+            // Detalles del encargo (siempre mostrar - incluye receptor e instrucciones)
+            const SizedBox(height: 12),
+            _buildDescripcion(context, textSecondary),
 
             // Comprobante de transferencia (si existe)
             if (_tieneComprobante) ...[
@@ -414,88 +408,291 @@ class CardEncargoActivo extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoDestinatario(
-    BuildContext context,
-    Color textPrimary,
-    Color textSecondary,
-  ) {
+  /// Sección de detalles del encargo con formato ordenado
+  /// Separa correctamente: Cliente (solicitante) vs Receptor (quien recibe)
+  Widget _buildDescripcion(BuildContext context, Color textSecondary) {
+    final textPrimary = CupertinoColors.label.resolveFrom(context);
+
+    // Parsear la descripción para extraer tipo, contenido y datos del receptor
+    // Formato del backend: "Courier: {tipo} - {descripcion}. Receptor: {nombre} ({telefono})"
+    String tipoPaquete = 'Paquete';
+    String descripcionContenido = '';
+    String receptorNombre = '';
+    String receptorTelefono = '';
+
+    final descripcionOriginal = encargo.descripcion ?? '';
+
+    // Extraer el tipo de paquete
+    if (descripcionOriginal.contains('Courier:')) {
+      // Formato: "Courier: Tipo - Descripcion. Receptor: Nombre (Telefono)"
+      final partes = descripcionOriginal.split('Receptor:');
+      if (partes.isNotEmpty) {
+        // Primera parte: "Courier: Tipo - Descripcion. "
+        final partePaquete = partes[0].replaceFirst('Courier:', '').trim();
+        if (partePaquete.contains(' - ')) {
+          final tipoYDesc = partePaquete.split(' - ');
+          tipoPaquete = tipoYDesc[0].trim();
+          if (tipoYDesc.length > 1) {
+            descripcionContenido = tipoYDesc
+                .sublist(1)
+                .join(' - ')
+                .replaceAll('. ', '')
+                .trim();
+          }
+        } else {
+          tipoPaquete = partePaquete.replaceAll('. ', '').trim();
+        }
+      }
+
+      // Segunda parte: "Nombre (Telefono)"
+      if (partes.length > 1) {
+        final parteReceptor = partes[1].trim();
+        // Formato: "Nombre (Telefono)"
+        final regexReceptor = RegExp(r'^(.+?)\s*\((.+?)\)$');
+        final match = regexReceptor.firstMatch(parteReceptor);
+        if (match != null) {
+          receptorNombre = match.group(1)?.trim() ?? '';
+          receptorTelefono = match.group(2)?.trim() ?? '';
+        } else {
+          // Si no tiene el formato esperado, usar todo como nombre
+          receptorNombre = parteReceptor;
+        }
+      }
+    } else {
+      // Formato legacy o diferente
+      descripcionContenido = descripcionOriginal;
+    }
+
+    // Si no se pudo parsear el receptor, NO mostrar datos del cliente como receptor
+    final tieneReceptor = receptorNombre.isNotEmpty;
+
+    // Obtener instrucciones de entrega (si existen)
+    final instrucciones = encargo.instruccionesEntrega ?? '';
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: CupertinoColors.tertiarySystemBackground.resolveFrom(context),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _colorEncargo.withValues(alpha: 0.2)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: _accent.withValues(alpha: 0.2),
-            backgroundImage: encargo.cliente.foto != null
-                ? NetworkImage(encargo.cliente.foto!)
-                : null,
-            child: encargo.cliente.foto == null
-                ? Icon(CupertinoIcons.person_fill, color: _accent, size: 20)
-                : null,
+          // Título de sección
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.doc_text_fill,
+                color: _colorEncargo,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'DETALLES DEL ENCARGO',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: _colorEncargo,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
+
+          const SizedBox(height: 14),
+
+          // 1. Tipo de Paquete
+          _buildDetalleRow(
+            context,
+            icono: _getIconoTipoPaquete(tipoPaquete),
+            label: 'Tipo',
+            valor: tipoPaquete,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+          ),
+
+          // 2. Descripción del contenido (si existe)
+          if (descripcionContenido.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _buildDetalleRow(
+              context,
+              icono: CupertinoIcons.text_alignleft,
+              label: 'Descripción',
+              valor: descripcionContenido,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              multiline: true,
+            ),
+          ],
+
+          // 3. SOLICITADO POR - Cliente que pidió el encargo
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemGrey6.resolveFrom(context),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Destinatario',
+                  '📱 SOLICITADO POR:',
                   style: TextStyle(
                     fontSize: 11,
+                    fontWeight: FontWeight.w700,
                     color: textSecondary,
-                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                Text(
-                  encargo.cliente.nombre,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: textPrimary,
-                  ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.person_fill,
+                      color: textSecondary,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        encargo.cliente.nombre,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                if (encargo.cliente.telefono != null &&
+                    encargo.cliente.telefono!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        CupertinoIcons.phone_fill,
+                        color: textSecondary,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        encargo.cliente.telefono!,
+                        style: TextStyle(fontSize: 13, color: textSecondary),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
-          // Botones de contacto
-          if (encargo.cliente.telefono != null) ...[
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: onLlamar,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: _success.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  CupertinoIcons.phone_fill,
-                  color: _success,
-                  size: 18,
-                ),
+
+          // 4. ENTREGAR A - Receptor del paquete (parseado de la descripción)
+          if (tieneReceptor) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _accent.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '📦 ENTREGAR A:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _accent,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        CupertinoIcons.person_fill,
+                        color: _accent,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          receptorNombre,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (receptorTelefono.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          CupertinoIcons.phone_fill,
+                          color: _accent,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          receptorTelefono,
+                          style: TextStyle(fontSize: 14, color: textPrimary),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: onWhatsApp,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF25D366).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.chat,
-                  color: Color(0xFF25D366),
-                  size: 18,
-                ),
+          ],
+
+          // 5. Instrucciones de Entrega (si existen)
+          if (instrucciones.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        CupertinoIcons.exclamationmark_circle_fill,
+                        color: Colors.amber.shade700,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'INSTRUCCIONES ESPECIALES',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.amber.shade700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    instrucciones,
+                    style: TextStyle(fontSize: 14, color: textPrimary),
+                  ),
+                ],
               ),
             ),
           ],
@@ -504,43 +701,74 @@ class CardEncargoActivo extends StatelessWidget {
     );
   }
 
-  Widget _buildDescripcion(BuildContext context, Color textSecondary) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: CupertinoColors.tertiarySystemBackground.resolveFrom(context),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(CupertinoIcons.doc_text, color: textSecondary, size: 18),
-          const SizedBox(width: 10),
+  /// Obtiene el ícono según el tipo de paquete
+  IconData _getIconoTipoPaquete(String tipo) {
+    switch (tipo.toLowerCase()) {
+      case 'documentos':
+        return CupertinoIcons.doc_text;
+      case 'llaves':
+        return CupertinoIcons.lock_fill;
+      case 'otro':
+        return CupertinoIcons.question_circle;
+      default:
+        return CupertinoIcons.cube_box_fill;
+    }
+  }
+
+  /// Widget para mostrar una fila de detalle con formato consistente
+  Widget _buildDetalleRow(
+    BuildContext context, {
+    required IconData icono,
+    required String label,
+    required String valor,
+    required Color textPrimary,
+    required Color textSecondary,
+    bool multiline = false,
+  }) {
+    return Row(
+      crossAxisAlignment: multiline
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
+      children: [
+        Icon(icono, color: textSecondary, size: 16),
+        const SizedBox(width: 8),
+        if (multiline)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Instrucciones',
+                  label,
                   style: TextStyle(
                     fontSize: 11,
                     color: textSecondary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  encargo.descripcion!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: CupertinoColors.label.resolveFrom(context),
-                  ),
-                ),
+                const SizedBox(height: 2),
+                Text(valor, style: TextStyle(fontSize: 14, color: textPrimary)),
               ],
+            ),
+          )
+        else ...[
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 13,
+              color: textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            valor,
+            style: TextStyle(
+              fontSize: 14,
+              color: textPrimary,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 
@@ -636,7 +864,7 @@ class CardEncargoActivo extends StatelessWidget {
               children: [
                 const Text('Tu ganancia:', style: TextStyle(color: _success)),
                 Text(
-                  '\$${encargo.comisionRepartidor!.toStringAsFixed(2)}',
+                  '\$${encargo.gananciaTotal.toStringAsFixed(2)}',
                   style: const TextStyle(
                     color: _success,
                     fontWeight: FontWeight.bold,

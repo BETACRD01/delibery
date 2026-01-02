@@ -56,22 +56,21 @@ class PagoConComprobante {
       transferenciaComprobante: json['transferencia_comprobante']?.toString(),
       comprobanteUrl: json['comprobante_url']?.toString(),
       transferenciaBancoOrigen: json['transferencia_banco_origen']?.toString(),
-      transferenciaNumeroOperacion:
-          json['transferencia_numero_operacion']?.toString(),
+      transferenciaNumeroOperacion: json['transferencia_numero_operacion']
+          ?.toString(),
       repartidorAsignado: json['repartidor_asignado'],
       repartidorNombre: json['repartidor_nombre']?.toString(),
       datosBancariosRepartidor: json['datos_bancarios_repartidor'] != null
-          ? DatosBancariosParaPago.fromJson(
-              json['datos_bancarios_repartidor'])
+          ? DatosBancariosParaPago.fromJson(json['datos_bancarios_repartidor'])
           : null,
       comprobanteVisibleRepartidor:
           json['comprobante_visible_repartidor'] ?? false,
       fechaVisualizacionRepartidor:
           json['fecha_visualizacion_repartidor'] != null
-              ? DateTime.tryParse(
-                  json['fecha_visualizacion_repartidor'].toString())
-              : null,
-      creadoEn: DateTime.tryParse(json['creado_en']?.toString() ?? '') ??
+          ? DateTime.tryParse(json['fecha_visualizacion_repartidor'].toString())
+          : null,
+      creadoEn:
+          DateTime.tryParse(json['creado_en']?.toString() ?? '') ??
           DateTime.now(),
       actualizadoEn: json['actualizado_en'] != null
           ? DateTime.tryParse(json['actualizado_en'].toString())
@@ -93,6 +92,7 @@ class ComprobanteRepartidor {
   final String referencia;
   final String? pedidoNumero;
   final String? clienteNombre;
+  final String? clienteFoto;
   final String monto;
   final String estado;
   final String? estadoDisplay;
@@ -109,6 +109,7 @@ class ComprobanteRepartidor {
     required this.referencia,
     this.pedidoNumero,
     this.clienteNombre,
+    this.clienteFoto,
     required this.monto,
     required this.estado,
     this.estadoDisplay,
@@ -127,22 +128,23 @@ class ComprobanteRepartidor {
       referencia: json['referencia']?.toString() ?? '',
       pedidoNumero: json['pedido_numero']?.toString(),
       clienteNombre: json['cliente_nombre']?.toString(),
+      clienteFoto: json['cliente_foto']?.toString(),
       monto: json['monto']?.toString() ?? '0',
       estado: json['estado']?.toString() ?? '',
       estadoDisplay: json['estado_display']?.toString(),
       transferenciaComprobante: json['transferencia_comprobante']?.toString(),
       comprobanteUrl: json['comprobante_url']?.toString(),
       transferenciaBancoOrigen: json['transferencia_banco_origen']?.toString(),
-      transferenciaNumeroOperacion:
-          json['transferencia_numero_operacion']?.toString(),
+      transferenciaNumeroOperacion: json['transferencia_numero_operacion']
+          ?.toString(),
       comprobanteVisibleRepartidor:
           json['comprobante_visible_repartidor'] ?? false,
       fechaVisualizacionRepartidor:
           json['fecha_visualizacion_repartidor'] != null
-              ? DateTime.tryParse(
-                  json['fecha_visualizacion_repartidor'].toString())
-              : null,
-      creadoEn: DateTime.tryParse(json['creado_en']?.toString() ?? '') ??
+          ? DateTime.tryParse(json['fecha_visualizacion_repartidor'].toString())
+          : null,
+      creadoEn:
+          DateTime.tryParse(json['creado_en']?.toString() ?? '') ??
           DateTime.now(),
     );
   }

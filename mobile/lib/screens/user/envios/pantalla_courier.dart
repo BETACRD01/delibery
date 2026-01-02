@@ -10,6 +10,7 @@ import '../../../../services/envios/envios_service.dart';
 import '../../../../services/core/toast_service.dart';
 import '../../../../theme/app_colors_primary.dart';
 import '../../../../widgets/maps/map_location_picker.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 
 class PantallaCourier extends StatefulWidget {
   const PantallaCourier({super.key});
@@ -52,7 +53,6 @@ class _PantallaCourierState extends State<PantallaCourier> {
     {'id': 'Paquete', 'icon': CupertinoIcons.cube_box, 'label': 'Paquete'},
     {'id': 'Documentos', 'icon': CupertinoIcons.doc_text, 'label': 'Docs'},
     {'id': 'Llaves', 'icon': CupertinoIcons.lock, 'label': 'Llaves'},
-    {'id': 'Comida', 'icon': Icons.fastfood_outlined, 'label': 'Comida'},
     {'id': 'Otro', 'icon': CupertinoIcons.question_circle, 'label': 'Otro'},
   ];
 
@@ -811,25 +811,98 @@ class _PantallaCourierState extends State<PantallaCourier> {
 
                                 const SizedBox(height: 16),
 
-                                // SECCIÓN 3: DESTINATARIO (Row)
+                                // SECCIÓN 3: DESTINATARIO
+                                Text(
+                                  '¿Quién recibe el paquete?',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: CupertinoColors.secondaryLabel
+                                        .resolveFrom(context),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+
                                 Row(
                                   children: [
                                     Expanded(
+                                      flex: 4, // 40% para nombre
                                       child: _buildInput(
                                         context,
                                         controller: _nombreRecibeCtrl,
                                         icon: CupertinoIcons.person,
-                                        placeholder: 'Nombre receptor',
+                                        placeholder: 'Nombres',
                                       ),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
-                                      child: _buildInput(
-                                        context,
-                                        controller: _telefonoRecibeCtrl,
-                                        icon: CupertinoIcons.phone,
-                                        placeholder: 'Teléfono',
-                                        keyboardType: TextInputType.phone,
+                                      flex:
+                                          6, // 60% para teléfono (necesita mas espacio por la bandera)
+                                      child: Container(
+                                        height:
+                                            50, // Altura fija para igualar al input vecino
+                                        decoration: BoxDecoration(
+                                          color: CupertinoColors
+                                              .tertiarySystemBackground
+                                              .resolveFrom(context),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: CupertinoColors.separator
+                                                .resolveFrom(context),
+                                            width: 0.5,
+                                          ),
+                                        ),
+                                        child: IntlPhoneField(
+                                          controller: _telefonoRecibeCtrl,
+                                          decoration: InputDecoration(
+                                            hintText: 'Teléfono',
+                                            hintStyle: TextStyle(
+                                              color: CupertinoColors
+                                                  .placeholderText
+                                                  .resolveFrom(context),
+                                              fontSize: 15,
+                                            ),
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            focusedErrorBorder:
+                                                InputBorder.none,
+                                            counterText: '',
+                                            contentPadding:
+                                                const EdgeInsets.only(
+                                                  top: 14,
+                                                ), // Centrado vertical
+                                            isDense: true,
+                                          ),
+                                          initialCountryCode: 'EC',
+                                          languageCode: 'es',
+                                          style: TextStyle(
+                                            color: CupertinoColors.label
+                                                .resolveFrom(context),
+                                            fontSize: 15,
+                                          ),
+                                          dropdownTextStyle: TextStyle(
+                                            color: CupertinoColors.label
+                                                .resolveFrom(context),
+                                            fontSize: 15,
+                                          ),
+                                          dropdownIcon: Icon(
+                                            Icons.arrow_drop_down,
+                                            color: CupertinoColors
+                                                .secondaryLabel
+                                                .resolveFrom(context),
+                                            size: 18,
+                                          ),
+                                          flagsButtonPadding:
+                                              const EdgeInsets.only(left: 8),
+                                          showCountryFlag: true,
+                                          disableLengthCheck: true,
+                                          showDropdownIcon:
+                                              false, // Ahorrar espacio
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -857,25 +930,19 @@ class _PantallaCourierState extends State<PantallaCourier> {
                                     padding: EdgeInsets.zero,
                                     borderRadius: BorderRadius.circular(16),
                                     color: AppColorsPrimary.main,
-                                    onPressed: _loading
-                                        ? null
-                                        : (_cotizacion == null
-                                              ? _cotizar
-                                              : _mostrarModalPago),
-                                    child: _loading
-                                        ? const CupertinoActivityIndicator(
-                                            color: Colors.white,
-                                          )
-                                        : Text(
-                                            _cotizacion == null
-                                                ? 'Cotizar Envío'
-                                                : 'Solicitar Shopper',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 17,
-                                              color: CupertinoColors.white,
-                                            ),
-                                          ),
+                                    onPressed: _cotizacion == null
+                                        ? _cotizar
+                                        : _mostrarModalPago,
+                                    child: Text(
+                                      _cotizacion == null
+                                          ? 'Cotizar Envío'
+                                          : 'Solicitar Shopper',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 17,
+                                        color: CupertinoColors.white,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -890,6 +957,55 @@ class _PantallaCourierState extends State<PantallaCourier> {
               ),
             ),
           ),
+
+          // 4. OVERLAY DE CARGA (Pantalla Completa)
+          if (_loading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.3),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 24,
+                        horizontal: 32,
+                      ),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemBackground.resolveFrom(
+                          context,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CupertinoActivityIndicator(radius: 18),
+                          const SizedBox(height: 16),
+                          Text(
+                            _cotizacion == null
+                                ? 'Calculando tarifa...'
+                                : 'Procesando...',
+                            style: TextStyle(
+                              color: CupertinoColors.label.resolveFrom(context),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

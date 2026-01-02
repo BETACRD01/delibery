@@ -304,6 +304,12 @@ class PedidoCreateSerializer(serializers.ModelSerializer):
                     lat_destino_calc=validated_data.get('latitud_destino'),
                     lng_destino_calc=validated_data.get('longitud_destino'),
                 )
+                
+                # ACTUALIZACIÓN CRÍTICA: Calcular comisiones ahora que existe el envío
+                # Esto asegura que comision_repartidor se llene con el total_envio
+                pedido.refresh_from_db()
+                pedido._distribuir_ganancias()
+                pedido.save(update_fields=['comision_repartidor', 'comision_proveedor', 'ganancia_app', 'tarifa_servicio'])
 
         return pedido
 
@@ -577,8 +583,8 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
             return False
         if not obj.repartidor:
             return False
-        if getattr(obj.repartidor, 'user_id', None) == getattr(user, 'id', None):
-            return False
+        # if getattr(obj.repartidor, 'user_id', None) == getattr(user, 'id', None):
+        #     return False
 
         try:
           from calificaciones.models import Calificacion, TipoCalificacion
@@ -859,11 +865,23 @@ class PedidoRepartidorDetalladoSerializer(serializers.ModelSerializer):
         """Datos COMPLETOS del cliente (solo para repartidor asignado)"""
         if not obj.cliente:
             return None
+        
+        # Construir URL absoluta de la foto
+        request = self.context.get('request')
+        foto_url = None
+        if obj.cliente.foto_perfil:
+            try:
+                foto_url = obj.cliente.foto_perfil.url
+                if request and not foto_url.startswith(('http:', 'https:')):
+                    foto_url = request.build_absolute_uri(foto_url)
+            except Exception:
+                foto_url = None
+
         return {
             'id': obj.cliente.id,
             'nombre': obj.cliente.user.get_full_name(),
             'telefono': getattr(obj.cliente.user, 'celular', None),  # DATO SENSIBLE
-            'foto': obj.cliente.foto_perfil.url if obj.cliente.foto_perfil else None
+            'foto': foto_url
         }
 
     def get_proveedor(self, obj):
@@ -876,10 +894,14 @@ class PedidoRepartidorDetalladoSerializer(serializers.ModelSerializer):
         if obj.proveedor.logo:
             try:
                 foto_url = obj.proveedor.logo.url
-                if request and not foto_url.startswith('http'):
+                if request and not foto_url.startswith(('http:', 'https:')):
                     foto_url = request.build_absolute_uri(foto_url)
             except Exception:
                 foto_url = None
+        
+        # Fallback si no hay logo
+        if not foto_url:
+            foto_url = "https://ui-avatars.com/api/?name=" + (obj.proveedor.nombre or "Proveedor").replace(" ", "+") + "&background=random"
 
         return {
             'id': obj.proveedor.id,

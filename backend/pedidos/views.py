@@ -308,26 +308,8 @@ def aceptar_pedido_repartidor(request, pedido_id):
                 except Exception as e:
                     logger.warning(f"No se pudo vincular el pago al repartidor: {e}")
 
-                # Notificar al cliente que debe transferir y subir comprobante
-                try:
-                    if pedido.cliente and pedido.cliente.user:
-                        from notificaciones.services import crear_y_enviar_notificacion
-                        crear_y_enviar_notificacion(
-                            usuario=pedido.cliente.user,
-                            titulo="Repartidor aceptó tu pedido",
-                            mensaje=f"Debes transferir ${pedido.total} y subir el comprobante para el pedido #{pedido.numero_pedido}.",
-                            tipo='pedido',
-                            pedido=pedido,
-                            datos_extra={
-                                'accion': 'subir_comprobante',
-                                'monto': str(pedido.total),
-                                'pedido_id': str(pedido.id),
-                                'pedido_numero': pedido.numero_pedido or '',
-                            },
-                        )
-                except Exception as e:
-                    logger.warning(f"No se pudo enviar notificación de transferencia: {e}")
-
+                # NOTA: La notificación se envía automáticamente por signals (notificaciones/signals.py)
+                
             return Response({"mensaje": "Pedido aceptado"}, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

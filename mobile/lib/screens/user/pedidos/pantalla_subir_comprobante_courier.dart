@@ -694,7 +694,7 @@ class _PantallaSubirComprobanteCourierState
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        'Subir Comprobante',
+                        'Datos de Transferencia',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,

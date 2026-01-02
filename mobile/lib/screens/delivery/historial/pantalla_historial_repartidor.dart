@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:mobile/models/entrega_historial.dart';
 import 'package:mobile/services/repartidor/repartidor_service.dart';
+import 'package:mobile/screens/delivery/historial/pantalla_detalle_entrega.dart';
 
 /// Pantalla dedicada al historial de entregas vinculada al backend.
 class PantallaHistorialRepartidor extends StatefulWidget {
@@ -168,7 +169,7 @@ class _PantallaHistorialRepartidorState
           ),
           _buildResumenItem(
             'Ganancia',
-            'Bs ${_totalComisiones.toStringAsFixed(2)}',
+            '\$${_totalComisiones.toStringAsFixed(2)}',
             CupertinoIcons.money_dollar_circle_fill,
             _success,
           ),
@@ -302,7 +303,11 @@ class _PantallaHistorialRepartidorState
       child: CupertinoButton(
         padding: EdgeInsets.zero,
         onPressed: () {
-          // Placeholder para detalle
+          Navigator.of(context).push(
+            CupertinoPageRoute(
+              builder: (context) => PantallaDetalleEntrega(entrega: entrega),
+            ),
+          );
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -367,17 +372,38 @@ class _PantallaHistorialRepartidorState
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      'Total: ',
-                      style: TextStyle(fontSize: 14, color: _textSecondary),
-                    ),
-                    Text(
-                      'Bs ${entrega.montoTotal.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: _textPrimary,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Ganancia: \$${entrega.comisionRepartidor.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: _success,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Text(
+                              'Total: ',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _textSecondary,
+                              ),
+                            ),
+                            Text(
+                              '\$${entrega.montoTotal.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: _textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
